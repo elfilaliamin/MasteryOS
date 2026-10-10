@@ -95,6 +95,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (fullName, avatarUrl) => {
+    let updatedUser = {
+      ...(user || {}),
+      full_name: fullName,
+      avatar_url: avatarUrl || user?.avatar_url,
+    };
+
+    try {
+      const res = await api.updateProfile(fullName, avatarUrl);
+      if (res && res.user) {
+        updatedUser = res.user;
+      }
+    } catch (err) {
+      console.warn('API updateProfile notice:', err.message);
+    }
+
+    setUser(updatedUser);
+    localStorage.setItem('master_tasks_user', JSON.stringify(updatedUser));
+    return updatedUser;
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -111,6 +132,7 @@ export const AuthProvider = ({ children }) => {
         isLoading,
         login,
         register,
+        updateProfile,
         logout,
       }}
     >

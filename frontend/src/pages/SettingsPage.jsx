@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -45,7 +45,7 @@ const SECTION_METADATA = {
 };
 
 export const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { playerStats, equippedTitleId, equipTitle } = useGamification();
 
@@ -57,6 +57,12 @@ export const SettingsPage = () => {
   );
   const [savedSuccess, setSavedSuccess] = useState(false);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (user?.full_name) setFullName(user.full_name);
+    if (user?.email) setEmail(user.email);
+    if (user?.avatar_url) setAvatarUrl(user.avatar_url);
+  }, [user]);
 
   // Change Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -103,7 +109,11 @@ export const SettingsPage = () => {
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.updateProfile(fullName, avatarUrl);
+      if (updateProfile) {
+        await updateProfile(fullName, avatarUrl);
+      } else {
+        await api.updateProfile(fullName, avatarUrl);
+      }
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch {
