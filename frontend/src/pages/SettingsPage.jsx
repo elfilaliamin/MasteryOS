@@ -26,17 +26,19 @@ import {
 } from 'lucide-react';
 
 const DEFAULT_DASHBOARD_CONFIG = {
+  showHabits: true,
   showStats: true,
   showUrgentTasks: true,
   showDeadlines: true,
   showActiveCourses: true,
   showGoalsOverview: true,
-  order: ['stats', 'urgent', 'deadlines', 'courses', 'goals'],
+  order: ['habits', 'stats', 'urgent', 'deadlines', 'courses', 'goals'],
 };
 
 const SECTION_METADATA = {
+  habits: { title: "Today's Habits Shortcut", icon: '🔥', desc: "Check today's active habits and streak progress" },
   stats: { title: 'KPI Metrics & Summary Cards', icon: '📊', desc: 'Total tasks, completion rate, and active counts' },
-  urgent: { title: 'High & Urgent Priority Tasks', icon: '🔥', desc: 'Direct access to critical execution items' },
+  urgent: { title: 'High & Urgent Priority Tasks', icon: '⚡', desc: 'Direct access to critical execution items' },
   deadlines: { title: 'Upcoming & Nearest Deadlines', icon: '📅', desc: 'Tasks sorted by nearest due date' },
   courses: { title: 'In-Progress Courses', icon: '🎓', desc: 'Active learning courses with quick +1 lesson progress' },
   goals: { title: 'Strategic Goals Progress', icon: '🎯', desc: 'High-level milestones and task completion progress' },
@@ -352,6 +354,7 @@ export const SettingsPage = () => {
                 if (!meta) return null;
 
                 const propMap = {
+                  habits: 'showHabits',
                   stats: 'showStats',
                   urgent: 'showUrgentTasks',
                   deadlines: 'showDeadlines',

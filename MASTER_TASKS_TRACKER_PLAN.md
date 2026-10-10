@@ -376,3 +376,12 @@ The frontend is built using **React 19**, **Vite**, **Tailwind CSS v4**, and **L
 - [x] **Task 14.11**: Add "Hide Completed" toggle button exclusive to List View in `TasksPage` (defaulting to enabled in List View and removed from Board View). Add "Load More Tasks (+50)" pagination button for large task lists (+50 items) in List view and per column in Board view.
 - [x] **Task 14.12**: Update brand subtitle under the website title from "Tasks • Goals • Courses" to "Pro Version" in Sidebar, Login, and Registration views.
 
+### 📍 Phase 15: Dedicated Habit Tracker (HabitsPage) & Dashboard Shortcut
+- [x] **Task 15.1**: Backend Database Schema & REST Endpoints (`/api/habits`, `POST /api/habits/:id/toggle`, `habit.model.js` with PostgreSQL & in-memory fallbacks).
+- [x] **Task 15.2**: Frontend API client integration for habits in `api.js`.
+- [x] **Task 15.3**: Build `HabitModal` component (habit title, icon picker, color accent, time of day, description).
+- [x] **Task 15.4**: Build `HabitsPage` with streaks (current & longest), 7-day mini matrix, period analytics (Week, Month, Year charts & completion rates), time-of-day filters, keeping habits strictly separate from gamification XP.
+- [x] **Task 15.5**: Add "Today's Habits" shortcut widget to `DashboardPage` with quick checkbox toggling, today progress bar, and direct navigation.
+- [x] **Task 15.6**: Update `SettingsPage` dashboard view customization to include the Today's Habits widget.
+- [x] **Task 15.7**: Add "Habits Tracker" link to `Sidebar.jsx` and wire `/habits` route and global habit state in `App.jsx`.
+

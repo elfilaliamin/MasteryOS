@@ -102,3 +102,32 @@ CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
 CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
 CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id);
 CREATE INDEX IF NOT EXISTS idx_courses_user_id ON courses(user_id);
+
+-- 8. Habits Table
+CREATE TABLE IF NOT EXISTS habits (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    icon VARCHAR(10) DEFAULT '⚡',
+    color VARCHAR(7) DEFAULT '#0d8a72',
+    time_of_day VARCHAR(20) DEFAULT 'ANYTIME',
+    frequency VARCHAR(20) DEFAULT 'DAILY',
+    is_archived BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. Habit Logs Table
+CREATE TABLE IF NOT EXISTS habit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    habit_id UUID NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    completed_date DATE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_habit_user_date UNIQUE (habit_id, user_id, completed_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_habits_user_id ON habits(user_id);
+CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_id ON habit_logs(habit_id);
+CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(completed_date);

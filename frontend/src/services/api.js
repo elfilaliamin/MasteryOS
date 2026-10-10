@@ -216,4 +216,45 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  // Habits endpoints
+  async getHabits() {
+    const res = await fetch(`${API_BASE}/habits`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+
+  async createHabit(habitData) {
+    const res = await fetch(`${API_BASE}/habits`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(habitData),
+    });
+    return handleResponse(res);
+  },
+
+  async updateHabit(id, habitData) {
+    const res = await fetch(`${API_BASE}/habits/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(habitData),
+    });
+    return handleResponse(res);
+  },
+
+  async toggleHabit(id, date = null) {
+    const res = await fetch(`${API_BASE}/habits/${id}/toggle`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ date }),
+    });
+    return handleResponse(res);
+  },
+
+  async deleteHabit(id) {
+    const res = await fetch(`${API_BASE}/habits/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
 };

@@ -13,6 +13,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { TasksPage } from './pages/TasksPage';
 import { GoalsPage } from './pages/GoalsPage';
 import { CoursesPage } from './pages/CoursesPage';
+import { HabitsPage } from './pages/HabitsPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -20,9 +21,74 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { TaskModal } from './components/tasks/TaskModal';
 import { GoalModal } from './components/goals/GoalModal';
 import { CourseModal } from './components/courses/CourseModal';
+import { HabitModal } from './components/habits/HabitModal';
 import { LevelUpModal } from './components/gamification/LevelUpModal';
 import { api } from './services/api';
 import './App.css';
+
+const getRecentDate = (daysAgo) => {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const INITIAL_DEMO_HABITS = [
+  {
+    id: 'habit-1',
+    title: 'Drink 2L Water',
+    description: 'Stay properly hydrated throughout the workday to boost focus.',
+    icon: '💧',
+    color: '#0284c7',
+    time_of_day: 'MORNING',
+    frequency: 'DAILY',
+    completed_dates: [getRecentDate(0), getRecentDate(1), getRecentDate(2), getRecentDate(3), getRecentDate(4)],
+    current_streak: 5,
+    longest_streak: 12,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'habit-2',
+    title: 'Morning Cardio or 5K Run',
+    description: 'Elevate heart rate and build physical momentum.',
+    icon: '🏃',
+    color: '#10b981',
+    time_of_day: 'MORNING',
+    frequency: 'DAILY',
+    completed_dates: [getRecentDate(0), getRecentDate(1), getRecentDate(2)],
+    current_streak: 3,
+    longest_streak: 9,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'habit-3',
+    title: 'Deep Work & Coding Sprint (60m)',
+    description: 'Uninterrupted block for high-leverage architectural building.',
+    icon: '💻',
+    color: '#0d8a72',
+    time_of_day: 'AFTERNOON',
+    frequency: 'DAILY',
+    completed_dates: [getRecentDate(1), getRecentDate(2), getRecentDate(3), getRecentDate(4)],
+    current_streak: 4,
+    longest_streak: 14,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'habit-4',
+    title: 'Read 15 Pages',
+    description: 'Read high-impact non-fiction, systems thinking, or philosophy.',
+    icon: '📚',
+    color: '#8b5cf6',
+    time_of_day: 'EVENING',
+    frequency: 'DAILY',
+    completed_dates: [getRecentDate(0), getRecentDate(1), getRecentDate(2), getRecentDate(3)],
+    current_streak: 4,
+    longest_streak: 10,
+    created_at: new Date().toISOString()
+  }
+];
 
 // Initial demo goals with Due Date, Priority, and categorized icons
 const INITIAL_DEMO_GOALS = [
@@ -162,6 +228,14 @@ const AuthenticatedApp = () => {
   const [tasks, setTasks] = useState([]);
   const [goals, setGoals] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [habits, setHabits] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mastery_local_habits');
+      return saved ? JSON.parse(saved) : INITIAL_DEMO_HABITS;
+    } catch {
+      return INITIAL_DEMO_HABITS;
+    }
+  });
   const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -178,6 +252,18 @@ const AuthenticatedApp = () => {
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
 
+  // Habit Modal state
+  const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
+  const [editingHabit, setEditingHabit] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mastery_local_habits', JSON.stringify(habits));
+    } catch {
+      // ignore
+    }
+  }, [habits]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -185,12 +271,13 @@ const AuthenticatedApp = () => {
       if (!isAuthenticated) return;
 
       try {
-        const [tasksRes, catsRes, statsRes, goalsRes, coursesRes] = await Promise.allSettled([
+        const [tasksRes, catsRes, statsRes, goalsRes, coursesRes, habitsRes] = await Promise.allSettled([
           api.getTasks(),
           api.getCategories(),
           api.getStats(),
           api.getGoals(),
-          api.getCourses()
+          api.getCourses(),
+          api.getHabits()
         ]);
 
         if (!isMounted) return;
@@ -211,6 +298,10 @@ const AuthenticatedApp = () => {
           setCourses(coursesRes.value.courses.length > 0 ? coursesRes.value.courses : INITIAL_DEMO_COURSES);
         } else {
           setCourses((prev) => (prev.length ? prev : INITIAL_DEMO_COURSES));
+        }
+
+        if (habitsRes.status === 'fulfilled' && habitsRes.value?.habits && habitsRes.value.habits.length > 0) {
+          setHabits(habitsRes.value.habits);
         }
 
         if (catsRes.status === 'fulfilled' && catsRes.value?.categories && catsRes.value.categories.length > 0) {
@@ -475,6 +566,111 @@ const AuthenticatedApp = () => {
     setCategories((prev) => prev.filter((c) => c.id !== catId));
   };
 
+  // Habit actions
+  const handleCreateOrUpdateHabit = async (habitData) => {
+    const habitId = habitData.id || `local-habit-${Date.now()}`;
+    try {
+      if (habitData.id) {
+        await api.updateHabit(habitData.id, habitData);
+      } else {
+        await api.createHabit(habitData);
+      }
+    } catch {
+      // Local optimistic update
+    }
+
+    if (habitData.id) {
+      setHabits((prev) =>
+        prev.map((h) => (h.id === habitData.id ? { ...h, ...habitData } : h))
+      );
+    } else {
+      const newHabit = {
+        ...habitData,
+        id: habitId,
+        completed_dates: [],
+        total_completions: 0,
+        current_streak: 0,
+        longest_streak: 0,
+        created_at: new Date().toISOString()
+      };
+      setHabits((prev) => [...prev, newHabit]);
+    }
+  };
+
+  const handleToggleHabit = async (habitId, targetDate = null) => {
+    const dateKey = targetDate || (() => {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })();
+
+    try {
+      await api.toggleHabit(habitId, dateKey);
+    } catch {
+      // Local optimistic update
+    }
+
+    setHabits((prev) =>
+      prev.map((h) => {
+        if (h.id === habitId) {
+          const currentDates = new Set(h.completed_dates || []);
+          if (currentDates.has(dateKey)) {
+            currentDates.delete(dateKey);
+          } else {
+            currentDates.add(dateKey);
+          }
+
+          // Streak calculation
+          const todayKey = (() => {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          })();
+
+          let streak = 0;
+          let checkD = new Date();
+          if (!currentDates.has(todayKey)) {
+            checkD.setDate(checkD.getDate() - 1);
+          }
+          while (true) {
+            const y = checkD.getFullYear();
+            const m = String(checkD.getMonth() + 1).padStart(2, '0');
+            const day = String(checkD.getDate()).padStart(2, '0');
+            const k = `${y}-${m}-${day}`;
+            if (currentDates.has(k)) {
+              streak++;
+              checkD.setDate(checkD.getDate() - 1);
+            } else {
+              break;
+            }
+          }
+
+          const newDatesArray = Array.from(currentDates);
+          return {
+            ...h,
+            completed_dates: newDatesArray,
+            current_streak: streak,
+            longest_streak: Math.max(h.longest_streak || 0, streak)
+          };
+        }
+        return h;
+      })
+    );
+  };
+
+  const handleDeleteHabit = async (habitId) => {
+    try {
+      await api.deleteHabit(habitId);
+    } catch {
+      // Local removal
+    }
+    setHabits((prev) => prev.filter((h) => h.id !== habitId));
+  };
+
   return (
     <GamificationProvider tasks={tasks} goals={goals} courses={courses}>
       <Routes>
@@ -505,6 +701,7 @@ const AuthenticatedApp = () => {
                   tasks={tasks}
                   goals={goals}
                   courses={courses}
+                  habits={habits}
                   stats={stats}
                   onOpenNewTask={() => {
                     setEditingTask(null);
@@ -512,6 +709,25 @@ const AuthenticatedApp = () => {
                   }}
                   onStatusChange={handleStatusChange}
                   onIncrementLesson={handleIncrementLesson}
+                  onToggleHabit={handleToggleHabit}
+                />
+              }
+            />
+            <Route
+              path="/habits"
+              element={
+                <HabitsPage
+                  habits={habits}
+                  onOpenNewHabit={() => {
+                    setEditingHabit(null);
+                    setIsHabitModalOpen(true);
+                  }}
+                  onEditHabit={(h) => {
+                    setEditingHabit(h);
+                    setIsHabitModalOpen(true);
+                  }}
+                  onDeleteHabit={handleDeleteHabit}
+                  onToggleHabit={handleToggleHabit}
                 />
               }
             />
@@ -628,6 +844,14 @@ const AuthenticatedApp = () => {
         onSubmit={handleCreateOrUpdateCourse}
         course={editingCourse}
         tasks={tasks}
+      />
+
+      {/* Global Habit Creation/Editing Modal */}
+      <HabitModal
+        isOpen={isHabitModalOpen}
+        onClose={() => setIsHabitModalOpen(false)}
+        onSubmit={handleCreateOrUpdateHabit}
+        habit={editingHabit}
       />
 
       {/* Celebratory Level Up Modal */}

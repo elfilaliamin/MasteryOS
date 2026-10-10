@@ -14,12 +14,15 @@ import {
   Target,
   PlusCircle,
   ChevronRight,
-  Circle
+  Circle,
+  Flame,
+  CheckCircle2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGamification } from '../context/useGamification';
 
 const DASHBOARD_LIMITS = {
+  HABITS: 6,            // Max 6 habits in today's shortcut widget
   URGENT_TASKS: 4,      // Max 4 High/Urgent priority tasks (2x2 grid)
   DEADLINES: 6,         // Max 6 nearest due date tasks (2x3 grid)
   ACTIVE_COURSES: 4,    // Max 4 in-progress courses (2x2 grid)
@@ -27,22 +30,25 @@ const DASHBOARD_LIMITS = {
 };
 
 const DEFAULT_DASHBOARD_CONFIG = {
+  showHabits: true,
   showStats: true,
   showUrgentTasks: true,
   showDeadlines: true,
   showActiveCourses: true,
   showGoalsOverview: true,
-  order: ['stats', 'urgent', 'deadlines', 'courses', 'goals'],
+  order: ['habits', 'stats', 'urgent', 'deadlines', 'courses', 'goals'],
 };
 
 export const DashboardPage = ({
   tasks = [],
   goals = [],
   courses = [],
+  habits = [],
   stats = {},
   onOpenNewTask,
   onStatusChange,
-  onIncrementLesson
+  onIncrementLesson,
+  onToggleHabit
 }) => {
   const navigate = useNavigate();
   const { playerStats } = useGamification();
@@ -127,9 +133,124 @@ export const DashboardPage = ({
   // 4. Strategic Goals
   const displayedGoals = goals.slice(0, DASHBOARD_LIMITS.GOALS);
 
+  // 5. Today's Habits Shortcut
+  const todayStr = (() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  })();
+
+  const displayedHabits = habits.slice(0, DASHBOARD_LIMITS.HABITS);
+  const completedHabitsCount = habits.filter((h) =>
+    (h.completed_dates || []).includes(todayStr)
+  ).length;
+  const habitsRate = habits.length > 0 ? Math.round((completedHabitsCount / habits.length) * 100) : 0;
+
   // Widget rendering dictionary
   const renderSection = (sectionKey) => {
     switch (sectionKey) {
+      case 'habits':
+        if (!dashboardConfig.showHabits || habits.length === 0) return null;
+        return (
+          <div key="habits" className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
+                  <Flame size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <span>Today's Habits Shortcut</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                      {completedHabitsCount} of {habits.length} Done ({habitsRate}%)
+                    </span>
+                  </h3>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/habits')}
+                  className="text-xs font-bold text-[#0d8a72] dark:text-teal-400 hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <span>
+                    {habits.length > DASHBOARD_LIMITS.HABITS
+                      ? `View all ${habits.length} Habits`
+                      : 'View all Habits'}
+                  </span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
+
+            {/* Habit Items Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {displayedHabits.map((habit) => {
+                const isCompleted = (habit.completed_dates || []).includes(todayStr);
+                const streak = habit.current_streak || 0;
+
+                return (
+                  <div
+                    key={`dash-habit-${habit.id}`}
+                    onClick={() => onToggleHabit && onToggleHabit(habit.id)}
+                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer select-none ${
+                      isCompleted
+                        ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/80 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-amber-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0"
+                        style={{
+                          backgroundColor: `${habit.color || '#0d8a72'}18`,
+                          border: `1px solid ${habit.color || '#0d8a72'}30`,
+                        }}
+                      >
+                        {habit.icon || '⚡'}
+                      </div>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-xs font-bold truncate ${
+                            isCompleted
+                              ? 'line-through text-slate-400 dark:text-slate-500'
+                              : 'text-slate-900 dark:text-slate-100'
+                          }`}
+                        >
+                          {habit.title}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] font-bold text-amber-500 flex items-center gap-0.5">
+                            <Flame size={11} />
+                            <span>{streak}d streak</span>
+                          </span>
+                          <span className="text-[9px] text-slate-400 uppercase">
+                            • {habit.time_of_day || 'ANYTIME'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      aria-label="Toggle habit"
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                        isCompleted
+                          ? 'bg-emerald-600 text-white'
+                          : 'border border-slate-300 dark:border-slate-700 text-transparent hover:border-[#0d8a72]'
+                      }`}
+                    >
+                      <CheckCircle2 size={15} className={isCompleted ? 'text-white' : 'opacity-0'} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+
       case 'deadlines':
         if (!dashboardConfig.showDeadlines || nearestDeadlines.length === 0) return null;
         return (

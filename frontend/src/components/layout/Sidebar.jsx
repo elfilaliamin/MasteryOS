@@ -10,7 +10,8 @@ import {
   LogOut,
   Sun,
   Moon,
-  Sparkles
+  Sparkles,
+  Flame
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { useTheme } from '../../context/useTheme';
@@ -29,6 +30,7 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Habits Tracker', path: '/habits', icon: Flame },
     { name: 'Goals & Milestones', path: '/goals', icon: Target },
     { name: 'Courses Tracker', path: '/courses', icon: GraduationCap },
     { name: 'Tasks Board', path: '/tasks', icon: CheckSquare },
