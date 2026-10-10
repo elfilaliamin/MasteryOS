@@ -14,7 +14,6 @@ import {
   Target,
   PlusCircle,
   ChevronRight,
-  Circle,
   Flame,
   Check,
   BookOpen,
@@ -444,10 +443,10 @@ export const DashboardPage = ({
                                 <button
                                   type="button"
                                   onClick={() => onStatusChange(task.id, 'COMPLETED')}
-                                  className="mt-0.5 w-5 h-5 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-600 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                                  className="mt-0.5 w-5 h-5 rounded-md border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 cursor-pointer transition-all group/check shadow-2xs"
                                   title="Mark as completed"
                                 >
-                                  <Circle size={13} />
+                                  <Check size={12} strokeWidth={3} className="opacity-0 group-hover/check:opacity-100 transition-opacity" />
                                 </button>
                               )}
                               <div className="min-w-0">
@@ -594,10 +593,10 @@ export const DashboardPage = ({
                                 <button
                                   type="button"
                                   onClick={() => onStatusChange(item.id, 'COMPLETED')}
-                                  className="mt-0.5 w-5 h-5 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-600 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                                  className="mt-0.5 w-5 h-5 rounded-md border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 cursor-pointer transition-all group/check shadow-2xs"
                                   title="Mark as completed"
                                 >
-                                  <Circle size={13} />
+                                  <Check size={12} strokeWidth={3} className="opacity-0 group-hover/check:opacity-100 transition-opacity" />
                                 </button>
                               )}
                               <div className="min-w-0">
