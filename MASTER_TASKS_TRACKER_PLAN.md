@@ -385,3 +385,48 @@ The frontend is built using **React 19**, **Vite**, **Tailwind CSS v4**, and **L
 - [x] **Task 15.6**: Update `SettingsPage` dashboard view customization to include the Today's Habits widget.
 - [x] **Task 15.7**: Add "Habits Tracker" link to `Sidebar.jsx` and wire `/habits` route and global habit state in `App.jsx`.
 
+### 📍 Phase 16: Production Security Hardening & Authorization Architecture
+- [ ] **Task 16.1**: **Strict Multi-Tenant Authorization & Cross-Entity Ownership Validation**
+  - Enforce `user_id` filtering on every database query across `tasks`, `categories`, `goals`, `courses`, `habits`, and `activities`.
+  - Validate ownership of referenced foreign objects: when creating or updating an entity referencing another object (e.g. assigning a task to a `category_id`, `goal_id`, `course_id`), verify that the referenced object belongs to the authenticated user.
+  - Implement automated multi-tenant integration tests with two distinct users to ensure User A cannot view, mutate, or associate resources belonging to User B.
+- [ ] **Task 16.2**: **Session & JWT Hardening with Secure httpOnly Cookie Migration**
+  - Migrate JWT storage from browser `localStorage` to an `httpOnly`, `Secure`, `SameSite=Lax` cookie.
+  - Implement CSRF protection (Double Submit Cookie or Anti-CSRF token verification) for state-changing endpoints.
+  - Enforce HS256 algorithm pinning and validate that `JWT_SECRET` meets a strict entropy requirement (32+ characters).
+  - Shorten access token expiry and implement an explicit `/api/auth/logout` endpoint that clears the auth cookie.
+  - Add `token_version` to the user schema/model to immediately invalidate stale tokens on password reset or account revocation.
+  - Require the user's current password on `POST /api/auth/change-password` before applying changes.
+  - Normalize authentication failure responses to return the same generic error message ("Invalid email or password") for both non-existent emails and incorrect passwords to prevent user enumeration.
+- [ ] **Task 16.3**: **Proxy IP Attribution & Comprehensive Multi-Tiered Rate Limiting**
+  - Configure Express `trust proxy` to parse client IP from `CF-Connecting-IP` behind Nginx / Cloudflare IP ranges.
+  - Integrate `express-rate-limit` with sliding window across sensitive routes:
+    - Login & registration endpoints (`/api/auth/login`, `/api/auth/register`).
+    - Per-email failed attempt lockouts to block targeted brute-force password guessing.
+    - Password updates (`/api/auth/change-password`).
+    - File upload endpoints (`/api/upload`).
+  - Create integration test verifying repeated failed authentication attempts reliably trigger HTTP `429 Too Many Requests`.
+- [ ] **Task 16.4**: **Strict Request Schema Validation (Zod) & DOM Sanitization**
+  - Implement Zod validation schemas for all request bodies, query strings, and URL route parameters (including strict UUID format checks on all resource IDs).
+  - Whitelist allowable sort, order, and filter fields for List and Board views to eliminate injection risks.
+  - Enforce strict Express body parser limits (`limit: '100kb'`) and cap pagination queries to a maximum of 100 items per request.
+  - Restrict URL input fields (avatar image, course cover, certificate link) to strictly accept valid `http://` or `https://` protocols.
+  - Audit frontend codebase to eliminate any usage of `dangerouslySetInnerHTML` or raw `innerHTML`.
+- [ ] **Task 16.5**: **Secure File Upload Pipeline & Magic Byte Inspection**
+  - Set hard upload file size limits on backend upload middleware.
+  - Inspect file magic bytes (file signature) to verify authentic MIME types—strictly allow only `image/png`, `image/jpeg`, `image/webp`, and `application/pdf` (strictly disallow SVG files to eliminate stored XSS vectors).
+  - Generate cryptographically randomized filenames (UUID/hash) prior to disk persistence.
+  - Store uploaded assets in a dedicated, isolated storage volume outside web execution roots.
+  - Serve static uploads with `X-Content-Type-Options: nosniff` header, and force PDF attachments via `Content-Disposition: attachment`.
+  - Add test suite validating rejection of oversized uploads and renamed fake extension files (e.g., `.exe` renamed to `.png`).
+- [ ] **Task 16.6**: **Security Headers (Helmet & Nginx), CORS Lockdown & Error Redaction**
+  - Add `helmet` middleware and configure production Nginx security headers:
+    - Content Security Policy (CSP).
+    - `X-Frame-Options: DENY` (clickjacking defense).
+    - `Referrer-Policy: strict-origin-when-cross-origin`.
+    - Disable Nginx version emissions (`server_tokens off`).
+    - Exclude local HSTS configuration since Cloudflare handles edge HSTS.
+  - Restrict CORS origins strictly to the designated frontend production domain.
+  - Sanitize all error responses in production (`NODE_ENV === 'production'`) to suppress stack traces and database internal details.
+  - Configure server logger sanitization to permanently redact passwords, JWT tokens, and sensitive request bodies from application logs.
+
