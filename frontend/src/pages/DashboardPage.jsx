@@ -16,7 +16,10 @@ import {
   ChevronRight,
   Circle,
   Flame,
-  Check
+  Check,
+  BookOpen,
+  FileCheck,
+  ExternalLink
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGamification } from '../context/useGamification';
@@ -414,97 +417,117 @@ export const DashboardPage = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {urgentTasks.map((task) => {
-                const isUrgent = task.priority === 'URGENT';
-                const assignedGoal = goals.find((g) => g.id === task.goal_id) || (task.goal_title ? { title: task.goal_title, icon: task.goal_icon || '🎯', color: task.goal_color } : null);
-                const assignedCourse = courses.find((c) => c.id === task.course_id) || (task.course_title ? { title: task.course_title } : null);
+            {/* List Table View styled like TasksPage */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs text-left">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+                  <thead className="bg-slate-50 dark:bg-slate-950/60 text-xs uppercase text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800">
+                    <tr>
+                      <th className="px-5 py-3.5">Task</th>
+                      <th className="px-5 py-3.5">Status</th>
+                      <th className="px-5 py-3.5">Priority</th>
+                      <th className="px-5 py-3.5">Category</th>
+                      <th className="px-5 py-3.5">Due Date</th>
+                      <th className="px-5 py-3.5 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {urgentTasks.map((task) => {
+                      const assignedGoal = goals.find((g) => g.id === task.goal_id) || (task.goal_title ? { title: task.goal_title, icon: task.goal_icon || '🎯', color: task.goal_color } : null);
+                      const assignedCourse = courses.find((c) => c.id === task.course_id) || (task.course_title ? { title: task.course_title } : null);
 
-                return (
-                  <div
-                    key={task.id}
-                    className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 text-left shadow-2xs hover:shadow-md ${
-                      isUrgent
-                        ? 'border-l-4 border-l-rose-500 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-rose-400 dark:hover:border-rose-700'
-                        : 'border-l-4 border-l-amber-500 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-700'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <button
-                          type="button"
-                          onClick={() => onStatusChange && onStatusChange(task.id, 'COMPLETED')}
-                          className="mt-0.5 w-5 h-5 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-600 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-                          title="Mark as completed"
-                        >
-                          <Circle size={13} />
-                        </button>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 hover:text-[#0d8a72] dark:hover:text-teal-400 transition-colors line-clamp-1">
-                            {task.title}
-                          </h4>
-                          {task.description && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5 leading-relaxed">
-                              {task.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <Badge variant={task.priority} size="xs" className="shrink-0">
-                        {task.priority}
-                      </Badge>
-                    </div>
-
-                    {/* Tags row: Course, Goal, Category & Due Date */}
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] flex-wrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {task.category_name && (
-                          <span
-                            className="px-2 py-0.5 rounded-md font-bold text-[10px] border"
-                            style={{
-                              backgroundColor: `${task.category_color || '#0d8a72'}15`,
-                              borderColor: `${task.category_color || '#0d8a72'}35`,
-                              color: task.category_color || '#0d8a72',
-                            }}
-                          >
-                            {task.category_name}
-                          </span>
-                        )}
-                        {assignedCourse && (
-                          <span
-                            className="px-2 py-0.5 rounded-md font-bold text-[10px] border bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 flex items-center gap-1"
-                            title={`Course: ${assignedCourse.title}`}
-                          >
-                            <span>🎓</span>
-                            <span className="truncate max-w-[120px]">{assignedCourse.title}</span>
-                          </span>
-                        )}
-                        {assignedGoal && (
-                          <span
-                            className="px-2 py-0.5 rounded-md font-bold text-[10px] border flex items-center gap-1"
-                            style={{
-                              backgroundColor: `${assignedGoal.color || '#d97706'}15`,
-                              borderColor: `${assignedGoal.color || '#d97706'}35`,
-                              color: assignedGoal.color || '#d97706',
-                            }}
-                            title={`Goal: ${assignedGoal.title}`}
-                          >
-                            <span>{assignedGoal.icon || '🎯'}</span>
-                            <span className="truncate max-w-[120px]">{assignedGoal.title}</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {task.due_date && (
-                        <span className="flex items-center gap-1 font-semibold text-slate-500 dark:text-slate-400 shrink-0">
-                          <Calendar size={12} className="text-slate-400" />
-                          <span>Due {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                      return (
+                        <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-start gap-3">
+                              {onStatusChange && (
+                                <button
+                                  type="button"
+                                  onClick={() => onStatusChange(task.id, 'COMPLETED')}
+                                  className="mt-0.5 w-5 h-5 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-600 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                                  title="Mark as completed"
+                                >
+                                  <Circle size={13} />
+                                </button>
+                              )}
+                              <div className="min-w-0">
+                                <div className="font-bold text-slate-900 dark:text-slate-100 hover:text-[#0d8a72] dark:hover:text-teal-400 transition-colors">
+                                  {task.title}
+                                </div>
+                                {task.description && (
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs sm:max-w-md mt-0.5">
+                                    {task.description}
+                                  </div>
+                                )}
+                                {(assignedCourse || assignedGoal) && (
+                                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                    {assignedCourse && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                                        <span>🎓</span>
+                                        <span className="truncate max-w-[120px]">{assignedCourse.title}</span>
+                                      </span>
+                                    )}
+                                    {assignedGoal && (
+                                      <span
+                                        className="text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1"
+                                        style={{
+                                          backgroundColor: `${assignedGoal.color || '#d97706'}15`,
+                                          borderColor: `${assignedGoal.color || '#d97706'}35`,
+                                          color: assignedGoal.color || '#d97706',
+                                        }}
+                                      >
+                                        <span>{assignedGoal.icon || '🎯'}</span>
+                                        <span className="truncate max-w-[120px]">{assignedGoal.title}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
+                              {task.status.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <Badge variant={task.priority} size="xs">
+                              {task.priority}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            {task.category_name ? (
+                              <span
+                                className="text-xs font-bold px-2.5 py-0.5 rounded-md border"
+                                style={{
+                                  backgroundColor: `${task.category_color || '#0d8a72'}15`,
+                                  borderColor: `${task.category_color || '#0d8a72'}40`,
+                                  color: task.category_color || '#0d8a72',
+                                }}
+                              >
+                                {task.category_name}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                            {task.due_date ? new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                          </td>
+                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => navigate('/tasks')}
+                              className="text-xs text-[#0d8a72] dark:text-teal-400 font-bold hover:underline cursor-pointer"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         );
@@ -543,90 +566,133 @@ export const DashboardPage = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {nearestDeadlines.map((item) => {
-                const diff = getDeadlineDiff(item.due_date);
-                const assignedGoal = goals.find((g) => g.id === item.goal_id) || (item.goal_title ? { title: item.goal_title, icon: item.goal_icon || '🎯', color: item.goal_color } : null);
-                const assignedCourse = courses.find((c) => c.id === item.course_id) || (item.course_title ? { title: item.course_title } : null);
+            {/* List Table View styled like TasksPage */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs text-left">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+                  <thead className="bg-slate-50 dark:bg-slate-950/60 text-xs uppercase text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800">
+                    <tr>
+                      <th className="px-5 py-3.5">Task</th>
+                      <th className="px-5 py-3.5">Status</th>
+                      <th className="px-5 py-3.5">Priority</th>
+                      <th className="px-5 py-3.5">Category</th>
+                      <th className="px-5 py-3.5">Due Date</th>
+                      <th className="px-5 py-3.5 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {nearestDeadlines.map((item) => {
+                      const diff = getDeadlineDiff(item.due_date);
+                      const assignedGoal = goals.find((g) => g.id === item.goal_id) || (item.goal_title ? { title: item.goal_title, icon: item.goal_icon || '🎯', color: item.goal_color } : null);
+                      const assignedCourse = courses.find((c) => c.id === item.course_id) || (item.course_title ? { title: item.course_title } : null);
 
-                return (
-                  <div
-                    key={`deadline-task-${item.id}`}
-                    className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 text-left shadow-2xs hover:shadow-md ${
-                      diff.isOverdue
-                        ? 'border-l-4 border-l-rose-500 bg-rose-50/25 dark:bg-rose-950/25 border-rose-200/90 dark:border-rose-900/60'
-                        : diff.isToday
-                        ? 'border-l-4 border-l-amber-500 bg-amber-50/25 dark:bg-amber-950/25 border-amber-200/90 dark:border-amber-900/60'
-                        : 'border-l-4 border-l-[#0d8a72] bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-[#0d8a72]/50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2.5">
-                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                        <button
-                          type="button"
-                          onClick={() => onStatusChange && onStatusChange(item.id, 'COMPLETED')}
-                          className="mt-0.5 w-5 h-5 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-600 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-                          title="Complete task"
-                        >
-                          <Circle size={13} />
-                        </button>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 hover:text-[#0d8a72] dark:hover:text-teal-400 transition-colors line-clamp-1">
-                            {item.title}
-                          </h4>
-                          {item.description && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
-                              {item.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <span
-                        className={`text-[10px] font-black px-2.5 py-0.5 rounded-full shrink-0 border ${
-                          diff.isOverdue
-                            ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
-                            : diff.isToday
-                            ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
-                            : 'bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300 border-teal-200 dark:border-teal-800'
-                        }`}
-                      >
-                        {diff.text}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/80 gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="capitalize text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                          {item.priority}
-                        </span>
-                        {assignedCourse && (
-                          <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                            <span>🎓</span>
-                            <span className="truncate max-w-[100px]">{assignedCourse.title}</span>
-                          </span>
-                        )}
-                        {assignedGoal && (
-                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                            <span>{assignedGoal.icon || '🎯'}</span>
-                            <span className="truncate max-w-[100px]">{assignedGoal.title}</span>
-                          </span>
-                        )}
-                      </div>
-
-                      <span className="font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                        <Calendar size={11} className="text-slate-400" />
-                        <span>
-                          {new Date(item.due_date).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                      return (
+                        <tr key={`deadline-task-${item.id}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-start gap-3">
+                              {onStatusChange && (
+                                <button
+                                  type="button"
+                                  onClick={() => onStatusChange(item.id, 'COMPLETED')}
+                                  className="mt-0.5 w-5 h-5 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-600 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                                  title="Mark as completed"
+                                >
+                                  <Circle size={13} />
+                                </button>
+                              )}
+                              <div className="min-w-0">
+                                <div className="font-bold text-slate-900 dark:text-slate-100 hover:text-[#0d8a72] dark:hover:text-teal-400 transition-colors">
+                                  {item.title}
+                                </div>
+                                {item.description && (
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs sm:max-w-md mt-0.5">
+                                    {item.description}
+                                  </div>
+                                )}
+                                {(assignedCourse || assignedGoal) && (
+                                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                    {assignedCourse && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                                        <span>🎓</span>
+                                        <span className="truncate max-w-[120px]">{assignedCourse.title}</span>
+                                      </span>
+                                    )}
+                                    {assignedGoal && (
+                                      <span
+                                        className="text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1"
+                                        style={{
+                                          backgroundColor: `${assignedGoal.color || '#d97706'}15`,
+                                          borderColor: `${assignedGoal.color || '#d97706'}35`,
+                                          color: assignedGoal.color || '#d97706',
+                                        }}
+                                      >
+                                        <span>{assignedGoal.icon || '🎯'}</span>
+                                        <span className="truncate max-w-[120px]">{assignedGoal.title}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
+                              {item.status.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <Badge variant={item.priority} size="xs">
+                              {item.priority}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            {item.category_name ? (
+                              <span
+                                className="text-xs font-bold px-2.5 py-0.5 rounded-md border"
+                                style={{
+                                  backgroundColor: `${item.category_color || '#0d8a72'}15`,
+                                  borderColor: `${item.category_color || '#0d8a72'}40`,
+                                  color: item.category_color || '#0d8a72',
+                                }}
+                              >
+                                {item.category_name}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                {new Date(item.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              </span>
+                              <span
+                                className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                                  diff.isOverdue
+                                    ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                    : diff.isToday
+                                    ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                    : 'bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300 border-teal-200 dark:border-teal-800'
+                                }`}
+                              >
+                                {diff.text}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => navigate('/tasks')}
+                              className="text-xs text-[#0d8a72] dark:text-teal-400 font-bold hover:underline cursor-pointer"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         );
@@ -662,62 +728,150 @@ export const DashboardPage = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {activeCourses.map((course) => {
                 const finished = course.finished_lessons || 0;
                 const totalL = course.total_lessons || 1;
                 const pct = Math.min(100, Math.round((finished / totalL) * 100));
 
                 return (
-                  <Card key={course.id} className="p-4 flex flex-col justify-between gap-3 text-left border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {course.cover_image && (
+                  <div
+                    key={course.id}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 hover:border-[#0d8a72]/50 dark:hover:border-teal-500/50 rounded-3xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group text-left"
+                  >
+                    <div>
+                      {/* Card Cover Banner */}
+                      <div
+                        onClick={() => navigate('/courses')}
+                        className="relative h-44 w-full bg-slate-800 overflow-hidden cursor-pointer group/cover"
+                        title="Click cover to view in Courses"
+                      >
+                        {course.cover_image ? (
                           <img
                             src={course.cover_image}
-                            alt=""
-                            className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-800"
+                            alt={course.title}
+                            className="w-full h-full object-cover group-hover/cover:scale-105 transition-transform duration-500"
                           />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-tr from-slate-800 to-[#0d8a72] flex items-center justify-center text-white/50 group-hover/cover:scale-105 transition-transform">
+                            <GraduationCap size={48} />
+                          </div>
                         )}
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10 group-hover/cover:via-black/20 transition-colors" />
+
+                        {/* Top Badges on Cover */}
+                        <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                          <span
+                            className={`text-[11px] font-black px-2.5 py-1 rounded-xl shadow-md ${
+                              course.status === 'COMPLETED'
+                                ? 'bg-emerald-500 text-white'
+                                : course.status === 'NOT_STARTED'
+                                ? 'bg-slate-700 text-slate-200'
+                                : 'bg-[#0d8a72] text-white'
+                            }`}
+                          >
+                            {course.status === 'COMPLETED'
+                              ? 'Completed'
+                              : course.status === 'NOT_STARTED'
+                              ? 'Not Started'
+                              : 'In Progress'}
+                          </span>
+                        </div>
+
+                        {/* Bottom Title on Cover */}
+                        <div className="absolute bottom-3 left-3 right-3 text-white pointer-events-none">
+                          <h4 className="text-sm font-black tracking-tight line-clamp-1 drop-shadow-sm">
                             {course.title}
                           </h4>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            {finished} of {totalL} lessons completed
-                          </p>
                         </div>
                       </div>
 
-                      <span className="text-xs font-black text-[#0d8a72] dark:text-teal-400">
-                        {pct}%
-                      </span>
-                    </div>
+                      {/* Body Details */}
+                      <div className="p-4 flex flex-col gap-3">
+                        {course.description && (
+                          <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed min-h-[32px]">
+                            {course.description}
+                          </p>
+                        )}
 
-                    <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <div
-                        className="h-full bg-[#0d8a72] rounded-full transition-all duration-300"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+                        {/* Progress Bar & Lessons Count */}
+                        <div className="flex flex-col gap-1.5 bg-slate-50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span className="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                              <BookOpen size={13} className="text-[#0d8a72] dark:text-teal-400" />
+                              <span>
+                                {finished} of {totalL} lessons completed
+                              </span>
+                            </span>
+                            <span
+                              className={`font-black ${
+                                course.status === 'COMPLETED'
+                                  ? 'text-emerald-500'
+                                  : course.status === 'NOT_STARTED'
+                                  ? 'text-slate-400'
+                                  : 'text-[#0d8a72] dark:text-teal-400'
+                              }`}
+                            >
+                              {pct}%
+                            </span>
+                          </div>
 
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
-                        In Progress
-                      </span>
+                          {/* Progress Bar */}
+                          <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${pct}%`,
+                                backgroundColor:
+                                  course.status === 'COMPLETED'
+                                    ? '#10b981'
+                                    : course.status === 'NOT_STARTED'
+                                    ? '#94a3b8'
+                                    : '#0d8a72',
+                              }}
+                            />
+                          </div>
+                        </div>
 
-                      {onIncrementLesson && (
-                        <button
-                          onClick={() => onIncrementLesson(course.id)}
-                          className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-[#0d8a72] hover:bg-[#0b7561] text-white shadow-xs cursor-pointer transition-colors active:scale-95"
-                          title="Complete 1 lesson"
-                        >
-                          <PlusCircle size={13} />
-                          <span>+1 Lesson</span>
-                        </button>
-                      )}
+                        {/* Interactive Action Bar: +1 Lesson & Certification */}
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          {onIncrementLesson && (
+                            <button
+                              onClick={() => onIncrementLesson(course.id)}
+                              disabled={course.isCompleted || pct >= 100}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                                course.isCompleted || pct >= 100
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 opacity-80 cursor-default'
+                                  : 'bg-[#0d8a72] hover:bg-[#0b7561] text-white active:scale-95'
+                              }`}
+                              title={
+                                course.isCompleted || pct >= 100
+                                  ? 'All lessons completed!'
+                                  : 'Mark +1 lesson finished and earn XP'
+                              }
+                            >
+                              <PlusCircle size={14} />
+                              <span>{course.isCompleted || pct >= 100 ? 'Finished' : '+1 Lesson'}</span>
+                            </button>
+                          )}
+
+                          {course.certification_url && (
+                            <a
+                              href={course.certification_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              download={course.certification_filename || 'Course_Certificate.pdf'}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 transition-colors"
+                            >
+                              <FileCheck size={13} className="text-amber-500" />
+                              <span>Certificate</span>
+                              <ExternalLink size={11} className="opacity-70" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </Card>
+                  </div>
                 );
               })}
             </div>
