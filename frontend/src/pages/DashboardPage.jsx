@@ -31,13 +31,13 @@ const DASHBOARD_LIMITS = {
 };
 
 export const DEFAULT_DASHBOARD_CONFIG = {
-  showHabits: true,
   showStats: true,
+  showHabits: true,
   showUrgentTasks: true,
   showDeadlines: true,
   showActiveCourses: true,
   showGoalsOverview: true,
-  order: ['habits', 'stats', 'urgent', 'deadlines', 'courses', 'goals'],
+  order: ['stats', 'habits', 'urgent', 'deadlines', 'courses', 'goals'],
 };
 
 export const normalizeDashboardConfig = (raw) => {
@@ -45,9 +45,22 @@ export const normalizeDashboardConfig = (raw) => {
   try {
     const config = typeof raw === 'string' ? JSON.parse(raw) : raw;
     let order = Array.isArray(config.order) ? [...config.order] : [...DEFAULT_DASHBOARD_CONFIG.order];
-    if (!order.includes('habits')) {
-      order.unshift('habits');
+    if (!order.includes('stats')) {
+      order.unshift('stats');
     }
+    if (!order.includes('habits')) {
+      const statsIdx = order.indexOf('stats');
+      order.splice(statsIdx + 1, 0, 'habits');
+    }
+    // Ensure stats comes before habits by default
+    const statsIdx = order.indexOf('stats');
+    const habitsIdx = order.indexOf('habits');
+    if (habitsIdx !== -1 && statsIdx !== -1 && habitsIdx < statsIdx && statsIdx <= 1) {
+      order.splice(habitsIdx, 1);
+      const newStatsIdx = order.indexOf('stats');
+      order.splice(newStatsIdx + 1, 0, 'habits');
+    }
+
     DEFAULT_DASHBOARD_CONFIG.order.forEach((key) => {
       if (!order.includes(key)) {
         order.push(key);
@@ -58,6 +71,7 @@ export const normalizeDashboardConfig = (raw) => {
     return {
       ...DEFAULT_DASHBOARD_CONFIG,
       ...config,
+      showStats: config.showStats !== false,
       showHabits: config.showHabits !== false,
       order,
     };
@@ -120,12 +134,6 @@ export const DashboardPage = ({
   // 1. Nearest Due Dates Component (Tasks ONLY sorted by earliest deadline)
   const allDeadlines = tasks
     .filter((t) => t.status !== 'COMPLETED' && t.due_date)
-    .map((t) => ({
-      id: t.id,
-      title: t.title,
-      priority: t.priority,
-      due_date: t.due_date,
-    }))
     .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
 
   const nearestDeadlines = allDeadlines.slice(0, DASHBOARD_LIMITS.DEADLINES);
@@ -165,8 +173,17 @@ export const DashboardPage = ({
 
   const urgentTasks = allUrgentTasks.slice(0, DASHBOARD_LIMITS.URGENT_TASKS);
 
-  // 4. Strategic Goals
-  const displayedGoals = goals.slice(0, DASHBOARD_LIMITS.GOALS);
+  // 4. Goals Progress (Exclude completed goals)
+  const activeGoals = goals.filter((g) => {
+    if (g.status === 'COMPLETED') return false;
+    const assigned = tasks.filter((t) => t.goal_id === g.id);
+    if (assigned.length > 0 && assigned.every((t) => t.status === 'COMPLETED')) {
+      return false;
+    }
+    return true;
+  });
+
+  const displayedGoals = activeGoals.slice(0, DASHBOARD_LIMITS.GOALS);
 
   // 5. Today's Habits Shortcut
   const todayStr = (() => {
@@ -186,19 +203,84 @@ export const DashboardPage = ({
   // Widget rendering dictionary
   const renderSection = (sectionKey) => {
     switch (sectionKey) {
+      case 'stats':
+        if (!dashboardConfig.showStats) return null;
+        return (
+          <div key="stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+            <Card className="p-5 flex items-center justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Total Tasks
+                </p>
+                <h3 className="text-3xl font-black text-slate-900 dark:text-slate-100 mt-1 tracking-tight">{total}</h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Active workspace items</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                <ListTodo size={24} />
+              </div>
+            </Card>
+
+            <Card className="p-5 flex items-center justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  In Progress
+                </p>
+                <h3 className="text-3xl font-black text-amber-500 mt-1 tracking-tight">{inProgress}</h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Under active execution</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-500">
+                <Clock size={24} />
+              </div>
+            </Card>
+
+            <Card className="p-5 flex items-center justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Urgent Priority
+                </p>
+                <h3 className="text-3xl font-black text-rose-500 mt-1 tracking-tight">{urgent}</h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">High-impact bottlenecks</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-500">
+                <AlertTriangle size={24} />
+              </div>
+            </Card>
+
+            <Card className="p-5 flex items-center justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Completion Rate
+                </p>
+                <h3 className="text-3xl font-black text-[#0d8a72] dark:text-teal-400 mt-1 tracking-tight">
+                  {completionRate}%
+                </h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{completed} of {total} finished</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300">
+                <TrendingUp size={24} />
+              </div>
+            </Card>
+          </div>
+        );
+
       case 'habits':
         if (!dashboardConfig.showHabits) return null;
         if (habits.length === 0) {
           return (
             <div key="habits" className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
-                    <Flame size={16} className="fill-amber-500 text-amber-500" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                    <Flame size={18} className="fill-amber-500 text-amber-500" />
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <span>Today's Habits & Streaks</span>
-                  </h3>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                      Today's Habits & Streaks
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      Daily routines to protect your streaks and build lasting momentum
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -235,20 +317,22 @@ export const DashboardPage = ({
         }
 
         return (
-          <div key="habits" className="flex flex-col gap-3">
+          <div key="habits" className="flex flex-col gap-3.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-500 border border-amber-500/30">
-                  <Flame size={18} className="fill-amber-500 text-amber-500 drop-shadow-[0_1px_4px_rgba(245,158,11,0.5)]" />
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-500 border border-amber-500/30">
+                  <Flame size={20} className="fill-amber-500 text-amber-500 drop-shadow-[0_1px_4px_rgba(245,158,11,0.5)]" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
-                    <span>Today's Habits & Streaks</span>
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                      Today's Habits & Streaks
+                    </h3>
                     <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/80 shadow-2xs">
                       {completedHabitsCount} of {habits.length} Done ({habitsRate}%)
                     </span>
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                     Check off your daily habits to protect and extend your streak
                   </p>
                 </div>
@@ -262,7 +346,7 @@ export const DashboardPage = ({
                   <span>
                     {habits.length > DASHBOARD_LIMITS.HABITS
                       ? `View all ${habits.length} Habits`
-                      : 'Habit Tracker'}
+                      : 'Habit Tracker Matrix'}
                   </span>
                   <ChevronRight size={13} />
                 </button>
@@ -279,15 +363,15 @@ export const DashboardPage = ({
                   <div
                     key={`dash-habit-${habit.id}`}
                     onClick={() => onToggleHabit && onToggleHabit(habit.id)}
-                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer select-none group ${
+                    className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer select-none group shadow-2xs ${
                       isCompleted
-                        ? 'bg-emerald-50/60 dark:bg-emerald-950/25 border-emerald-300/80 dark:border-emerald-800/80 shadow-xs ring-1 ring-emerald-400/20'
-                        : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500 shadow-2xs hover:shadow-xs'
+                        ? 'bg-emerald-50/60 dark:bg-emerald-950/25 border-emerald-300/80 dark:border-emerald-800/80 ring-1 ring-emerald-400/20'
+                        : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xs'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 transition-transform group-hover:scale-105"
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 transition-transform group-hover:scale-105"
                         style={{
                           backgroundColor: `${habit.color || '#0d8a72'}18`,
                           border: `1px solid ${habit.color || '#0d8a72'}35`,
@@ -297,7 +381,7 @@ export const DashboardPage = ({
                       </div>
                       <div className="min-w-0">
                         <p
-                          className={`text-xs font-bold truncate transition-colors ${
+                          className={`text-sm font-bold truncate transition-colors ${
                             isCompleted
                               ? 'line-through text-slate-400 dark:text-slate-500'
                               : 'text-slate-900 dark:text-slate-100 group-hover:text-[#0d8a72] dark:group-hover:text-teal-300'
@@ -307,7 +391,7 @@ export const DashboardPage = ({
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           {/* Prominent Streak Badge with Filled Flame */}
-                          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-black text-xs shadow-2xs">
+                          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 border border-amber-500/35 text-amber-600 dark:text-amber-400 font-black text-xs shadow-2xs">
                             <Flame
                               size={14}
                               className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_1px_4px_rgba(245,158,11,0.5)] animate-pulse"
@@ -349,23 +433,151 @@ export const DashboardPage = ({
           </div>
         );
 
+      case 'urgent':
+        if (!dashboardConfig.showUrgentTasks || urgentTasks.length === 0) return null;
+        return (
+          <div key="urgent" className="flex flex-col gap-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                    High & Urgent Priority Tasks
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                    Critical items requiring your immediate executive focus
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/tasks')}
+                className="text-xs font-bold text-[#0d8a72] dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>
+                  {allUrgentTasks.length > DASHBOARD_LIMITS.URGENT_TASKS
+                    ? `Go to board (${allUrgentTasks.length})`
+                    : 'Go to board'}
+                </span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {urgentTasks.map((task) => {
+                const isUrgent = task.priority === 'URGENT';
+                const assignedGoal = goals.find((g) => g.id === task.goal_id) || (task.goal_title ? { title: task.goal_title, icon: task.goal_icon || '🎯', color: task.goal_color } : null);
+                const assignedCourse = courses.find((c) => c.id === task.course_id) || (task.course_title ? { title: task.course_title } : null);
+
+                return (
+                  <div
+                    key={task.id}
+                    className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 text-left shadow-2xs hover:shadow-md ${
+                      isUrgent
+                        ? 'border-l-4 border-l-rose-500 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-rose-400 dark:hover:border-rose-700'
+                        : 'border-l-4 border-l-amber-500 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-700'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <button
+                          type="button"
+                          onClick={() => onStatusChange && onStatusChange(task.id, 'COMPLETED')}
+                          className="mt-0.5 w-5 h-5 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-600 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                          title="Mark as completed"
+                        >
+                          <Circle size={13} />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 hover:text-[#0d8a72] dark:hover:text-teal-400 transition-colors line-clamp-1">
+                            {task.title}
+                          </h4>
+                          {task.description && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5 leading-relaxed">
+                              {task.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant={task.priority} size="xs" className="shrink-0">
+                        {task.priority}
+                      </Badge>
+                    </div>
+
+                    {/* Tags row: Course, Goal, Category & Due Date */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {task.category_name && (
+                          <span
+                            className="px-2 py-0.5 rounded-md font-bold text-[10px] border"
+                            style={{
+                              backgroundColor: `${task.category_color || '#0d8a72'}15`,
+                              borderColor: `${task.category_color || '#0d8a72'}35`,
+                              color: task.category_color || '#0d8a72',
+                            }}
+                          >
+                            {task.category_name}
+                          </span>
+                        )}
+                        {assignedCourse && (
+                          <span
+                            className="px-2 py-0.5 rounded-md font-bold text-[10px] border bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 flex items-center gap-1"
+                            title={`Course: ${assignedCourse.title}`}
+                          >
+                            <span>🎓</span>
+                            <span className="truncate max-w-[120px]">{assignedCourse.title}</span>
+                          </span>
+                        )}
+                        {assignedGoal && (
+                          <span
+                            className="px-2 py-0.5 rounded-md font-bold text-[10px] border flex items-center gap-1"
+                            style={{
+                              backgroundColor: `${assignedGoal.color || '#d97706'}15`,
+                              borderColor: `${assignedGoal.color || '#d97706'}35`,
+                              color: assignedGoal.color || '#d97706',
+                            }}
+                            title={`Goal: ${assignedGoal.title}`}
+                          >
+                            <span>{assignedGoal.icon || '🎯'}</span>
+                            <span className="truncate max-w-[120px]">{assignedGoal.title}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {task.due_date && (
+                        <span className="flex items-center gap-1 font-semibold text-slate-500 dark:text-slate-400 shrink-0">
+                          <Calendar size={12} className="text-slate-400" />
+                          <span>Due {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+
       case 'deadlines':
         if (!dashboardConfig.showDeadlines || nearestDeadlines.length === 0) return null;
         return (
-          <div key="deadlines" className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                  <Calendar size={16} />
+          <div key="deadlines" className="flex flex-col gap-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                  <Calendar size={20} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  Upcoming & Nearest Deadlines
-                </h3>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                    Upcoming & Nearest Deadlines
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                    Tasks sorted chronologically by earliest due date
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2.5">
-                <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-                  Sorted by earliest due
-                </span>
                 <button
                   type="button"
                   onClick={() => navigate('/tasks')}
@@ -381,57 +593,85 @@ export const DashboardPage = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {nearestDeadlines.map((item) => {
                 const diff = getDeadlineDiff(item.due_date);
+                const assignedGoal = goals.find((g) => g.id === item.goal_id) || (item.goal_title ? { title: item.goal_title, icon: item.goal_icon || '🎯', color: item.goal_color } : null);
+                const assignedCourse = courses.find((c) => c.id === item.course_id) || (item.course_title ? { title: item.course_title } : null);
+
                 return (
                   <div
                     key={`deadline-task-${item.id}`}
-                    className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-3 text-left bg-white dark:bg-slate-900 ${
+                    className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 text-left shadow-2xs hover:shadow-md ${
                       diff.isOverdue
-                        ? 'border-rose-300 dark:border-rose-900/60 bg-rose-50/10'
+                        ? 'border-l-4 border-l-rose-500 bg-rose-50/25 dark:bg-rose-950/25 border-rose-200/90 dark:border-rose-900/60'
                         : diff.isToday
-                        ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/10'
-                        : 'border-slate-200/90 dark:border-slate-800 hover:border-[#0d8a72]/40'
+                        ? 'border-l-4 border-l-amber-500 bg-amber-50/25 dark:bg-amber-950/25 border-amber-200/90 dark:border-amber-900/60'
+                        : 'border-l-4 border-l-[#0d8a72] bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-[#0d8a72]/50'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <button
                           type="button"
                           onClick={() => onStatusChange && onStatusChange(item.id, 'COMPLETED')}
-                          className="text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 shrink-0 cursor-pointer"
+                          className="mt-0.5 w-5 h-5 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-600 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
                           title="Complete task"
                         >
-                          <Circle size={16} />
+                          <Circle size={13} />
                         </button>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                          {item.title}
-                        </h4>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 hover:text-[#0d8a72] dark:hover:text-teal-400 transition-colors line-clamp-1">
+                            {item.title}
+                          </h4>
+                          {item.description && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       <span
-                        className={`text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 border ${
+                        className={`text-[10px] font-black px-2.5 py-0.5 rounded-full shrink-0 border ${
                           diff.isOverdue
-                            ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                            ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
                             : diff.isToday
-                            ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                            : 'bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] dark:text-teal-300 border-teal-200 dark:border-teal-800'
+                            ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                            : 'bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300 border-teal-200 dark:border-teal-800'
                         }`}
                       >
                         {diff.text}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800/80">
-                      <span className="capitalize text-[10px] font-bold text-slate-400">
-                        {item.priority} Priority
-                      </span>
-                      <span className="font-medium">
-                        {new Date(item.due_date).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/80 gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="capitalize text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                          {item.priority}
+                        </span>
+                        {assignedCourse && (
+                          <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                            <span>🎓</span>
+                            <span className="truncate max-w-[100px]">{assignedCourse.title}</span>
+                          </span>
+                        )}
+                        {assignedGoal && (
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                            <span>{assignedGoal.icon || '🎯'}</span>
+                            <span className="truncate max-w-[100px]">{assignedGoal.title}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <Calendar size={11} className="text-slate-400" />
+                        <span>
+                          {new Date(item.due_date).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -440,74 +680,24 @@ export const DashboardPage = ({
             </div>
           </div>
         );
-      case 'stats':
-        if (!dashboardConfig.showStats) return null;
-        return (
-          <div key="stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Total Tasks
-                </p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">{total}</h3>
-              </div>
-              <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                <ListTodo size={22} />
-              </div>
-            </Card>
-
-            <Card className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  In Progress
-                </p>
-                <h3 className="text-2xl font-black text-amber-500 mt-1">{inProgress}</h3>
-              </div>
-              <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-500">
-                <Clock size={22} />
-              </div>
-            </Card>
-
-            <Card className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Urgent Priority
-                </p>
-                <h3 className="text-2xl font-black text-rose-500 mt-1">{urgent}</h3>
-              </div>
-              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-500">
-                <AlertTriangle size={22} />
-              </div>
-            </Card>
-
-            <Card className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Completion Rate
-                </p>
-                <h3 className="text-2xl font-black text-[#0d8a72] dark:text-teal-400 mt-1">
-                  {completionRate}%
-                </h3>
-              </div>
-              <div className="p-3 rounded-2xl bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300">
-                <TrendingUp size={22} />
-              </div>
-            </Card>
-          </div>
-        );
 
       case 'courses':
         if (!dashboardConfig.showActiveCourses || activeCourses.length === 0) return null;
         return (
-          <div key="courses" className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-teal-500/10 text-[#0d8a72] dark:text-teal-400">
-                  <GraduationCap size={16} />
+          <div key="courses" className="flex flex-col gap-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-teal-500/15 text-[#0d8a72] dark:text-teal-400 border border-teal-500/30">
+                  <GraduationCap size={20} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  In-Progress Courses
-                </h3>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                    In-Progress Courses
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                    Active learning modules with direct +1 lesson quick advance
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => navigate('/courses')}
@@ -522,14 +712,14 @@ export const DashboardPage = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
               {activeCourses.map((course) => {
                 const finished = course.finished_lessons || 0;
                 const totalL = course.total_lessons || 1;
                 const pct = Math.min(100, Math.round((finished / totalL) * 100));
 
                 return (
-                  <Card key={course.id} className="p-4 flex flex-col justify-between gap-3 text-left">
+                  <Card key={course.id} className="p-4 flex flex-col justify-between gap-3 text-left border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         {course.cover_image && (
@@ -540,10 +730,10 @@ export const DashboardPage = ({
                           />
                         )}
                         <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                             {course.title}
                           </h4>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                             {finished} of {totalL} lessons completed
                           </p>
                         </div>
@@ -584,123 +774,121 @@ export const DashboardPage = ({
           </div>
         );
 
-      case 'urgent':
-        if (!dashboardConfig.showUrgentTasks || urgentTasks.length === 0) return null;
-        return (
-          <div key="urgent" className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                  <AlertTriangle size={16} />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  High & Urgent Priority Tasks
-                </h3>
-              </div>
-              <button
-                onClick={() => navigate('/tasks')}
-                className="text-xs font-bold text-[#0d8a72] dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>
-                  {allUrgentTasks.length > DASHBOARD_LIMITS.URGENT_TASKS
-                    ? `Go to board (${allUrgentTasks.length})`
-                    : 'Go to board'}
-                </span>
-                <ChevronRight size={13} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {urgentTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="p-3.5 rounded-2xl border border-rose-200/80 dark:border-rose-950/60 bg-white dark:bg-slate-900 flex items-center justify-between gap-3 text-left hover:border-rose-400 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5 truncate min-w-0">
-                    <button
-                      onClick={() => onStatusChange && onStatusChange(task.id, 'COMPLETED')}
-                      className="text-slate-400 hover:text-emerald-500 cursor-pointer shrink-0"
-                    >
-                      <Circle size={16} />
-                    </button>
-                    <div className="truncate">
-                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                        {task.title}
-                      </p>
-                      {task.due_date && (
-                        <p className="text-[10px] text-slate-400 font-medium">
-                          Due {new Date(task.due_date).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Badge variant={task.priority} size="xs">
-                    {task.priority}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
       case 'goals':
-        if (!dashboardConfig.showGoalsOverview || goals.length === 0) return null;
-        return (
-          <div key="goals" className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-teal-500/10 text-[#0d8a72] dark:text-teal-400">
-                  <Target size={16} />
+        if (!dashboardConfig.showGoalsOverview) return null;
+        if (displayedGoals.length === 0) {
+          return (
+            <div key="goals" className="flex flex-col gap-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-teal-500/15 text-[#0d8a72] dark:text-teal-400 border border-teal-500/30">
+                    <Target size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                      Goals Progress
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                      Active milestone targets and task completion tracking
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  Strategic Goals Progress
-                </h3>
+                <button
+                  onClick={() => navigate('/goals')}
+                  className="text-xs font-bold text-[#0d8a72] dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Go to Goals</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+
+              <div className="p-6 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 flex flex-col items-center justify-center text-center gap-2">
+                <div className="w-10 h-10 rounded-2xl bg-teal-500/10 flex items-center justify-center text-[#0d8a72]">
+                  <Target size={22} />
+                </div>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  {goals.length > 0 ? 'All active goals are completed! 🎉' : 'No goals created yet'}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
+                  {goals.length > 0
+                    ? 'Outstanding execution! Set new strategic milestones to continue compounding your momentum.'
+                    : 'Establish clear milestones to anchor your day-to-day execution and monitor high-level completion.'}
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigate('/goals')}
+                  className="mt-1"
+                >
+                  <Plus size={14} />
+                  <span>{goals.length > 0 ? 'Set New Goal' : 'Create First Goal'}</span>
+                </Button>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div key="goals" className="flex flex-col gap-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-teal-500/15 text-[#0d8a72] dark:text-teal-400 border border-teal-500/30">
+                  <Target size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                    Goals Progress
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                    Active milestone targets and task completion tracking
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => navigate('/goals')}
                 className="text-xs font-bold text-[#0d8a72] dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>
-                  {goals.length > DASHBOARD_LIMITS.GOALS
-                    ? `View all ${goals.length} goals`
+                  {activeGoals.length > DASHBOARD_LIMITS.GOALS
+                    ? `View all ${activeGoals.length} active goals`
                     : 'View all goals'}
                 </span>
                 <ChevronRight size={13} />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {displayedGoals.map((goal) => {
                 const assigned = tasks.filter((t) => t.goal_id === goal.id);
                 const completedCount = assigned.filter((t) => t.status === 'COMPLETED').length;
                 const pct = assigned.length > 0 ? Math.round((completedCount / assigned.length) * 100) : 0;
 
                 return (
-                  <Card key={goal.id} className="p-3.5 flex flex-col justify-between gap-2.5 text-left">
+                  <Card key={goal.id} className="p-4 flex flex-col justify-between gap-3 text-left border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="text-base shrink-0">{goal.icon || '🎯'}</span>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                      <div className="flex items-center gap-2.5 truncate">
+                        <span className="text-lg shrink-0">{goal.icon || '🎯'}</span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                           {goal.title}
                         </h4>
                       </div>
-                      <Badge variant={goal.priority || 'HIGH'} size="xs">
+                      <Badge variant={goal.priority || 'HIGH'} size="xs" className="shrink-0">
                         {goal.priority || 'MEDIUM'}
                       </Badge>
                     </div>
 
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full"
+                        className="h-full rounded-full transition-all duration-300"
                         style={{ width: `${pct}%`, backgroundColor: goal.color || '#0d8a72' }}
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800/80">
                       <span>
                         {completedCount}/{assigned.length} tasks completed
                       </span>
-                      <span style={{ color: goal.color || '#0d8a72' }}>{pct}%</span>
+                      <span className="font-bold" style={{ color: goal.color || '#0d8a72' }}>{pct}%</span>
                     </div>
                   </Card>
                 );

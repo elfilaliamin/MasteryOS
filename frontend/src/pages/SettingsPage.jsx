@@ -27,12 +27,12 @@ import {
 import { DEFAULT_DASHBOARD_CONFIG, normalizeDashboardConfig } from './DashboardPage';
 
 const SECTION_METADATA = {
-  habits: { title: "Today's Habits & Streaks", icon: '🔥', desc: "Check today's active habits and streak progress" },
   stats: { title: 'KPI Metrics & Summary Cards', icon: '📊', desc: 'Total tasks, completion rate, and active counts' },
+  habits: { title: "Today's Habits & Streaks", icon: '🔥', desc: "Check today's active habits and streak progress" },
   urgent: { title: 'High & Urgent Priority Tasks', icon: '⚡', desc: 'Direct access to critical execution items' },
   deadlines: { title: 'Upcoming & Nearest Deadlines', icon: '📅', desc: 'Tasks sorted by nearest due date' },
   courses: { title: 'In-Progress Courses', icon: '🎓', desc: 'Active learning courses with quick +1 lesson progress' },
-  goals: { title: 'Strategic Goals Progress', icon: '🎯', desc: 'High-level milestones and task completion progress' },
+  goals: { title: 'Goals Progress', icon: '🎯', desc: 'Active milestones and task completion progress' },
 };
 
 export const SettingsPage = () => {

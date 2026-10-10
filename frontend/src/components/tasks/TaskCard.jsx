@@ -4,6 +4,8 @@ import { Calendar, Clock, Edit2, Trash2, ArrowRight, GripVertical } from 'lucide
 
 export const TaskCard = ({
   task,
+  goal,
+  course,
   onEdit,
   onDelete,
   onStatusChange,
@@ -13,6 +15,19 @@ export const TaskCard = ({
 }) => {
   const [isLocalDragging, setIsLocalDragging] = useState(false);
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'COMPLETED';
+
+  const assignedGoal = goal || (task.goal_title ? {
+    id: task.goal_id,
+    title: task.goal_title,
+    color: task.goal_color || '#d97706',
+    icon: task.goal_icon || '🎯'
+  } : null);
+
+  const assignedCourse = course || (task.course_title ? {
+    id: task.course_id,
+    title: task.course_title,
+    icon: '🎓'
+  } : null);
 
   const nextStatusMap = {
     TODO: 'IN_PROGRESS',
@@ -52,7 +67,7 @@ export const TaskCard = ({
           : 'border-slate-200/90 dark:border-slate-800 hover:border-[#0d8a72]/40 dark:hover:border-teal-500/40 hover:shadow-md cursor-grab active:cursor-grabbing'
       }`}
     >
-      {/* Top Row: Category, Goal, Priority & Drag Grip */}
+      {/* Top Row: Category, Priority Badge & Drag Grip */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           {/* Draggable grip indicator */}
@@ -73,27 +88,6 @@ export const TaskCard = ({
               }}
             >
               {task.category_name}
-            </span>
-          )}
-          {task.goal_title && (
-            <span
-              className="text-[11px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1"
-              style={{
-                backgroundColor: `${task.goal_color || '#f59e0b'}15`,
-                borderColor: `${task.goal_color || '#f59e0b'}40`,
-                color: task.goal_color || '#d97706',
-              }}
-            >
-              <span>{task.goal_icon || '🎯'}</span>
-              <span>{task.goal_title}</span>
-            </span>
-          )}
-          {task.course_title && (
-            <span
-              className="text-[11px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400"
-            >
-              <span>📚</span>
-              <span className="truncate max-w-[120px]">{task.course_title}</span>
             </span>
           )}
           <Badge variant={task.priority} size="xs">
@@ -130,7 +124,7 @@ export const TaskCard = ({
         </div>
       </div>
 
-      {/* Task Title & Description */}
+      {/* Task Title, Description, and Assigned Course & Goal */}
       <div>
         <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors line-clamp-2">
           {task.title}
@@ -139,6 +133,35 @@ export const TaskCard = ({
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
             {task.description}
           </p>
+        )}
+
+        {/* Display Course and Goal assigned AFTER the description */}
+        {(assignedCourse || assignedGoal) && (
+          <div className="pt-2 flex flex-wrap items-center gap-1.5">
+            {assignedCourse && (
+              <span
+                className="text-[11px] font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 shadow-2xs"
+                title={`Assigned Course: ${assignedCourse.title}`}
+              >
+                <span>🎓</span>
+                <span className="truncate max-w-[140px]">{assignedCourse.title}</span>
+              </span>
+            )}
+            {assignedGoal && (
+              <span
+                className="text-[11px] font-bold px-2 py-0.5 rounded-lg border flex items-center gap-1.5 shadow-2xs"
+                style={{
+                  backgroundColor: `${assignedGoal.color || '#d97706'}15`,
+                  borderColor: `${assignedGoal.color || '#d97706'}35`,
+                  color: assignedGoal.color || '#d97706',
+                }}
+                title={`Assigned Goal: ${assignedGoal.title}`}
+              >
+                <span>{assignedGoal.icon || '🎯'}</span>
+                <span className="truncate max-w-[140px]">{assignedGoal.title}</span>
+              </span>
+            )}
+          </div>
         )}
       </div>
 

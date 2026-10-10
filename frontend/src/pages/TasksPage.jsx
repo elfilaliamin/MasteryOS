@@ -502,6 +502,8 @@ export const TasksPage = ({
                         <TaskCard
                           key={task.id}
                           task={task}
+                          goal={goals.find((g) => g.id === task.goal_id)}
+                          course={courses.find((c) => c.id === task.course_id)}
                           onEdit={onEditTask}
                           onDelete={onDeleteTask}
                           onStatusChange={onStatusChange}
@@ -573,14 +575,41 @@ export const TasksPage = ({
                           </td>
                         </tr>
                       )}
-                      {group.tasks.map((task) => (
-                        <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                          <td className="px-5 py-4">
-                            <div className="font-bold text-slate-900 dark:text-slate-100">{task.title}</div>
-                            {task.description && (
-                              <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">{task.description}</div>
-                            )}
-                          </td>
+                      {group.tasks.map((task) => {
+                        const assignedGoal = goals.find((g) => g.id === task.goal_id) || (task.goal_title ? { title: task.goal_title, icon: task.goal_icon || '🎯', color: task.goal_color } : null);
+                        const assignedCourse = courses.find((c) => c.id === task.course_id) || (task.course_title ? { title: task.course_title } : null);
+
+                        return (
+                          <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                            <td className="px-5 py-4">
+                              <div className="font-bold text-slate-900 dark:text-slate-100">{task.title}</div>
+                              {task.description && (
+                                <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">{task.description}</div>
+                              )}
+                              {(assignedCourse || assignedGoal) && (
+                                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                  {assignedCourse && (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                                      <span>🎓</span>
+                                      <span className="truncate max-w-[120px]">{assignedCourse.title}</span>
+                                    </span>
+                                  )}
+                                  {assignedGoal && (
+                                    <span
+                                      className="text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1"
+                                      style={{
+                                        backgroundColor: `${assignedGoal.color || '#d97706'}15`,
+                                        borderColor: `${assignedGoal.color || '#d97706'}35`,
+                                        color: assignedGoal.color || '#d97706',
+                                      }}
+                                    >
+                                      <span>{assignedGoal.icon || '🎯'}</span>
+                                      <span className="truncate max-w-[120px]">{assignedGoal.title}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
                           <td className="px-5 py-4">
                             <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
                               {task.status.replace('_', ' ')}
@@ -627,9 +656,10 @@ export const TasksPage = ({
                             </div>
                           </td>
                         </tr>
-                      ))}
-                    </Fragment>
-                  ))
+                      );
+                    })}
+                  </Fragment>
+                ))
                 )}
               </tbody>
             </table>
