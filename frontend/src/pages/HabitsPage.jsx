@@ -20,7 +20,8 @@ import {
   Trash2,
   CheckCircle2,
   Circle,
-  Calendar
+  Calendar,
+  Layers
 } from 'lucide-react';
 
 // Format date as YYYY-MM-DD
@@ -47,7 +48,7 @@ export const HabitsPage = ({
   const [monthOffset, setMonthOffset] = useState(0);
   const [viewMode, setViewMode] = useState('GRID'); // 'GRID' (matrix) | 'LIST' (cards)
   const [selectedDayKey, setSelectedDayKey] = useState(() => formatDateKey(new Date()));
-  const [activeMenuHabitId, setActiveMenuHabitId] = useState(null);
+  const [mobileTab, setMobileTab] = useState('ACTIONS'); // 'ACTIONS' (Today Checklist) | 'MATRIX' (Weekly Heatmap)
 
   const todayKey = formatDateKey(new Date());
 
@@ -67,10 +68,14 @@ export const HabitsPage = ({
 
   const firstName = user?.full_name ? user.full_name.split(' ')[0] : 'Alex';
 
+  // Completed Today stats
+  const completedTodayCount = habits.filter((h) =>
+    (h.completed_dates || []).includes(todayKey)
+  ).length;
+
   // 1. Calculate Week Days for the Selected Week Offset
   const weekDays = useMemo(() => {
     const curr = new Date();
-    // Shift by weekOffset weeks
     curr.setDate(curr.getDate() + weekOffset * 7);
 
     // Find Monday of this week (1 = Monday, 0 = Sunday)
@@ -198,7 +203,6 @@ export const HabitsPage = ({
       return { percent, completedLogs: totalLogs, totalOpportunities: totalPossible };
     }
 
-    // Default for year / all time
     let totalLogs = 0;
     habits.forEach((h) => {
       totalLogs += (h.completed_dates || []).length;
@@ -238,25 +242,58 @@ export const HabitsPage = ({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12 select-none text-left">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in pb-12 select-none text-left">
       {/* Top Greeting Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
           {greeting}, {firstName}
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
           {timeSub}
         </p>
       </div>
 
-      {/* Main Split Layout: Left Center Matrix + Right Day Action Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* ================= LEFT MAIN PANEL (8 Cols) ================= */}
-        <div className="lg:col-span-8 flex flex-col gap-5">
+      {/* MOBILE SEGMENTED CONTROL: Visible on small screens (< 1024px) for native phone ergonomics */}
+      <div className="flex lg:hidden items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setMobileTab('ACTIONS')}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            mobileTab === 'ACTIONS'
+              ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <CheckCircle2 size={15} />
+          <span>Daily Check-ins ({completedTodayCount}/{habits.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileTab('MATRIX')}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            mobileTab === 'MATRIX'
+              ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <LayoutGrid size={15} />
+          <span>Weekly Matrix</span>
+        </button>
+      </div>
+
+      {/* Main Split Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+        {/* ================= LEFT MAIN PANEL (8 Cols on desktop, toggled on mobile) ================= */}
+        <div
+          className={`lg:col-span-8 flex-col gap-4 sm:gap-5 ${
+            mobileTab === 'MATRIX' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
           {/* Controls Bar: Period Toggle Pill + Add Habit Button */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {/* Period Toggle Pill inspired by reference design */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-full border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
+            {/* Period Toggle Pill with horizontal scroll on mobile */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-full border border-slate-200/60 dark:border-slate-700/60 shadow-2xs overflow-x-auto no-scrollbar max-w-full">
               {[
                 { id: 'WEEK', label: 'Week' },
                 { id: 'MONTH', label: 'Month' },
@@ -267,7 +304,7 @@ export const HabitsPage = ({
                   key={p.id}
                   type="button"
                   onClick={() => setPeriod(p.id)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     period === p.id
                       ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-sm'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -282,7 +319,7 @@ export const HabitsPage = ({
             <button
               type="button"
               onClick={onOpenNewHabit}
-              className="flex items-center justify-center gap-2 px-5 py-2 rounded-full text-xs font-bold border-2 border-[#0d8a72] dark:border-teal-400 text-[#0d8a72] dark:text-teal-400 hover:bg-[#0d8a72] hover:text-white dark:hover:bg-teal-500 dark:hover:text-slate-950 transition-all cursor-pointer shadow-xs active:scale-95"
+              className="flex items-center justify-center gap-2 px-5 py-2 rounded-full text-xs font-bold border-2 border-[#0d8a72] dark:border-teal-400 text-[#0d8a72] dark:text-teal-400 hover:bg-[#0d8a72] hover:text-white dark:hover:bg-teal-500 dark:hover:text-slate-950 transition-all cursor-pointer shadow-xs active:scale-95 shrink-0 self-stretch sm:self-auto"
             >
               <Plus size={15} strokeWidth={2.5} />
               <span>Add Habit</span>
@@ -292,8 +329,8 @@ export const HabitsPage = ({
           {/* Date Navigation & View Mode Switch */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
             {/* Date Nav Controls */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -318,13 +355,13 @@ export const HabitsPage = ({
                 </button>
               </div>
 
-              <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+              <h2 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
                 {periodRangeLabel}
               </h2>
             </div>
 
             {/* Jump to Current & View Toggle */}
-            <div className="flex items-center gap-3 self-end sm:self-auto">
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={handleJumpToCurrent}
@@ -364,7 +401,6 @@ export const HabitsPage = ({
 
           {/* Progress Bar & Trend Line */}
           <div className="space-y-2 pt-1">
-            {/* Minimalist Progress Track */}
             <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-[#0d8a72] via-teal-500 to-emerald-400 rounded-full transition-all duration-500 shadow-sm"
@@ -372,13 +408,12 @@ export const HabitsPage = ({
               />
             </div>
 
-            {/* Progress Metadata Subline */}
             <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <TrendingUp size={14} />
-                <span>Up {Math.min(periodAchievement.percent, 24)}% from past baseline</span>
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[11px] sm:text-xs">
+                <TrendingUp size={13} />
+                <span>Up {Math.min(periodAchievement.percent, 24)}% vs baseline</span>
               </span>
-              <span className="text-slate-800 dark:text-slate-200">
+              <span className="text-slate-800 dark:text-slate-200 font-mono text-[11px] sm:text-xs">
                 {periodAchievement.percent}% achieved
               </span>
             </div>
@@ -386,7 +421,7 @@ export const HabitsPage = ({
 
           {/* ================= HABIT MATRIX TABLE / GRID ================= */}
           {habits.length === 0 ? (
-            <Card className="p-12 text-center flex flex-col items-center justify-center">
+            <Card className="p-8 sm:p-12 text-center flex flex-col items-center justify-center">
               <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] flex items-center justify-center mb-3">
                 <Flame size={28} />
               </div>
@@ -402,196 +437,212 @@ export const HabitsPage = ({
               </Button>
             </Card>
           ) : viewMode === 'GRID' ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 shadow-2xs overflow-x-auto">
-              <div className="min-w-[560px]">
-                {/* Table Header: Habit Name column + Days columns + Ratio column */}
-                <div className="grid grid-cols-12 gap-2 pb-3 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400">
-                  {/* Habit title column */}
-                  <div className="col-span-4 pl-3">Habit</div>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xs relative">
+              {/* Mobile Horizontal Swipe Notice */}
+              <div className="flex sm:hidden items-center justify-between text-[10px] text-slate-400 font-medium pb-2 border-b border-slate-100 dark:border-slate-800">
+                <span>Sticky Habit Titles</span>
+                <span>Swipe days horizontally →</span>
+              </div>
 
-                  {/* Period Days columns */}
-                  {period === 'WEEK' ? (
-                    <div className="col-span-7 grid grid-cols-7 gap-2 text-center">
-                      {weekDays.map((wd) => (
-                        <button
-                          key={wd.key}
-                          type="button"
-                          onClick={() => setSelectedDayKey(wd.key)}
-                          className={`text-[11px] font-bold uppercase transition-colors cursor-pointer rounded-lg py-1 ${
-                            wd.isSelected
-                              ? 'text-[#0d8a72] dark:text-teal-400 bg-teal-50/70 dark:bg-teal-950/40'
-                              : wd.isToday
-                              ? 'text-amber-500 font-black'
-                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                          }`}
-                        >
-                          {wd.dayShort}
-                        </button>
-                      ))}
+              {/* Responsive Scrollable Container with Sticky Habit Column */}
+              <div className="overflow-x-auto -mx-1 px-1 scroll-smooth">
+                <div className="min-w-[500px] sm:min-w-[560px]">
+                  {/* Table Header */}
+                  <div className="grid grid-cols-12 gap-1.5 sm:gap-2 pb-2.5 pt-1 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 items-center">
+                    {/* Sticky Habit column header */}
+                    <div className="col-span-5 sm:col-span-4 sticky left-0 bg-white dark:bg-slate-900 z-10 pl-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.4)]">
+                      Habit
                     </div>
-                  ) : period === 'MONTH' ? (
-                    <div className="col-span-7 grid grid-cols-10 gap-1 text-center">
-                      {monthDays.slice(0, 30).map((md) => (
-                        <button
-                          key={md.key}
-                          type="button"
-                          onClick={() => setSelectedDayKey(md.key)}
-                          className={`text-[9px] font-bold uppercase transition-colors cursor-pointer ${
-                            md.isSelected ? 'text-[#0d8a72] font-black' : 'text-slate-400'
-                          }`}
-                        >
-                          {md.dayNum}
-                        </button>
-                      ))}
-                    </div>
-                  ) : period === 'YEAR' ? (
-                    <div className="col-span-7 grid grid-cols-12 gap-1 text-center">
-                      {yearMonths.map((ym) => (
-                        <span key={ym.yearMonthKey} className="text-[9px] font-bold uppercase text-slate-400 truncate">
-                          {ym.monthShort}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="col-span-7 text-center text-xs font-semibold text-slate-400">
-                      Lifetime Completion Intensity
-                    </div>
-                  )}
 
-                  {/* Ratio column */}
-                  <div className="col-span-1 text-right pr-2">Ratio</div>
-                </div>
-
-                {/* Habit Rows */}
-                <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                  {habits.map((habit) => {
-                    const dates = habit.completed_dates || [];
-                    const habitColor = habit.color || '#0d8a72';
-
-                    // Calculate week ratio
-                    let completedInWeek = 0;
-                    weekDays.forEach((wd) => {
-                      if (dates.includes(wd.key)) completedInWeek++;
-                    });
-
-                    return (
-                      <div
-                        key={habit.id}
-                        className="grid grid-cols-12 gap-2 items-center py-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 rounded-2xl transition-colors px-2 group"
-                      >
-                        {/* Left: Indicator dot + Icon + Title */}
-                        <div className="col-span-4 flex items-center gap-2.5 min-w-0 pr-2">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
-                            style={{ backgroundColor: habitColor }}
-                          />
-                          <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
-                            {habit.title}
+                    {/* Period Days columns */}
+                    {period === 'WEEK' ? (
+                      <div className="col-span-6 sm:col-span-7 grid grid-cols-7 gap-1 sm:gap-2 text-center">
+                        {weekDays.map((wd) => (
+                          <button
+                            key={wd.key}
+                            type="button"
+                            onClick={() => {
+                              setSelectedDayKey(wd.key);
+                              setMobileTab('ACTIONS');
+                            }}
+                            className={`text-[10px] sm:text-[11px] font-bold uppercase transition-colors cursor-pointer rounded-lg py-1 ${
+                              wd.isSelected
+                                ? 'text-[#0d8a72] dark:text-teal-400 bg-teal-50/70 dark:bg-teal-950/40'
+                                : wd.isToday
+                                ? 'text-amber-500 font-black'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                            }`}
+                          >
+                            <span>{wd.dayShort}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : period === 'MONTH' ? (
+                      <div className="col-span-6 sm:col-span-7 grid grid-cols-10 gap-1 text-center">
+                        {monthDays.slice(0, 30).map((md) => (
+                          <button
+                            key={md.key}
+                            type="button"
+                            onClick={() => {
+                              setSelectedDayKey(md.key);
+                              setMobileTab('ACTIONS');
+                            }}
+                            className={`text-[9px] font-bold uppercase transition-colors cursor-pointer ${
+                              md.isSelected ? 'text-[#0d8a72] font-black' : 'text-slate-400'
+                            }`}
+                          >
+                            {md.dayNum}
+                          </button>
+                        ))}
+                      </div>
+                    ) : period === 'YEAR' ? (
+                      <div className="col-span-6 sm:col-span-7 grid grid-cols-12 gap-1 text-center">
+                        {yearMonths.map((ym) => (
+                          <span key={ym.yearMonthKey} className="text-[8px] sm:text-[9px] font-bold uppercase text-slate-400 truncate">
+                            {ym.monthShort}
                           </span>
-                        </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="col-span-6 sm:col-span-7 text-center text-xs font-semibold text-slate-400">
+                        Lifetime Intensity
+                      </div>
+                    )}
 
-                        {/* Middle: Days Heatmap Blocks */}
-                        {period === 'WEEK' ? (
-                          <div className="col-span-7 grid grid-cols-7 gap-2 justify-items-center">
-                            {weekDays.map((wd) => {
-                              const isCompleted = dates.includes(wd.key);
+                    {/* Ratio column */}
+                    <div className="col-span-1 text-right pr-2">Ratio</div>
+                  </div>
 
-                              return (
-                                <button
-                                  key={wd.key}
-                                  type="button"
-                                  onClick={() => onToggleHabit(habit.id, wd.key)}
-                                  title={`${habit.title} - ${wd.dayShort}, ${wd.key}: ${
-                                    isCompleted ? 'Completed (Click to uncheck)' : 'Pending (Click to complete)'
-                                  }`}
-                                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
-                                    isCompleted
-                                      ? 'shadow-xs scale-100 hover:scale-105'
-                                      : 'bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 opacity-70 hover:opacity-100'
-                                  }`}
-                                  style={{
-                                    backgroundColor: isCompleted ? habitColor : undefined,
-                                  }}
-                                >
-                                  {isCompleted && (
-                                    <Check size={14} className="text-white drop-shadow-xs" strokeWidth={3} />
-                                  )}
-                                </button>
-                              );
-                            })}
+                  {/* Habit Rows */}
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                    {habits.map((habit) => {
+                      const dates = habit.completed_dates || [];
+                      const habitColor = habit.color || '#0d8a72';
+
+                      let completedInWeek = 0;
+                      weekDays.forEach((wd) => {
+                        if (dates.includes(wd.key)) completedInWeek++;
+                      });
+
+                      return (
+                        <div
+                          key={habit.id}
+                          className="grid grid-cols-12 gap-1.5 sm:gap-2 items-center py-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 rounded-2xl transition-colors px-1 sm:px-2 group"
+                        >
+                          {/* Sticky Left: Indicator dot + Icon + Title */}
+                          <div className="col-span-5 sm:col-span-4 sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-850 z-10 flex items-center gap-2 sm:gap-2.5 min-w-0 pr-2 pl-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.4)]">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                              style={{ backgroundColor: habitColor }}
+                            />
+                            <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
+                              {habit.title}
+                            </span>
                           </div>
-                        ) : period === 'MONTH' ? (
-                          <div className="col-span-7 grid grid-cols-10 gap-1 justify-items-center">
-                            {monthDays.slice(0, 30).map((md) => {
-                              const isCompleted = dates.includes(md.key);
-                              return (
-                                <button
-                                  key={md.key}
-                                  type="button"
-                                  onClick={() => onToggleHabit(habit.id, md.key)}
-                                  title={`${md.key}: ${isCompleted ? 'Completed' : 'Missed'}`}
-                                  className={`w-4 h-4 rounded-md transition-all cursor-pointer ${
-                                    isCompleted ? 'scale-105' : 'bg-slate-100 dark:bg-slate-800 opacity-60'
-                                  }`}
+
+                          {/* Middle: Days Heatmap Blocks with touch target */}
+                          {period === 'WEEK' ? (
+                            <div className="col-span-6 sm:col-span-7 grid grid-cols-7 gap-1 sm:gap-2 justify-items-center">
+                              {weekDays.map((wd) => {
+                                const isCompleted = dates.includes(wd.key);
+
+                                return (
+                                  <button
+                                    key={wd.key}
+                                    type="button"
+                                    onClick={() => onToggleHabit(habit.id, wd.key)}
+                                    title={`${habit.title} - ${wd.dayShort}, ${wd.key}: ${
+                                      isCompleted ? 'Completed (Click to uncheck)' : 'Pending (Click to complete)'
+                                    }`}
+                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                                      isCompleted
+                                        ? 'shadow-xs scale-100 hover:scale-105 active:scale-90'
+                                        : 'bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 opacity-70 hover:opacity-100 active:scale-90'
+                                    }`}
+                                    style={{
+                                      backgroundColor: isCompleted ? habitColor : undefined,
+                                    }}
+                                  >
+                                    {isCompleted && (
+                                      <Check size={13} className="text-white drop-shadow-xs" strokeWidth={3} />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : period === 'MONTH' ? (
+                            <div className="col-span-6 sm:col-span-7 grid grid-cols-10 gap-1 justify-items-center">
+                              {monthDays.slice(0, 30).map((md) => {
+                                const isCompleted = dates.includes(md.key);
+                                return (
+                                  <button
+                                    key={md.key}
+                                    type="button"
+                                    onClick={() => onToggleHabit(habit.id, md.key)}
+                                    title={`${md.key}: ${isCompleted ? 'Completed' : 'Missed'}`}
+                                    className={`w-4 h-4 rounded-md transition-all cursor-pointer ${
+                                      isCompleted ? 'scale-105' : 'bg-slate-100 dark:bg-slate-800 opacity-60'
+                                    }`}
+                                    style={{
+                                      backgroundColor: isCompleted ? habitColor : undefined,
+                                    }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ) : period === 'YEAR' ? (
+                            <div className="col-span-6 sm:col-span-7 grid grid-cols-12 gap-1 justify-items-center">
+                              {yearMonths.map((ym) => {
+                                const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
+                                const intensity = Math.min(1, countInMonth / 20);
+                                return (
+                                  <div
+                                    key={ym.yearMonthKey}
+                                    title={`${ym.monthShort}: ${countInMonth} check-ins`}
+                                    className="w-3.5 h-4.5 sm:w-4 sm:h-5 rounded-md flex items-center justify-center text-[8px] font-bold text-white transition-all"
+                                    style={{
+                                      backgroundColor: countInMonth > 0 ? habitColor : undefined,
+                                      opacity: countInMonth > 0 ? Math.max(0.35, intensity) : 0.15,
+                                    }}
+                                  >
+                                    {countInMonth > 0 ? countInMonth : ''}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="col-span-6 sm:col-span-7 px-2 sm:px-4">
+                              <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all"
                                   style={{
-                                    backgroundColor: isCompleted ? habitColor : undefined,
+                                    width: `${Math.min(100, Math.max(5, (dates.length / 50) * 100))}%`,
+                                    backgroundColor: habitColor,
                                   }}
                                 />
-                              );
-                            })}
-                          </div>
-                        ) : period === 'YEAR' ? (
-                          <div className="col-span-7 grid grid-cols-12 gap-1 justify-items-center">
-                            {yearMonths.map((ym) => {
-                              const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
-                              const intensity = Math.min(1, countInMonth / 20);
-                              return (
-                                <div
-                                  key={ym.yearMonthKey}
-                                  title={`${ym.monthShort}: ${countInMonth} check-ins`}
-                                  className="w-4 h-5 rounded-md flex items-center justify-center text-[8px] font-bold text-white transition-all"
-                                  style={{
-                                    backgroundColor: countInMonth > 0 ? habitColor : undefined,
-                                    opacity: countInMonth > 0 ? Math.max(0.35, intensity) : 0.15,
-                                  }}
-                                >
-                                  {countInMonth > 0 ? countInMonth : ''}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="col-span-7 px-4">
-                            <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all"
-                                style={{
-                                  width: `${Math.min(100, Math.max(5, (dates.length / 50) * 100))}%`,
-                                  backgroundColor: habitColor,
-                                }}
-                              />
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Right: Ratio / Count */}
-                        <div className="col-span-1 text-right pr-2">
-                          <span className="text-xs font-mono font-bold text-slate-400">
-                            {period === 'WEEK'
-                              ? `${completedInWeek} / 7`
-                              : `${dates.length}`}
-                          </span>
+                          {/* Right: Ratio */}
+                          <div className="col-span-1 text-right pr-2">
+                            <span className="text-[11px] sm:text-xs font-mono font-bold text-slate-400">
+                              {period === 'WEEK'
+                                ? `${completedInWeek}/7`
+                                : `${dates.length}`}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
             /* Detailed Cards View fallback */
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {habits.map((habit) => {
                 const isDoneToday = (habit.completed_dates || []).includes(todayKey);
                 return (
@@ -636,40 +687,44 @@ export const HabitsPage = ({
           )}
         </div>
 
-        {/* ================= RIGHT PANEL: SELECTED DAY QUICK ACTIONS (4 Cols) ================= */}
-        <div className="lg:col-span-4 flex flex-col gap-4">
-          <Card className="p-5 flex flex-col gap-4 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 shadow-2xs rounded-3xl">
+        {/* ================= RIGHT PANEL: SELECTED DAY QUICK ACTIONS (4 Cols on desktop, toggled on mobile) ================= */}
+        <div
+          className={`lg:col-span-4 flex-col gap-4 ${
+            mobileTab === 'ACTIONS' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
+          <Card className="p-4 sm:p-5 flex flex-col gap-4 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 shadow-2xs rounded-3xl">
             {/* Header: Selected Date + Navigation Arrows */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <Calendar size={16} className="text-[#0d8a72] dark:text-teal-400" />
+                <Calendar size={16} className="text-[#0d8a72] dark:text-teal-400 shrink-0" />
                 <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">
                   {selectedDayInfo.displayTitle}
                 </h3>
                 {selectedDayInfo.isToday && (
-                  <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-teal-50 dark:bg-teal-950/60 text-[#0d8a72] dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-[#0d8a72] dark:text-teal-300 border border-teal-200 dark:border-teal-800">
                     Today
                   </span>
                 )}
               </div>
 
               {/* Prev / Next Day Chevrons */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => stepSelectedDay(-1)}
-                  className="w-7 h-7 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-[#0d8a72] hover:border-[#0d8a72] transition-colors cursor-pointer"
+                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-[#0d8a72] hover:border-[#0d8a72] transition-colors cursor-pointer"
                   title="Previous Day"
                 >
-                  <ChevronLeft size={14} />
+                  <ChevronLeft size={15} />
                 </button>
                 <button
                   type="button"
                   onClick={() => stepSelectedDay(1)}
-                  className="w-7 h-7 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-[#0d8a72] hover:border-[#0d8a72] transition-colors cursor-pointer"
+                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-[#0d8a72] hover:border-[#0d8a72] transition-colors cursor-pointer"
                   title="Next Day"
                 >
-                  <ChevronRight size={14} />
+                  <ChevronRight size={15} />
                 </button>
               </div>
             </div>
@@ -731,7 +786,7 @@ export const HabitsPage = ({
                           <button
                             type="button"
                             onClick={() => onToggleHabit(habit.id, selectedDayKey)}
-                            className="font-bold underline text-white/90 hover:text-white cursor-pointer transition-opacity"
+                            className="font-bold underline text-white/90 hover:text-white cursor-pointer transition-opacity py-0.5 px-1"
                           >
                             Undo
                           </button>
@@ -768,11 +823,11 @@ export const HabitsPage = ({
                           </div>
                         </div>
 
-                        {/* Action: Mark Complete outline button */}
+                        {/* Action: Mark Complete outline button with mobile touch height */}
                         <button
                           type="button"
                           onClick={() => onToggleHabit(habit.id, selectedDayKey)}
-                          className="w-full py-1.5 px-3 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#0d8a72] hover:text-[#0d8a72] dark:hover:border-teal-400 dark:hover:text-teal-300 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-teal-50/40 dark:hover:bg-teal-950/20 transition-all cursor-pointer shadow-2xs active:scale-98"
+                          className="w-full py-2 px-3 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#0d8a72] hover:text-[#0d8a72] dark:hover:border-teal-400 dark:hover:text-teal-300 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-teal-50/40 dark:hover:bg-teal-950/20 transition-all cursor-pointer shadow-2xs active:scale-98 min-h-[38px]"
                         >
                           Mark Complete
                         </button>
