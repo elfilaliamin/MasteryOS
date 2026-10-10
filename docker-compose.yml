@@ -38,8 +38,6 @@ services:
       DB_NAME: ${DB_NAME:-tasktracker_db}
       JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_master_tasks_tracker_2026}
       JWT_EXPIRES_IN: 7d
-    ports:
-      - "5000:5000"
     depends_on:
       db:
         condition: service_healthy
@@ -53,8 +51,6 @@ services:
       dockerfile: Dockerfile
     container_name: tasks_frontend_web
     restart: unless-stopped
-    ports:
-      - "80:80"
     depends_on:
       - backend
     networks:
