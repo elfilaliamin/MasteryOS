@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -58,17 +58,6 @@ const HabitFormContent = ({ habit, onSubmit, onClose }) => {
   const [frequency, setFrequency] = useState(habit?.frequency || 'DAILY');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (habit) {
-      setTitle(habit.title || '');
-      setDescription(habit.description || '');
-      setIcon(habit.icon || '💧');
-      setColor(habit.color || '#0d8a72');
-      setTimeOfDay(habit.time_of_day || 'ANYTIME');
-      setFrequency(habit.frequency || 'DAILY');
-    }
-  }, [habit]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -246,7 +235,7 @@ export const HabitModal = ({ isOpen, onClose, onSubmit, habit }) => {
       title={habit ? 'Edit Habit' : 'Create New Habit'}
       maxWidth="max-w-md"
     >
-      <HabitFormContent habit={habit} onSubmit={onSubmit} onClose={onClose} />
+      <HabitFormContent key={habit?.id || 'new'} habit={habit} onSubmit={onSubmit} onClose={onClose} />
     </Modal>
   );
 };

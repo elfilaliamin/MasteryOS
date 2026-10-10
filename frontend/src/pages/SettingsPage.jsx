@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -24,7 +24,7 @@ import {
   ArrowDown,
   RotateCcw,
 } from 'lucide-react';
-import { DEFAULT_DASHBOARD_CONFIG, normalizeDashboardConfig } from './DashboardPage';
+import { DEFAULT_DASHBOARD_CONFIG, normalizeDashboardConfig } from '../utils/dashboardConfig';
 
 const SECTION_METADATA = {
   stats: { title: 'KPI Metrics & Summary Cards', icon: '📊', desc: 'Total tasks, completion rate, and active counts' },
@@ -49,11 +49,14 @@ export const SettingsPage = () => {
   const [savedSuccess, setSavedSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
-  useEffect(() => {
-    if (user?.full_name) setFullName(user.full_name);
-    if (user?.email) setEmail(user.email);
-    if (user?.avatar_url) setAvatarUrl(user.avatar_url);
-  }, [user]);
+  // Sync state if user prop changes without causing cascading render warnings
+  const [prevUser, setPrevUser] = useState(user);
+  if (user && user !== prevUser) {
+    setPrevUser(user);
+    if (user.full_name) setFullName(user.full_name);
+    if (user.email) setEmail(user.email);
+    if (user.avatar_url) setAvatarUrl(user.avatar_url);
+  }
 
   // Change Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -214,7 +217,7 @@ export const SettingsPage = () => {
           Settings & Executive Preferences
         </h2>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          Customize your profile, configure Notion-style dashboard views, and manage achievements.
+          Customize your profile, configure dashboard views, and manage achievements.
         </p>
       </div>
 
@@ -322,14 +325,14 @@ export const SettingsPage = () => {
             </form>
           </Card>
 
-          {/* Notion-Style Dashboard View Preferences */}
+          {/* Dashboard View Preferences */}
           <Card className="flex flex-col gap-4 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <Layout size={18} className="text-[#0d8a72] dark:text-teal-400" />
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    Dashboard View Customizer (Notion-Style)
+                    Dashboard View Customizer
                   </h3>
                   <p className="text-[11px] text-slate-400">
                     Control which widgets appear on your dashboard and reorder sections.

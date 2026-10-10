@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
 import { useAuth } from '../context/useAuth';
 import {
   Flame,
@@ -9,19 +8,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
-  RotateCcw,
-  MoreVertical,
   LayoutGrid,
-  List,
-  Sparkles,
-  TrendingUp,
-  Clock,
-  Edit2,
-  Trash2,
   CheckCircle2,
-  Circle,
   Calendar,
-  Layers
+  List,
+  TrendingUp,
+  MoreVertical
 } from 'lucide-react';
 
 // Format date as YYYY-MM-DD
@@ -37,7 +29,6 @@ export const HabitsPage = ({
   habits = [],
   onOpenNewHabit,
   onEditHabit,
-  onDeleteHabit,
   onToggleHabit,
 }) => {
   const { user } = useAuth();

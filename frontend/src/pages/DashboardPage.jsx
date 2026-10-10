@@ -16,11 +16,11 @@ import {
   ChevronRight,
   Circle,
   Flame,
-  CheckCircle2,
   Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGamification } from '../context/useGamification';
+import { DEFAULT_DASHBOARD_CONFIG, normalizeDashboardConfig } from '../utils/dashboardConfig';
 
 const DASHBOARD_LIMITS = {
   HABITS: 6,            // Max 6 habits in today's shortcut widget
@@ -28,56 +28,6 @@ const DASHBOARD_LIMITS = {
   DEADLINES: 6,         // Max 6 nearest due date tasks (2x3 grid)
   ACTIVE_COURSES: 4,    // Max 4 in-progress courses (2x2 grid)
   GOALS: 3,             // Max 3 active strategic goals (1x3 grid)
-};
-
-export const DEFAULT_DASHBOARD_CONFIG = {
-  showStats: true,
-  showHabits: true,
-  showUrgentTasks: true,
-  showDeadlines: true,
-  showActiveCourses: true,
-  showGoalsOverview: true,
-  order: ['stats', 'habits', 'urgent', 'deadlines', 'courses', 'goals'],
-};
-
-export const normalizeDashboardConfig = (raw) => {
-  if (!raw) return DEFAULT_DASHBOARD_CONFIG;
-  try {
-    const config = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    let order = Array.isArray(config.order) ? [...config.order] : [...DEFAULT_DASHBOARD_CONFIG.order];
-    if (!order.includes('stats')) {
-      order.unshift('stats');
-    }
-    if (!order.includes('habits')) {
-      const statsIdx = order.indexOf('stats');
-      order.splice(statsIdx + 1, 0, 'habits');
-    }
-    // Ensure stats comes before habits by default
-    const statsIdx = order.indexOf('stats');
-    const habitsIdx = order.indexOf('habits');
-    if (habitsIdx !== -1 && statsIdx !== -1 && habitsIdx < statsIdx && statsIdx <= 1) {
-      order.splice(habitsIdx, 1);
-      const newStatsIdx = order.indexOf('stats');
-      order.splice(newStatsIdx + 1, 0, 'habits');
-    }
-
-    DEFAULT_DASHBOARD_CONFIG.order.forEach((key) => {
-      if (!order.includes(key)) {
-        order.push(key);
-      }
-    });
-    order = order.filter((k) => DEFAULT_DASHBOARD_CONFIG.order.includes(k));
-
-    return {
-      ...DEFAULT_DASHBOARD_CONFIG,
-      ...config,
-      showStats: config.showStats !== false,
-      showHabits: config.showHabits !== false,
-      order,
-    };
-  } catch {
-    return DEFAULT_DASHBOARD_CONFIG;
-  }
 };
 
 export const DashboardPage = ({
@@ -973,8 +923,18 @@ export const DashboardPage = ({
         </div>
       </div>
 
-      {/* Dynamically Ordered Dashboard Sections according to user Notion-style preferences */}
-      {dashboardConfig.order.map((sectionKey) => renderSection(sectionKey))}
+      {/* Dynamically Ordered Dashboard Sections with clear separation between sections */}
+      <div className="flex flex-col gap-10 sm:gap-12 pt-2">
+        {dashboardConfig.order.map((sectionKey) => {
+          const content = renderSection(sectionKey);
+          if (!content) return null;
+          return (
+            <section key={sectionKey} className="flex flex-col">
+              {content}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 };
