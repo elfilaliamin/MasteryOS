@@ -211,7 +211,7 @@ The frontend is built using **React 19**, **Vite**, **Tailwind CSS v4**, and **L
 
 1. **`LoginPage.jsx` (`/login`)**:
    - **Purpose:** Secure entry portal for registered users.
-   - **Features:** Clean glassmorphism card, email & password fields, show/hide password toggle, "Remember Me" checkbox, inline validation, demo login quick button, and link to register.
+   - **Features:** Clean glassmorphism card, email & password fields, show/hide password toggle, inline validation, and link to register.
 2. **`RegisterPage.jsx` (`/register`)**:
    - **Purpose:** Seamless onboarding flow for new users.
    - **Features:** Full name, email, password with live strength indicator, confirm password check, terms acknowledgment, and instant transition to the dashboard.
@@ -311,7 +311,7 @@ The frontend is built using **React 19**, **Vite**, **Tailwind CSS v4**, and **L
 - [x] **Task 5.4**: Configure React Router v7 with `AppLayout`, `ProtectedRoute`, and route definitions.
 
 ### 📍 Phase 6: Frontend Auth Pages (Login & Register)
-- [x] **Task 6.1**: Build `LoginPage` with validation, glassmorphic card, and demo credentials button.
+- [x] **Task 6.1**: Build `LoginPage` with validation, glassmorphic card, and clean responsive layout.
 - [x] **Task 6.2**: Build `RegisterPage` with live password strength meter and onboarding flow.
 - [x] **Task 6.3**: Connect Auth pages to backend API and handle token persistence & redirects.
 

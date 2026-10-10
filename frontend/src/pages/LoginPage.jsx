@@ -33,15 +33,6 @@ export const LoginPage = () => {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setEmail('demo@taskmaster.io');
-    setPassword('password123');
-    setIsLoading(true);
-    await login('demo@taskmaster.io', 'password123');
-    setIsLoading(false);
-    navigate('/');
-  };
-
   return (
     <div className="min-h-screen bg-[#f4f7f6] dark:bg-[#0b131e] flex items-center justify-center p-4 relative overflow-hidden transition-colors">
       {/* Dynamic ambient gradients */}
@@ -106,18 +97,9 @@ export const LoginPage = () => {
             </Button>
           </form>
 
-          {/* Demo Login Button */}
-          <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleDemoLogin}
-              className="w-full text-xs"
-            >
-              ⚡ Quick Fill & Demo Login
-            </Button>
-
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2">
+          {/* Registration Link */}
+          <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800 text-center">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Don't have an account?{' '}
               <Link to="/register" className="text-[#0d8a72] dark:text-teal-400 hover:underline font-bold">
                 Create one now

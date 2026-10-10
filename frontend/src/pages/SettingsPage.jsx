@@ -41,10 +41,10 @@ export const SettingsPage = () => {
   const { playerStats, equippedTitleId, equipTitle } = useGamification();
 
   // Profile Form state
-  const [fullName, setFullName] = useState(user?.full_name || 'Alex Mercer');
-  const [email, setEmail] = useState(user?.email || 'demo@masteryos.io');
+  const [fullName, setFullName] = useState(user?.full_name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [avatarUrl, setAvatarUrl] = useState(
-    user?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex'
+    user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.full_name || 'User')}`
   );
   const [savedSuccess, setSavedSuccess] = useState(false);
   const fileInputRef = useRef(null);
