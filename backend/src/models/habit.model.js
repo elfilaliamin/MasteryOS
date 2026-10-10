@@ -119,6 +119,24 @@ export const seedDefaultHabits = async (userId) => {
       time_of_day: 'EVENING',
       frequency: 'DAILY',
       history: [formatDateKey(today), formatDateKey(dMinus1), formatDateKey(dMinus2), formatDateKey(dMinus3)]
+    },
+    {
+      title: 'Mindful Meditation (15m)',
+      description: 'Calm the nervous system and practice stillness.',
+      icon: '🧘',
+      color: '#f59e0b',
+      time_of_day: 'MORNING',
+      frequency: 'DAILY',
+      history: [formatDateKey(today), formatDateKey(dMinus2), formatDateKey(dMinus4)]
+    },
+    {
+      title: 'Evening Journal & Review',
+      description: 'Reflect on wins, insights, and prepare priorities for tomorrow.',
+      icon: '✏️',
+      color: '#ec4899',
+      time_of_day: 'EVENING',
+      frequency: 'DAILY',
+      history: [formatDateKey(today), formatDateKey(dMinus1), formatDateKey(dMinus2), formatDateKey(dMinus3), formatDateKey(dMinus4), formatDateKey(dMinus5)]
     }
   ];
 

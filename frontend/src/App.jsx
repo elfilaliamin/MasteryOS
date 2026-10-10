@@ -87,6 +87,32 @@ const INITIAL_DEMO_HABITS = [
     current_streak: 4,
     longest_streak: 10,
     created_at: new Date().toISOString()
+  },
+  {
+    id: 'habit-5',
+    title: 'Mindful Meditation (15m)',
+    description: 'Calm the nervous system and practice stillness.',
+    icon: '🧘',
+    color: '#f59e0b',
+    time_of_day: 'MORNING',
+    frequency: 'DAILY',
+    completed_dates: [getRecentDate(0), getRecentDate(2), getRecentDate(4)],
+    current_streak: 1,
+    longest_streak: 7,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'habit-6',
+    title: 'Evening Journal & Review',
+    description: 'Reflect on wins, insights, and prepare priorities for tomorrow.',
+    icon: '✏️',
+    color: '#ec4899',
+    time_of_day: 'EVENING',
+    frequency: 'DAILY',
+    completed_dates: [getRecentDate(0), getRecentDate(1), getRecentDate(2), getRecentDate(3), getRecentDate(4), getRecentDate(5)],
+    current_streak: 6,
+    longest_streak: 15,
+    created_at: new Date().toISOString()
   }
 ];
 

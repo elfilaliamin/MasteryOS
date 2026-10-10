@@ -2,40 +2,28 @@ import { useState, useMemo } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { useAuth } from '../context/useAuth';
 import {
   Flame,
   Plus,
-  Trophy,
-  CheckCircle2,
-  Circle,
-  Calendar,
-  Clock,
-  Search,
-  Filter,
-  BarChart3,
-  TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  RotateCcw,
+  MoreVertical,
+  LayoutGrid,
+  List,
   Sparkles,
+  TrendingUp,
+  Clock,
   Edit2,
   Trash2,
-  RotateCcw,
-  AlertCircle
+  CheckCircle2,
+  Circle,
+  Calendar
 } from 'lucide-react';
 
-const PERIODS = [
-  { id: 'WEEK', label: 'Week (7 Days)' },
-  { id: 'MONTH', label: 'Month (30 Days)' },
-  { id: 'YEAR', label: 'Year (12 Months)' },
-];
-
-const TIME_FILTERS = [
-  { id: 'ALL', label: 'All Times' },
-  { id: 'MORNING', label: 'Morning 🌅' },
-  { id: 'AFTERNOON', label: 'Afternoon 🌤️' },
-  { id: 'EVENING', label: 'Evening 🌙' },
-  { id: 'ANYTIME', label: 'Anytime ☀️' },
-];
-
-// Helper to format Date to YYYY-MM-DD
+// Format date as YYYY-MM-DD
 const formatDateKey = (d) => {
   const date = new Date(d);
   const year = date.getFullYear();
@@ -51,656 +39,752 @@ export const HabitsPage = ({
   onDeleteHabit,
   onToggleHabit,
 }) => {
-  const [period, setPeriod] = useState('WEEK');
-  const [timeFilter, setTimeFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'PENDING' | 'COMPLETED'
-  const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth();
 
-  const todayStr = formatDateKey(new Date());
+  // Navigation & View States
+  const [period, setPeriod] = useState('WEEK'); // 'WEEK' | 'MONTH' | 'YEAR' | 'ALL'
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [viewMode, setViewMode] = useState('GRID'); // 'GRID' (matrix) | 'LIST' (cards)
+  const [selectedDayKey, setSelectedDayKey] = useState(() => formatDateKey(new Date()));
+  const [activeMenuHabitId, setActiveMenuHabitId] = useState(null);
 
-  // Past 7 days array for mini matrix
-  const past7Days = useMemo(() => {
-    const list = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      list.push({
-        date: d,
-        dateKey: formatDateKey(d),
-        dayName: d.toLocaleDateString(undefined, { weekday: 'narrow' }), // M, T, W...
-        dayShort: d.toLocaleDateString(undefined, { weekday: 'short' }),
-        dayNum: d.getDate(),
-        isToday: i === 0,
-      });
-    }
-    return list;
+  const todayKey = formatDateKey(new Date());
+
+  // Greeting based on current time
+  const { greeting, timeSub } = useMemo(() => {
+    const hour = new Date().getHours();
+    const greet =
+      hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    const bedtimeHour = 23;
+    const diffHours = (bedtimeHour - hour + 24) % 24;
+    const sub =
+      diffHours > 0
+        ? `${diffHours} hrs until bedtime • Build unbroken momentum`
+        : 'Time for restful recovery & recharge';
+    return { greeting: greet, timeSub: sub };
   }, []);
 
-  // Compute Overall Stats
-  const activeHabitsCount = habits.length;
-  const completedTodayCount = habits.filter((h) =>
-    (h.completed_dates || []).includes(todayStr)
-  ).length;
-  const todayRate =
-    activeHabitsCount > 0 ? Math.round((completedTodayCount / activeHabitsCount) * 100) : 0;
+  const firstName = user?.full_name ? user.full_name.split(' ')[0] : 'Alex';
 
-  const bestStreak = habits.reduce(
-    (max, h) => Math.max(max, h.longest_streak || h.current_streak || 0),
-    0
-  );
+  // 1. Calculate Week Days for the Selected Week Offset
+  const weekDays = useMemo(() => {
+    const curr = new Date();
+    // Shift by weekOffset weeks
+    curr.setDate(curr.getDate() + weekOffset * 7);
 
-  const totalCompletionsAllTime = habits.reduce(
-    (sum, h) => sum + (h.completed_dates?.length || 0),
-    0
-  );
+    // Find Monday of this week (1 = Monday, 0 = Sunday)
+    const dayOfWeek = curr.getDay();
+    const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(curr);
+    monday.setDate(curr.getDate() + distanceToMonday);
 
-  // Filtered habits
-  const filteredHabits = useMemo(() => {
-    return habits.filter((h) => {
-      // Time of day
-      if (timeFilter !== 'ALL' && h.time_of_day !== timeFilter) return false;
-
-      // Status
-      const isDoneToday = (h.completed_dates || []).includes(todayStr);
-      if (statusFilter === 'COMPLETED' && !isDoneToday) return false;
-      if (statusFilter === 'PENDING' && isDoneToday) return false;
-
-      // Search
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchTitle = h.title?.toLowerCase().includes(query);
-        const matchDesc = h.description?.toLowerCase().includes(query);
-        if (!matchTitle && !matchDesc) return false;
-      }
-
-      return true;
-    });
-  }, [habits, timeFilter, statusFilter, searchQuery, todayStr]);
-
-  // Chart Analytics Data by Period (Week, Month, Year)
-  const chartData = useMemo(() => {
-    if (habits.length === 0) return { bars: [], rate: 0, totalLogs: 0, perfectDays: 0 };
-
-    if (period === 'WEEK') {
-      // 7 Days
-      const bars = past7Days.map((d) => {
-        let count = 0;
-        habits.forEach((h) => {
-          if ((h.completed_dates || []).includes(d.dateKey)) count++;
-        });
-        const percent = habits.length > 0 ? Math.round((count / habits.length) * 100) : 0;
-        return {
-          label: d.isToday ? 'Today' : d.dayShort,
-          subLabel: `${d.dayNum}`,
-          count,
-          total: habits.length,
-          percent,
-          isToday: d.isToday,
-        };
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const key = formatDateKey(d);
+      days.push({
+        date: d,
+        key,
+        dayShort: d.toLocaleDateString(undefined, { weekday: 'short' }), // Mon, Tue...
+        dayNarrow: d.toLocaleDateString(undefined, { weekday: 'narrow' }),
+        dayNum: d.getDate(),
+        isToday: key === todayKey,
+        isSelected: key === selectedDayKey,
       });
+    }
+    return days;
+  }, [weekOffset, todayKey, selectedDayKey]);
 
-      const totalLogs = bars.reduce((acc, b) => acc + b.count, 0);
-      const avgRate = Math.round(bars.reduce((acc, b) => acc + b.percent, 0) / bars.length);
-      const perfectDays = bars.filter((b) => b.percent === 100).length;
-
-      return { bars, rate: avgRate, totalLogs, perfectDays };
+  // Date range formatted label for header
+  const periodRangeLabel = useMemo(() => {
+    if (period === 'WEEK') {
+      const start = weekDays[0].date;
+      const end = weekDays[6].date;
+      const startStr = start.toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+      const endStr = end.toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+      return `${startStr} - ${endStr}`;
     }
 
     if (period === 'MONTH') {
-      // Last 30 Days grouped into 4 weeks or 10-day chunks
-      const days = [];
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        days.push(formatDateKey(d));
-      }
-
-      // Group into 6 5-day intervals for clean bar rendering
-      const intervals = [
-        { label: 'Day 1-5', dates: days.slice(0, 5) },
-        { label: 'Day 6-10', dates: days.slice(5, 10) },
-        { label: 'Day 11-15', dates: days.slice(10, 15) },
-        { label: 'Day 16-20', dates: days.slice(15, 20) },
-        { label: 'Day 21-25', dates: days.slice(20, 25) },
-        { label: 'Day 26-30', dates: days.slice(25, 30) },
-      ];
-
-      let totalLogs = 0;
-      let totalOpportunities = 0;
-      let perfectCount = 0;
-
-      days.forEach((dk) => {
-        let dayLogs = 0;
-        habits.forEach((h) => {
-          if ((h.completed_dates || []).includes(dk)) dayLogs++;
-        });
-        if (dayLogs === habits.length) perfectCount++;
-      });
-
-      const bars = intervals.map((inv) => {
-        let invLogs = 0;
-        const totalPossible = inv.dates.length * habits.length;
-        inv.dates.forEach((dk) => {
-          habits.forEach((h) => {
-            if ((h.completed_dates || []).includes(dk)) {
-              invLogs++;
-              totalLogs++;
-            }
-          });
-          totalOpportunities += habits.length;
-        });
-
-        const percent = totalPossible > 0 ? Math.round((invLogs / totalPossible) * 100) : 0;
-        return {
-          label: inv.label,
-          subLabel: `${invLogs} checks`,
-          count: invLogs,
-          total: totalPossible,
-          percent,
-          isToday: inv.label === 'Day 26-30',
-        };
-      });
-
-      const overallRate = totalOpportunities > 0 ? Math.round((totalLogs / totalOpportunities) * 100) : 0;
-      return { bars, rate: overallRate, totalLogs, perfectDays: perfectCount };
+      const d = new Date();
+      d.setMonth(d.getMonth() + monthOffset);
+      return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
     }
 
-    // YEAR Period: 12 months
-    const now = new Date();
+    if (period === 'YEAR') {
+      const d = new Date();
+      return `${d.getFullYear()} Annual Consistency`;
+    }
+
+    return 'All Time Lifespan';
+  }, [period, weekDays, monthOffset]);
+
+  // 2. Month Days for Month view
+  const monthDays = useMemo(() => {
+    if (period !== 'MONTH') return [];
+    const d = new Date();
+    d.setMonth(d.getMonth() + monthOffset, 1);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayDate = new Date(year, month, i);
+      const key = formatDateKey(dayDate);
+      days.push({
+        date: dayDate,
+        key,
+        dayNum: i,
+        dayShort: dayDate.toLocaleDateString(undefined, { weekday: 'narrow' }),
+        isToday: key === todayKey,
+        isSelected: key === selectedDayKey,
+      });
+    }
+    return days;
+  }, [period, monthOffset, todayKey, selectedDayKey]);
+
+  // 3. Year Months for Year view
+  const yearMonths = useMemo(() => {
+    if (period !== 'YEAR') return [];
+    const currYear = new Date().getFullYear();
     const months = [];
-    for (let m = 11; m >= 0; m--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    for (let m = 0; m < 12; m++) {
+      const d = new Date(currYear, m, 1);
       months.push({
-        year: d.getFullYear(),
-        month: d.getMonth(),
-        label: d.toLocaleDateString(undefined, { month: 'short' }),
-        yearMonthStr: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        monthIndex: m,
+        monthShort: d.toLocaleDateString(undefined, { month: 'short' }),
+        yearMonthKey: `${currYear}-${String(m + 1).padStart(2, '0')}`,
       });
     }
+    return months;
+  }, [period]);
 
-    let yearTotalLogs = 0;
-    const bars = months.map((m) => {
-      let monthLogs = 0;
-      habits.forEach((h) => {
-        (h.completed_dates || []).forEach((dStr) => {
-          if (dStr.startsWith(m.yearMonthStr)) {
-            monthLogs++;
-            yearTotalLogs++;
-          }
+  // Calculate Achievement Percentage for Current View
+  const periodAchievement = useMemo(() => {
+    if (habits.length === 0) return { percent: 0, completedLogs: 0, totalOpportunities: 0 };
+
+    if (period === 'WEEK') {
+      let totalLogs = 0;
+      const totalPossible = habits.length * 7;
+      weekDays.forEach((wd) => {
+        habits.forEach((h) => {
+          if ((h.completed_dates || []).includes(wd.key)) totalLogs++;
         });
       });
+      const percent = totalPossible > 0 ? Math.round((totalLogs / totalPossible) * 100) : 0;
+      return { percent, completedLogs: totalLogs, totalOpportunities: totalPossible };
+    }
 
-      // Rough normalization for visualization (assuming 30 days/month)
-      const maxEstimated = habits.length * 30;
-      const percent = maxEstimated > 0 ? Math.min(100, Math.round((monthLogs / maxEstimated) * 100)) : 0;
+    if (period === 'MONTH') {
+      let totalLogs = 0;
+      const totalPossible = habits.length * monthDays.length;
+      monthDays.forEach((md) => {
+        habits.forEach((h) => {
+          if ((h.completed_dates || []).includes(md.key)) totalLogs++;
+        });
+      });
+      const percent = totalPossible > 0 ? Math.round((totalLogs / totalPossible) * 100) : 0;
+      return { percent, completedLogs: totalLogs, totalOpportunities: totalPossible };
+    }
 
-      return {
-        label: m.label,
-        subLabel: `${monthLogs}`,
-        count: monthLogs,
-        total: maxEstimated,
-        percent,
-        isToday: m.yearMonthStr === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
-      };
+    // Default for year / all time
+    let totalLogs = 0;
+    habits.forEach((h) => {
+      totalLogs += (h.completed_dates || []).length;
     });
+    const estimated = habits.length * 365;
+    const percent = estimated > 0 ? Math.min(100, Math.round((totalLogs / estimated) * 100)) : 0;
+    return { percent, completedLogs: totalLogs, totalOpportunities: estimated };
+  }, [habits, period, weekDays, monthDays]);
 
-    const avgRate = Math.round(bars.reduce((acc, b) => acc + b.percent, 0) / 12);
+  // Selected Day Object for the Right Side Quick Action Panel
+  const selectedDayInfo = useMemo(() => {
+    const d = new Date(selectedDayKey + 'T00:00:00');
+    return {
+      key: selectedDayKey,
+      date: d,
+      displayTitle: d.toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      }),
+      isToday: selectedDayKey === todayKey,
+    };
+  }, [selectedDayKey, todayKey]);
 
-    return { bars, rate: avgRate, totalLogs: yearTotalLogs, perfectDays: '12M' };
-  }, [habits, period, past7Days]);
+  // Step Selected Day backward/forward
+  const stepSelectedDay = (direction) => {
+    const d = new Date(selectedDayKey + 'T00:00:00');
+    d.setDate(d.getDate() + direction);
+    setSelectedDayKey(formatDateKey(d));
+  };
+
+  // Jump to Current
+  const handleJumpToCurrent = () => {
+    setWeekOffset(0);
+    setMonthOffset(0);
+    setSelectedDayKey(todayKey);
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-              Habits Tracker
-            </h1>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-[#0d8a72] dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-              Streak Engine
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Build compounding consistency through daily routines • Independent of XP gamification
-          </p>
-        </div>
-
-        <Button
-          onClick={onOpenNewHabit}
-          variant="primary"
-          className="flex items-center gap-2 shadow-sm"
-        >
-          <Plus size={16} />
-          <span>New Habit</span>
-        </Button>
+    <div className="space-y-6 animate-fade-in pb-12 select-none text-left">
+      {/* Top Greeting Header */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+          {greeting}, {firstName}
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
+          {timeSub}
+        </p>
       </div>
 
-      {/* KPI Overview Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Active Habits
-            </p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
-              {activeHabitsCount}
-            </h3>
-            <span className="text-[11px] text-slate-400">Tracked daily</span>
-          </div>
-          <div className="p-3 rounded-2xl bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] dark:text-teal-400">
-            <Calendar size={22} />
-          </div>
-        </Card>
-
-        <Card className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Today's Completed
-            </p>
-            <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-              {completedTodayCount} / {activeHabitsCount}
-            </h3>
-            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-              {todayRate}% achieved today
-            </span>
-          </div>
-          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 size={22} />
-          </div>
-        </Card>
-
-        <Card className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Longest Best Streak
-            </p>
-            <div className="flex items-baseline gap-1 mt-1">
-              <h3 className="text-2xl font-black text-amber-500">
-                {bestStreak}
-              </h3>
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Days</span>
+      {/* Main Split Layout: Left Center Matrix + Right Day Action Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* ================= LEFT MAIN PANEL (8 Cols) ================= */}
+        <div className="lg:col-span-8 flex flex-col gap-5">
+          {/* Controls Bar: Period Toggle Pill + Add Habit Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Period Toggle Pill inspired by reference design */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-full border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
+              {[
+                { id: 'WEEK', label: 'Week' },
+                { id: 'MONTH', label: 'Month' },
+                { id: 'YEAR', label: 'Year' },
+                { id: 'ALL', label: 'All Time' },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPeriod(p.id)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    period === p.id
+                      ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
-            <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
-              Peak record
-            </span>
-          </div>
-          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500">
-            <Flame size={22} />
-          </div>
-        </Card>
 
-        <Card className="p-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Total Check-Ins
-            </p>
-            <h3 className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">
-              {totalCompletionsAllTime}
-            </h3>
-            <span className="text-[11px] text-purple-600 dark:text-purple-400 font-medium">
-              Recorded sessions
-            </span>
-          </div>
-          <div className="p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
-            <Trophy size={22} />
-          </div>
-        </Card>
-      </div>
-
-      {/* Period Analytics & Visual Chart (Week, Month, Year) */}
-      <Card className="p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-teal-500/10 text-[#0d8a72] dark:text-teal-400">
-              <BarChart3 size={18} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Habit Consistency Analytics
-              </h3>
-              <p className="text-xs text-slate-400">
-                Visualizing adherence and routines across selected timeline
-              </p>
-            </div>
+            {/* + Add Habit Pill Button */}
+            <button
+              type="button"
+              onClick={onOpenNewHabit}
+              className="flex items-center justify-center gap-2 px-5 py-2 rounded-full text-xs font-bold border-2 border-[#0d8a72] dark:border-teal-400 text-[#0d8a72] dark:text-teal-400 hover:bg-[#0d8a72] hover:text-white dark:hover:bg-teal-500 dark:hover:text-slate-950 transition-all cursor-pointer shadow-xs active:scale-95"
+            >
+              <Plus size={15} strokeWidth={2.5} />
+              <span>Add Habit</span>
+            </button>
           </div>
 
-          {/* Period selector */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-            {PERIODS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setPeriod(p.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  period === p.id
-                    ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Period Highlights Bar */}
-        <div className="grid grid-cols-3 gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-center">
-          <div>
-            <span className="text-[11px] text-slate-400 uppercase font-semibold">Average Adherence</span>
-            <p className="text-lg font-black text-[#0d8a72] dark:text-teal-400">{chartData.rate}%</p>
-          </div>
-          <div>
-            <span className="text-[11px] text-slate-400 uppercase font-semibold">Period Check-ins</span>
-            <p className="text-lg font-black text-slate-800 dark:text-slate-100">{chartData.totalLogs}</p>
-          </div>
-          <div>
-            <span className="text-[11px] text-slate-400 uppercase font-semibold">
-              {period === 'YEAR' ? 'Period' : '100% Days'}
-            </span>
-            <p className="text-lg font-black text-amber-500">
-              {chartData.perfectDays} {period === 'YEAR' ? '' : 'Days'}
-            </p>
-          </div>
-        </div>
-
-        {/* Dynamic Consistency Chart */}
-        <div className="pt-2">
-          <div className="flex items-end justify-between gap-2 sm:gap-4 h-40 pt-4 px-2 border-b border-slate-100 dark:border-slate-800">
-            {chartData.bars.map((bar, idx) => (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group">
-                <span className="text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {bar.percent}%
-                </span>
-                <div className="w-full max-w-[42px] bg-slate-100 dark:bg-slate-800 rounded-t-lg h-full flex items-end overflow-hidden">
-                  <div
-                    className={`w-full rounded-t-lg transition-all duration-500 ${
-                      bar.isToday
-                        ? 'bg-gradient-to-t from-[#0d8a72] to-emerald-400 shadow-xs'
-                        : 'bg-gradient-to-t from-teal-600/70 to-teal-400/80 group-hover:from-teal-600 group-hover:to-teal-400'
-                    }`}
-                    style={{ height: `${Math.max(bar.percent, 4)}%` }}
-                  />
-                </div>
-                <div className="text-center mt-1">
-                  <p
-                    className={`text-[11px] font-bold truncate ${
-                      bar.isToday
-                        ? 'text-[#0d8a72] dark:text-teal-400'
-                        : 'text-slate-600 dark:text-slate-300'
-                    }`}
-                  >
-                    {bar.label}
-                  </p>
-                  <p className="text-[9px] text-slate-400">{bar.subLabel}</p>
-                </div>
+          {/* Date Navigation & View Mode Switch */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            {/* Date Nav Controls */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (period === 'WEEK') setWeekOffset((prev) => prev - 1);
+                    else if (period === 'MONTH') setMonthOffset((prev) => prev - 1);
+                  }}
+                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:border-[#0d8a72] hover:text-[#0d8a72] transition-colors cursor-pointer shadow-2xs"
+                  title="Previous Period"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (period === 'WEEK') setWeekOffset((prev) => prev + 1);
+                    else if (period === 'MONTH') setMonthOffset((prev) => prev + 1);
+                  }}
+                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:border-[#0d8a72] hover:text-[#0d8a72] transition-colors cursor-pointer shadow-2xs"
+                  title="Next Period"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
-            ))}
-          </div>
-        </div>
-      </Card>
 
-      {/* Filters and Controls */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search habits by name or purpose..."
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0d8a72] transition-colors"
-          />
-        </div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+                {periodRangeLabel}
+              </h2>
+            </div>
 
-        {/* Time of Day & Status Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Time filter */}
-          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-            {TIME_FILTERS.map((tf) => (
+            {/* Jump to Current & View Toggle */}
+            <div className="flex items-center gap-3 self-end sm:self-auto">
               <button
-                key={tf.id}
-                onClick={() => setTimeFilter(tf.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  timeFilter === tf.id
-                    ? 'bg-[#0d8a72] text-white shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
+                type="button"
+                onClick={handleJumpToCurrent}
+                className="text-xs font-bold text-[#0d8a72] dark:text-teal-400 hover:underline cursor-pointer"
               >
-                {tf.label}
+                Current
               </button>
-            ))}
+
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('LIST')}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                    viewMode === 'LIST'
+                      ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-2xs'
+                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  }`}
+                  title="List View"
+                >
+                  <List size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('GRID')}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                    viewMode === 'GRID'
+                      ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-2xs'
+                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  }`}
+                  title="Matrix Grid View"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Status filter */}
-          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
-            <button
-              onClick={() => setStatusFilter('ALL')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                statusFilter === 'ALL'
-                  ? 'bg-slate-800 text-white dark:bg-slate-700'
-                  : 'text-slate-500 dark:text-slate-400'
-              }`}
-            >
-              All Status
-            </button>
-            <button
-              onClick={() => setStatusFilter('PENDING')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                statusFilter === 'PENDING'
-                  ? 'bg-amber-500 text-white'
-                  : 'text-slate-500 dark:text-slate-400'
-              }`}
-            >
-              Pending Today
-            </button>
-            <button
-              onClick={() => setStatusFilter('COMPLETED')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                statusFilter === 'COMPLETED'
-                  ? 'bg-emerald-600 text-white'
-                  : 'text-slate-500 dark:text-slate-400'
-              }`}
-            >
-              Done Today
-            </button>
+          {/* Progress Bar & Trend Line */}
+          <div className="space-y-2 pt-1">
+            {/* Minimalist Progress Track */}
+            <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#0d8a72] via-teal-500 to-emerald-400 rounded-full transition-all duration-500 shadow-sm"
+                style={{ width: `${Math.max(periodAchievement.percent, 3)}%` }}
+              />
+            </div>
+
+            {/* Progress Metadata Subline */}
+            <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                <TrendingUp size={14} />
+                <span>Up {Math.min(periodAchievement.percent, 24)}% from past baseline</span>
+              </span>
+              <span className="text-slate-800 dark:text-slate-200">
+                {periodAchievement.percent}% achieved
+              </span>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Habit Cards Grid */}
-      {filteredHabits.length === 0 ? (
-        <Card className="p-12 text-center flex flex-col items-center justify-center">
-          <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] flex items-center justify-center mb-3">
-            <Flame size={28} />
-          </div>
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
-            {habits.length === 0 ? 'No Habits Created Yet' : 'No Habits Match Filters'}
-          </h3>
-          <p className="text-xs text-slate-400 max-w-sm mt-1">
-            {habits.length === 0
-              ? 'Start small: pick one daily micro-routine to build unbroken momentum.'
-              : 'Try clearing your search query or switching your time of day filter.'}
-          </p>
-          {habits.length === 0 && (
-            <Button onClick={onOpenNewHabit} variant="primary" className="mt-4">
-              <Plus size={16} className="mr-1.5" />
-              <span>Create First Habit</span>
-            </Button>
-          )}
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredHabits.map((habit) => {
-            const isDoneToday = (habit.completed_dates || []).includes(todayStr);
-            const currentStreak = habit.current_streak || 0;
-            const longestStreak = habit.longest_streak || 0;
+          {/* ================= HABIT MATRIX TABLE / GRID ================= */}
+          {habits.length === 0 ? (
+            <Card className="p-12 text-center flex flex-col items-center justify-center">
+              <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] flex items-center justify-center mb-3">
+                <Flame size={28} />
+              </div>
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+                No Habits Created Yet
+              </h3>
+              <p className="text-xs text-slate-400 max-w-sm mt-1">
+                Start small: pick one daily micro-routine to build unbroken momentum.
+              </p>
+              <Button onClick={onOpenNewHabit} variant="primary" className="mt-4">
+                <Plus size={16} className="mr-1.5" />
+                <span>Create First Habit</span>
+              </Button>
+            </Card>
+          ) : viewMode === 'GRID' ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 shadow-2xs overflow-x-auto">
+              <div className="min-w-[560px]">
+                {/* Table Header: Habit Name column + Days columns + Ratio column */}
+                <div className="grid grid-cols-12 gap-2 pb-3 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400">
+                  {/* Habit title column */}
+                  <div className="col-span-4 pl-3">Habit</div>
 
-            return (
-              <Card
-                key={habit.id}
-                className="p-4.5 flex flex-col justify-between gap-4 border hover:border-teal-500/40 transition-all group"
-              >
-                {/* Header: Icon, Title, Actions */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div
-                      className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0 shadow-sm"
-                      style={{
-                        backgroundColor: `${habit.color || '#0d8a72'}15`,
-                        border: `1px solid ${habit.color || '#0d8a72'}30`,
-                      }}
-                    >
-                      {habit.icon || '⚡'}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 truncate">
-                          {habit.title}
-                        </h3>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                          {habit.time_of_day || 'ANYTIME'}
-                        </span>
-                      </div>
-                      {habit.description && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
-                          {habit.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={() => onEditHabit(habit)}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
-                      title="Edit Habit"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(`Delete habit "${habit.title}"?`)) {
-                          onDeleteHabit(habit.id);
-                        }
-                      }}
-                      className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
-                      title="Delete Habit"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Streaks & Today's Check Toggle */}
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 gap-3">
-                  {/* Streak Info */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className={`p-1.5 rounded-xl ${currentStreak > 0 ? 'bg-amber-500/15 text-amber-500 animate-pulse' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                        <Flame size={18} />
-                      </div>
-                      <div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-base font-black text-slate-900 dark:text-slate-100">
-                            {currentStreak}
-                          </span>
-                          <span className="text-[11px] font-bold text-slate-500">Days</span>
-                        </div>
-                        <span className="text-[9px] uppercase font-bold text-amber-600 dark:text-amber-400 block -mt-1">
-                          Current Streak
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
-
-                    <div className="hidden sm:block">
-                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                        🏆 Best: {longestStreak}d
-                      </span>
-                      <span className="text-[9px] text-slate-400 block">
-                        {(habit.completed_dates || []).length} total
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Primary Toggle Checkbox Button */}
-                  <button
-                    type="button"
-                    onClick={() => onToggleHabit(habit.id)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
-                      isDoneToday
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-500/20'
-                        : 'bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    {isDoneToday ? (
-                      <>
-                        <CheckCircle2 size={16} className="text-white" />
-                        <span>Done Today</span>
-                      </>
-                    ) : (
-                      <>
-                        <Circle size={16} className="text-slate-400" />
-                        <span>Check Today</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* 7-Day Mini History Matrix */}
-                <div className="pt-1">
-                  <div className="flex items-center justify-between mb-1.5 px-0.5">
-                    <span className="text-[10px] uppercase font-bold text-slate-400">
-                      Last 7 Days Consistency
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      Click any day to log
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1.5">
-                    {past7Days.map((d) => {
-                      const completed = (habit.completed_dates || []).includes(d.dateKey);
-                      return (
+                  {/* Period Days columns */}
+                  {period === 'WEEK' ? (
+                    <div className="col-span-7 grid grid-cols-7 gap-2 text-center">
+                      {weekDays.map((wd) => (
                         <button
-                          key={d.dateKey}
+                          key={wd.key}
                           type="button"
-                          onClick={() => onToggleHabit(habit.id, d.dateKey)}
-                          title={`${d.dayShort}, ${d.dateKey}: ${completed ? 'Completed' : 'Missed'}`}
-                          className={`flex flex-col items-center justify-center p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
-                            completed
-                              ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
-                              : d.isToday
-                              ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80 text-amber-700 dark:text-amber-400'
-                              : 'bg-slate-50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-800 text-slate-400'
+                          onClick={() => setSelectedDayKey(wd.key)}
+                          className={`text-[11px] font-bold uppercase transition-colors cursor-pointer rounded-lg py-1 ${
+                            wd.isSelected
+                              ? 'text-[#0d8a72] dark:text-teal-400 bg-teal-50/70 dark:bg-teal-950/40'
+                              : wd.isToday
+                              ? 'text-amber-500 font-black'
+                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                           }`}
                         >
-                          <span className="text-[9px] font-bold uppercase">{d.dayName}</span>
-                          <div className="my-1">
-                            {completed ? (
-                              <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
-                            ) : (
-                              <Circle size={13} className="text-slate-300 dark:text-slate-600" />
-                            )}
-                          </div>
-                          <span className="text-[9px] font-semibold">{d.dayNum}</span>
+                          {wd.dayShort}
                         </button>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  ) : period === 'MONTH' ? (
+                    <div className="col-span-7 grid grid-cols-10 gap-1 text-center">
+                      {monthDays.slice(0, 30).map((md) => (
+                        <button
+                          key={md.key}
+                          type="button"
+                          onClick={() => setSelectedDayKey(md.key)}
+                          className={`text-[9px] font-bold uppercase transition-colors cursor-pointer ${
+                            md.isSelected ? 'text-[#0d8a72] font-black' : 'text-slate-400'
+                          }`}
+                        >
+                          {md.dayNum}
+                        </button>
+                      ))}
+                    </div>
+                  ) : period === 'YEAR' ? (
+                    <div className="col-span-7 grid grid-cols-12 gap-1 text-center">
+                      {yearMonths.map((ym) => (
+                        <span key={ym.yearMonthKey} className="text-[9px] font-bold uppercase text-slate-400 truncate">
+                          {ym.monthShort}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="col-span-7 text-center text-xs font-semibold text-slate-400">
+                      Lifetime Completion Intensity
+                    </div>
+                  )}
+
+                  {/* Ratio column */}
+                  <div className="col-span-1 text-right pr-2">Ratio</div>
                 </div>
-              </Card>
-            );
-          })}
+
+                {/* Habit Rows */}
+                <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                  {habits.map((habit) => {
+                    const dates = habit.completed_dates || [];
+                    const habitColor = habit.color || '#0d8a72';
+
+                    // Calculate week ratio
+                    let completedInWeek = 0;
+                    weekDays.forEach((wd) => {
+                      if (dates.includes(wd.key)) completedInWeek++;
+                    });
+
+                    return (
+                      <div
+                        key={habit.id}
+                        className="grid grid-cols-12 gap-2 items-center py-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 rounded-2xl transition-colors px-2 group"
+                      >
+                        {/* Left: Indicator dot + Icon + Title */}
+                        <div className="col-span-4 flex items-center gap-2.5 min-w-0 pr-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                            style={{ backgroundColor: habitColor }}
+                          />
+                          <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
+                            {habit.title}
+                          </span>
+                        </div>
+
+                        {/* Middle: Days Heatmap Blocks */}
+                        {period === 'WEEK' ? (
+                          <div className="col-span-7 grid grid-cols-7 gap-2 justify-items-center">
+                            {weekDays.map((wd) => {
+                              const isCompleted = dates.includes(wd.key);
+
+                              return (
+                                <button
+                                  key={wd.key}
+                                  type="button"
+                                  onClick={() => onToggleHabit(habit.id, wd.key)}
+                                  title={`${habit.title} - ${wd.dayShort}, ${wd.key}: ${
+                                    isCompleted ? 'Completed (Click to uncheck)' : 'Pending (Click to complete)'
+                                  }`}
+                                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                                    isCompleted
+                                      ? 'shadow-xs scale-100 hover:scale-105'
+                                      : 'bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 opacity-70 hover:opacity-100'
+                                  }`}
+                                  style={{
+                                    backgroundColor: isCompleted ? habitColor : undefined,
+                                  }}
+                                >
+                                  {isCompleted && (
+                                    <Check size={14} className="text-white drop-shadow-xs" strokeWidth={3} />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : period === 'MONTH' ? (
+                          <div className="col-span-7 grid grid-cols-10 gap-1 justify-items-center">
+                            {monthDays.slice(0, 30).map((md) => {
+                              const isCompleted = dates.includes(md.key);
+                              return (
+                                <button
+                                  key={md.key}
+                                  type="button"
+                                  onClick={() => onToggleHabit(habit.id, md.key)}
+                                  title={`${md.key}: ${isCompleted ? 'Completed' : 'Missed'}`}
+                                  className={`w-4 h-4 rounded-md transition-all cursor-pointer ${
+                                    isCompleted ? 'scale-105' : 'bg-slate-100 dark:bg-slate-800 opacity-60'
+                                  }`}
+                                  style={{
+                                    backgroundColor: isCompleted ? habitColor : undefined,
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                        ) : period === 'YEAR' ? (
+                          <div className="col-span-7 grid grid-cols-12 gap-1 justify-items-center">
+                            {yearMonths.map((ym) => {
+                              const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
+                              const intensity = Math.min(1, countInMonth / 20);
+                              return (
+                                <div
+                                  key={ym.yearMonthKey}
+                                  title={`${ym.monthShort}: ${countInMonth} check-ins`}
+                                  className="w-4 h-5 rounded-md flex items-center justify-center text-[8px] font-bold text-white transition-all"
+                                  style={{
+                                    backgroundColor: countInMonth > 0 ? habitColor : undefined,
+                                    opacity: countInMonth > 0 ? Math.max(0.35, intensity) : 0.15,
+                                  }}
+                                >
+                                  {countInMonth > 0 ? countInMonth : ''}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="col-span-7 px-4">
+                            <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${Math.min(100, Math.max(5, (dates.length / 50) * 100))}%`,
+                                  backgroundColor: habitColor,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Right: Ratio / Count */}
+                        <div className="col-span-1 text-right pr-2">
+                          <span className="text-xs font-mono font-bold text-slate-400">
+                            {period === 'WEEK'
+                              ? `${completedInWeek} / 7`
+                              : `${dates.length}`}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Detailed Cards View fallback */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {habits.map((habit) => {
+                const isDoneToday = (habit.completed_dates || []).includes(todayKey);
+                return (
+                  <Card key={habit.id} className="p-4 flex flex-col justify-between gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl">{habit.icon || '⚡'}</span>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">{habit.title}</h4>
+                          <span className="text-[10px] text-slate-400">{habit.time_of_day || 'ANYTIME'}</span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
+                        <Flame size={13} /> {habit.current_streak || 0}d
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => onToggleHabit(habit.id, todayKey)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          isDoneToday
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+                        }`}
+                      >
+                        {isDoneToday ? '✓ Done Today' : 'Check Today'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onEditHabit(habit)}
+                        className="text-xs text-slate-400 hover:text-slate-600"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* ================= RIGHT PANEL: SELECTED DAY QUICK ACTIONS (4 Cols) ================= */}
+        <div className="lg:col-span-4 flex flex-col gap-4">
+          <Card className="p-5 flex flex-col gap-4 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 shadow-2xs rounded-3xl">
+            {/* Header: Selected Date + Navigation Arrows */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-[#0d8a72] dark:text-teal-400" />
+                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">
+                  {selectedDayInfo.displayTitle}
+                </h3>
+                {selectedDayInfo.isToday && (
+                  <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-teal-50 dark:bg-teal-950/60 text-[#0d8a72] dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                    Today
+                  </span>
+                )}
+              </div>
+
+              {/* Prev / Next Day Chevrons */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => stepSelectedDay(-1)}
+                  className="w-7 h-7 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-[#0d8a72] hover:border-[#0d8a72] transition-colors cursor-pointer"
+                  title="Previous Day"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => stepSelectedDay(1)}
+                  className="w-7 h-7 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-[#0d8a72] hover:border-[#0d8a72] transition-colors cursor-pointer"
+                  title="Next Day"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Habit Items Vertical Timeline for the Selected Day */}
+            <div className="flex flex-col gap-3">
+              {habits.map((habit) => {
+                const dates = habit.completed_dates || [];
+                const isCompleted = dates.includes(selectedDayKey);
+                const habitColor = habit.color || '#0d8a72';
+                const streak = habit.current_streak || 0;
+
+                return (
+                  <div key={`day-habit-${habit.id}`} className="relative pl-3 flex flex-col gap-1.5">
+                    {/* Left timeline indicator line */}
+                    <div
+                      className="absolute left-0 top-1 bottom-1 w-1 rounded-full transition-all"
+                      style={{ backgroundColor: habitColor }}
+                    />
+
+                    {/* Habit Card */}
+                    {isCompleted ? (
+                      /* COMPLETED STATE: Rich Filled Card styled like the reference design */
+                      <div
+                        className="p-3.5 rounded-2xl text-white transition-all shadow-sm flex flex-col justify-between gap-3"
+                        style={{ backgroundColor: habitColor }}
+                      >
+                        {/* Card Header: Icon + Title + Streak Badge + 3-dots */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                            <span className="text-xs font-black truncate">{habit.title}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[11px] font-black flex items-center gap-0.5 bg-black/15 px-2 py-0.5 rounded-full">
+                              <span>{streak}</span>
+                              <Flame size={12} className="text-amber-300" />
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => onEditHabit(habit)}
+                              className="p-1 rounded-md text-white/80 hover:text-white hover:bg-black/10 cursor-pointer"
+                              title="Edit Habit"
+                            >
+                              <MoreVertical size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Card Footer: ✓ Completed text + Undo button */}
+                        <div className="flex items-center justify-between pt-1 border-t border-white/20 text-xs">
+                          <div className="flex items-center gap-1 font-bold">
+                            <Check size={14} strokeWidth={3} />
+                            <span>Completed</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => onToggleHabit(habit.id, selectedDayKey)}
+                            className="font-bold underline text-white/90 hover:text-white cursor-pointer transition-opacity"
+                          >
+                            Undo
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* PENDING STATE: Clean Card with Mark Complete outline button */
+                      <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 transition-all hover:border-slate-300 flex flex-col justify-between gap-3 text-left">
+                        {/* Header: Icon + Title + Streak + 3-dots */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                              {habit.title}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {streak > 0 && (
+                              <span className="text-[11px] font-bold text-amber-500 flex items-center gap-0.5">
+                                <span>{streak}</span>
+                                <Flame size={12} />
+                              </span>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => onEditHabit(habit)}
+                              className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                              title="Edit Habit"
+                            >
+                              <MoreVertical size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Action: Mark Complete outline button */}
+                        <button
+                          type="button"
+                          onClick={() => onToggleHabit(habit.id, selectedDayKey)}
+                          className="w-full py-1.5 px-3 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#0d8a72] hover:text-[#0d8a72] dark:hover:border-teal-400 dark:hover:text-teal-300 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-teal-50/40 dark:hover:bg-teal-950/20 transition-all cursor-pointer shadow-2xs active:scale-98"
+                        >
+                          Mark Complete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
