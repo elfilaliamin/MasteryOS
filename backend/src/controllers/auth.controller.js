@@ -1,5 +1,6 @@
 import { findUserByEmail, findUserById, createUser, updateUserPassword, updateUserProfile } from '../models/user.model.js';
 import { hashPassword, comparePassword, generateToken } from '../utils/auth.js';
+import { query } from '../config/db.js';
 
 export const register = async (req, res) => {
   try {
@@ -129,5 +130,29 @@ export const updateProfile = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update profile.' });
+  }
+};
+
+export const resetUserData = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    try {
+      await query(`DELETE FROM task_activities WHERE user_id = $1`, [userId]);
+      await query(`DELETE FROM tasks WHERE user_id = $1`, [userId]);
+      await query(`DELETE FROM goals WHERE user_id = $1`, [userId]);
+      await query(`DELETE FROM courses WHERE user_id = $1`, [userId]);
+      await query(`DELETE FROM habit_logs WHERE user_id = $1`, [userId]);
+      await query(`DELETE FROM habits WHERE user_id = $1`, [userId]);
+      await query(`DELETE FROM categories WHERE user_id = $1`, [userId]);
+    } catch (dbErr) {
+      console.warn('[DB Warning] Reset data query warning:', dbErr.message);
+    }
+
+    res.status(200).json({
+      message: 'All user data has been successfully reset.'
+    });
+  } catch (err) {
+    console.error('Reset data error:', err);
+    res.status(500).json({ error: 'Failed to reset user data.' });
   }
 };

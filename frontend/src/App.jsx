@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
@@ -72,22 +72,19 @@ const AuthenticatedApp = () => {
   const [isHabitModalOpen, setIsHabitModalOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
 
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const reloadData = useCallback(() => {
+    setReloadTrigger((v) => v + 1);
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
 
-    const loadData = async () => {
-      if (!isAuthenticated) {
-        if (isMounted) {
-          setTasks([]);
-          setGoals([]);
-          setCourses([]);
-          setHabits([]);
-          setCategories([]);
-          setStats({});
-        }
-        return;
-      }
+    if (!isAuthenticated) {
+      return;
+    }
 
+    const fetchData = async () => {
       try {
         const [tasksRes, catsRes, statsRes, goalsRes, coursesRes, habitsRes] = await Promise.allSettled([
           api.getTasks(),
@@ -100,36 +97,11 @@ const AuthenticatedApp = () => {
 
         if (!isMounted) return;
 
-        if (tasksRes.status === 'fulfilled' && tasksRes.value?.tasks) {
-          setTasks(tasksRes.value.tasks);
-        } else {
-          setTasks([]);
-        }
-
-        if (goalsRes.status === 'fulfilled' && goalsRes.value?.goals) {
-          setGoals(goalsRes.value.goals);
-        } else {
-          setGoals([]);
-        }
-
-        if (coursesRes.status === 'fulfilled' && coursesRes.value?.courses) {
-          setCourses(coursesRes.value.courses);
-        } else {
-          setCourses([]);
-        }
-
-        if (habitsRes.status === 'fulfilled' && habitsRes.value?.habits) {
-          setHabits(habitsRes.value.habits);
-        } else {
-          setHabits([]);
-        }
-
-        if (catsRes.status === 'fulfilled' && catsRes.value?.categories && catsRes.value.categories.length > 0) {
-          setCategories(catsRes.value.categories);
-        } else {
-          setCategories(INITIAL_CATEGORIES);
-        }
-
+        setTasks(tasksRes.status === 'fulfilled' && tasksRes.value?.tasks ? tasksRes.value.tasks : []);
+        setGoals(goalsRes.status === 'fulfilled' && goalsRes.value?.goals ? goalsRes.value.goals : []);
+        setCourses(coursesRes.status === 'fulfilled' && coursesRes.value?.courses ? coursesRes.value.courses : []);
+        setHabits(habitsRes.status === 'fulfilled' && habitsRes.value?.habits ? habitsRes.value.habits : []);
+        setCategories(catsRes.status === 'fulfilled' && catsRes.value?.categories && catsRes.value.categories.length > 0 ? catsRes.value.categories : INITIAL_CATEGORIES);
         if (statsRes.status === 'fulfilled' && statsRes.value?.stats) {
           setStats(statsRes.value.stats);
         }
@@ -138,12 +110,142 @@ const AuthenticatedApp = () => {
       }
     };
 
-    loadData();
+    fetchData();
 
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, reloadTrigger]);
+
+  // Global Data Reset
+  const handleResetData = async () => {
+    try {
+      await api.resetUserData();
+    } catch (err) {
+      console.warn('API reset notice:', err.message);
+    }
+    setTasks([]);
+    setGoals([]);
+    setCourses([]);
+    setHabits([]);
+    setCategories(INITIAL_CATEGORIES);
+    setStats({});
+    if (user?.id) {
+      localStorage.removeItem(`mastery_acknowledged_level_${user.id}`);
+      localStorage.removeItem(`taskmaster_equipped_title_${user.id}`);
+    }
+    localStorage.removeItem('mastery_acknowledged_level');
+    localStorage.removeItem('taskmaster_equipped_title');
+    localStorage.removeItem('mastery_local_habits');
+    reloadData();
+  };
+
+  // Global Data Import
+  const handleImportData = async (importPayload, mode = 'merge') => {
+    if (mode === 'replace') {
+      try {
+        await api.resetUserData();
+      } catch (err) {
+        console.warn('API reset before import notice:', err.message);
+      }
+    }
+
+    const categoryMap = new Map();
+    if (Array.isArray(importPayload.categories)) {
+      for (const cat of importPayload.categories) {
+        try {
+          const res = await api.createCategory({ name: cat.name, color: cat.color });
+          if (res?.category?.id) {
+            categoryMap.set(cat.id, res.category.id);
+          }
+        } catch {
+          // ignore duplicate category names
+        }
+      }
+    }
+
+    const goalMap = new Map();
+    if (Array.isArray(importPayload.goals)) {
+      for (const g of importPayload.goals) {
+        try {
+          const res = await api.createGoal({
+            title: g.title,
+            description: g.description,
+            due_date: g.due_date || g.target_date,
+            priority: g.priority,
+            color: g.color,
+            icon: g.icon,
+          });
+          if (res?.goal?.id) {
+            goalMap.set(g.id, res.goal.id);
+          }
+        } catch (err) {
+          console.warn('Import goal notice:', err.message);
+        }
+      }
+    }
+
+    const courseMap = new Map();
+    if (Array.isArray(importPayload.courses)) {
+      for (const c of importPayload.courses) {
+        try {
+          const res = await api.createCourse({
+            title: c.title,
+            description: c.description,
+            cover_image: c.cover_image,
+            total_lessons: c.total_lessons,
+            finished_lessons: c.finished_lessons,
+            certification_url: c.certification_url,
+            certification_filename: c.certification_filename,
+          });
+          if (res?.course?.id) {
+            courseMap.set(c.id, res.course.id);
+          }
+        } catch (err) {
+          console.warn('Import course notice:', err.message);
+        }
+      }
+    }
+
+    if (Array.isArray(importPayload.tasks)) {
+      for (const t of importPayload.tasks) {
+        try {
+          await api.createTask({
+            title: t.title,
+            description: t.description,
+            status: t.status,
+            priority: t.priority,
+            category_id: categoryMap.get(t.category_id) || null,
+            goal_id: goalMap.get(t.goal_id) || null,
+            course_id: courseMap.get(t.course_id) || null,
+            due_date: t.due_date,
+            estimated_minutes: t.estimated_minutes,
+          });
+        } catch (err) {
+          console.warn('Import task notice:', err.message);
+        }
+      }
+    }
+
+    if (Array.isArray(importPayload.habits)) {
+      for (const h of importPayload.habits) {
+        try {
+          await api.createHabit({
+            title: h.title,
+            description: h.description,
+            icon: h.icon,
+            color: h.color,
+            frequency: h.frequency,
+            time_of_day: h.time_of_day,
+          });
+        } catch (err) {
+          console.warn('Import habit notice:', err.message);
+        }
+      }
+    }
+
+    reloadData();
+  };
 
   // Task actions
   const handleCreateOrUpdateTask = async (taskData) => {
@@ -628,7 +730,17 @@ const AuthenticatedApp = () => {
             />
             <Route
               path="/settings"
-              element={<SettingsPage />}
+              element={
+                <SettingsPage
+                  tasks={tasks}
+                  goals={goals}
+                  courses={courses}
+                  habits={habits}
+                  categories={categories}
+                  onResetData={handleResetData}
+                  onImportData={handleImportData}
+                />
+              }
             />
           </Route>
         </Route>

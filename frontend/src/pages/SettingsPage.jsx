@@ -11,18 +11,25 @@ import {
   Mail,
   Sun,
   Moon,
+  Monitor,
   Sparkles,
   Trophy,
   Check,
   Lock,
   Save,
   Upload,
+  Download,
+  Database,
+  Trash2,
+  AlertTriangle,
   KeyRound,
   AlertCircle,
   Layout,
   ArrowUp,
   ArrowDown,
   RotateCcw,
+  FileJson,
+  CheckCircle2,
 } from 'lucide-react';
 import { DEFAULT_DASHBOARD_CONFIG, normalizeDashboardConfig } from '../utils/dashboardConfig';
 
@@ -35,9 +42,17 @@ const SECTION_METADATA = {
   goals: { title: 'Goals Progress', icon: '🎯', desc: 'Active milestones and task completion progress' },
 };
 
-export const SettingsPage = () => {
+export const SettingsPage = ({
+  tasks = [],
+  goals = [],
+  courses = [],
+  habits = [],
+  categories = [],
+  onResetData,
+  onImportData,
+}) => {
   const { user, updateProfile } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, themeMode, selectThemeMode } = useTheme();
   const { playerStats, equippedTitleId, equipTitle } = useGamification();
 
   // Profile Form state
@@ -204,6 +219,155 @@ export const SettingsPage = () => {
   const showConfigToast = () => {
     setConfigSaved(true);
     setTimeout(() => setConfigSaved(false), 2500);
+  };
+
+  // Reset Everything state
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+
+  // Export state
+  const [exportSuccess, setExportSuccess] = useState(false);
+
+  // Import state
+  const [importPreview, setImportPreview] = useState(null);
+  const [importMode, setImportMode] = useState('merge'); // 'merge' | 'replace'
+  const [importError, setImportError] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importSuccess, setImportSuccess] = useState(false);
+  const importFileInputRef = useRef(null);
+
+  const handleExportData = () => {
+    try {
+      const exportPayload = {
+        app: 'MasteryOS',
+        version: '1.0',
+        exported_at: new Date().toISOString(),
+        user: {
+          full_name: user?.full_name || '',
+          email: user?.email || '',
+        },
+        dashboard_config: dashboardConfig,
+        categories: categories || [],
+        goals: goals || [],
+        courses: courses || [],
+        tasks: tasks || [],
+        habits: habits || [],
+        metadata: {
+          task_count: tasks?.length || 0,
+          goal_count: goals?.length || 0,
+          course_count: courses?.length || 0,
+          habit_count: habits?.length || 0,
+          category_count: categories?.length || 0,
+        }
+      };
+
+      const jsonStr = JSON.stringify(exportPayload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const dateStr = new Date().toISOString().split('T')[0];
+      link.href = url;
+      link.download = `masteryos-backup-${dateStr}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 4000);
+    } catch (err) {
+      alert('Failed to export data: ' + err.message);
+    }
+  };
+
+  const handleSelectImportFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportError('');
+    setImportSuccess(false);
+
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      setImportError('Please select a valid JSON backup file (*.json).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        if (!parsed || typeof parsed !== 'object') {
+          throw new Error('Invalid JSON structure.');
+        }
+
+        const foundTasks = Array.isArray(parsed.tasks) ? parsed.tasks.length : 0;
+        const foundGoals = Array.isArray(parsed.goals) ? parsed.goals.length : 0;
+        const foundCourses = Array.isArray(parsed.courses) ? parsed.courses.length : 0;
+        const foundHabits = Array.isArray(parsed.habits) ? parsed.habits.length : 0;
+        const foundCategories = Array.isArray(parsed.categories) ? parsed.categories.length : 0;
+
+        if (foundTasks === 0 && foundGoals === 0 && foundCourses === 0 && foundHabits === 0 && foundCategories === 0) {
+          setImportError('No valid MasteryOS tasks, goals, courses, or habits found in this file.');
+          setImportPreview(null);
+          return;
+        }
+
+        setImportPreview({
+          filename: file.name,
+          data: parsed,
+          counts: {
+            tasks: foundTasks,
+            goals: foundGoals,
+            courses: foundCourses,
+            habits: foundHabits,
+            categories: foundCategories,
+          }
+        });
+      } catch (err) {
+        setImportError('Error parsing backup file: ' + err.message);
+        setImportPreview(null);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExecuteImport = async () => {
+    if (!importPreview?.data) return;
+    setIsImporting(true);
+    setImportError('');
+    try {
+      if (onImportData) {
+        await onImportData(importPreview.data, importMode);
+      }
+      setImportSuccess(true);
+      setImportPreview(null);
+      if (importFileInputRef.current) {
+        importFileInputRef.current.value = '';
+      }
+      setTimeout(() => setImportSuccess(false), 5000);
+    } catch (err) {
+      setImportError('Import failed: ' + err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleExecuteReset = async () => {
+    setIsResetting(true);
+    try {
+      if (onResetData) {
+        await onResetData();
+      } else {
+        await api.resetUserData();
+      }
+      setIsResetModalOpen(false);
+      setResetSuccess(true);
+      setTimeout(() => setResetSuccess(false), 5000);
+    } catch (err) {
+      alert('Failed to reset data: ' + err.message);
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   // Filter achievements by current track
@@ -530,50 +694,306 @@ export const SettingsPage = () => {
               </div>
             </form>
           </Card>
+
+          {/* Data Management: Export & Import */}
+          <Card className="flex flex-col gap-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Database size={18} className="text-[#0d8a72] dark:text-teal-400" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Data Backup & Migration
+                </h3>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                JSON Format
+              </span>
+            </div>
+
+            {/* Export Sub-Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800">
+              <div className="flex flex-col gap-1">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <Download size={15} className="text-[#0d8a72] dark:text-teal-400" />
+                  <span>Export All Application Data</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Download a complete backup containing {tasks.length} tasks, {goals.length} goals, {courses.length} courses, {habits.length} habits, and categories.
+                </p>
+                {exportSuccess && (
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-1">
+                    <CheckCircle2 size={13} /> Backup exported successfully to your downloads!
+                  </span>
+                )}
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleExportData}
+                className="gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
+              >
+                <Download size={14} />
+                <span>Export JSON</span>
+              </Button>
+            </div>
+
+            {/* Import Sub-Section */}
+            <div className="flex flex-col gap-3 p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-950/40 border border-slate-200/80 dark:border-slate-800">
+              <div className="flex flex-col gap-1">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <Upload size={15} className="text-[#0d8a72] dark:text-teal-400" />
+                  <span>Import & Restore Data</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Upload a previously exported MasteryOS JSON file to import tasks, goals, courses, and habits into your account.
+                </p>
+              </div>
+
+              {/* Hidden file input */}
+              <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleSelectImportFile}
+                className="hidden"
+              />
+
+              {!importPreview ? (
+                <div className="flex items-center gap-3 pt-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => importFileInputRef.current?.click()}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <FileJson size={14} className="text-[#0d8a72]" />
+                    <span>Select Backup File (.json)</span>
+                  </Button>
+                  <span className="text-[11px] text-slate-400">No file selected</span>
+                </div>
+              ) : (
+                /* Import Preview Box */
+                <div className="flex flex-col gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-teal-500/40 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileJson size={16} className="text-[#0d8a72]" />
+                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-xs">
+                        {importPreview.filename}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImportPreview(null);
+                        if (importFileInputRef.current) importFileInputRef.current.value = '';
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      Change file
+                    </button>
+                  </div>
+
+                  {/* Detected items summary chips */}
+                  <div className="flex flex-wrap gap-2 text-[11px]">
+                    <span className="px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/60 text-[#0d8a72] dark:text-teal-300 font-semibold border border-teal-200 dark:border-teal-800">
+                      {importPreview.counts.tasks} Tasks
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200 dark:border-sky-800">
+                      {importPreview.counts.goals} Goals
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold border border-purple-200 dark:border-purple-800">
+                      {importPreview.counts.courses} Courses
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
+                      {importPreview.counts.habits} Habits
+                    </span>
+                  </div>
+
+                  {/* Mode selector: Merge vs Replace */}
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      Import Mode:
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className={`flex items-center gap-2 p-2 rounded-xl border text-xs cursor-pointer transition-colors ${
+                        importMode === 'merge'
+                          ? 'border-[#0d8a72] bg-teal-50/50 dark:bg-teal-950/30 text-slate-900 dark:text-slate-100 font-semibold'
+                          : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="importMode"
+                          value="merge"
+                          checked={importMode === 'merge'}
+                          onChange={() => setImportMode('merge')}
+                          className="accent-[#0d8a72]"
+                        />
+                        <span>Merge with current data</span>
+                      </label>
+
+                      <label className={`flex items-center gap-2 p-2 rounded-xl border text-xs cursor-pointer transition-colors ${
+                        importMode === 'replace'
+                          ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 text-slate-900 dark:text-slate-100 font-semibold'
+                          : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="importMode"
+                          value="replace"
+                          checked={importMode === 'replace'}
+                          onChange={() => setImportMode('replace')}
+                          className="accent-rose-500"
+                        />
+                        <span>Replace existing data</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      isLoading={isImporting}
+                      onClick={handleExecuteImport}
+                      className="gap-2 cursor-pointer"
+                    >
+                      <Upload size={14} />
+                      <span>{importMode === 'replace' ? 'Replace & Restore Data' : 'Merge & Import Data'}</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {importError && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold">
+                  <AlertCircle size={15} />
+                  <span>{importError}</span>
+                </div>
+              )}
+
+              {importSuccess && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
+                  <CheckCircle2 size={15} />
+                  <span>Data backup imported and synced successfully!</span>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Danger Zone: Reset Everything */}
+          <Card className="flex flex-col gap-4 border-rose-200/90 dark:border-rose-900/40 bg-white dark:bg-slate-900">
+            <div className="flex items-center justify-between pb-3 border-b border-rose-100 dark:border-rose-950/60">
+              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                <Trash2 size={18} />
+                <h3 className="text-sm font-bold">
+                  Danger Zone: Reset Everything
+                </h3>
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">
+                Destructive
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-rose-50/40 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40">
+              <div className="flex flex-col gap-1">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  Reset All Tasks, Goals, Courses & Habits
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Permanently wipe all operational records, activity logs, streaks, and reset your gamification XP back to Level 1. This cannot be undone.
+                </p>
+                {resetSuccess && (
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-1">
+                    <CheckCircle2 size={13} /> All application data was successfully reset to a clean slate.
+                  </span>
+                )}
+              </div>
+
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => setIsResetModalOpen(true)}
+                className="gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
+              >
+                <Trash2 size={14} />
+                <span>Reset Everything</span>
+              </Button>
+            </div>
+          </Card>
         </div>
 
         {/* Right Column (1 col): Separated Serious Mastery Tracks & Theme Toggle */}
         <div className="flex flex-col gap-6">
           {/* Theme Mode Toggle Box */}
           <Card className="flex flex-col gap-4 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-              {theme === 'dark' ? (
-                <Moon size={18} className="text-teal-400" />
-              ) : (
-                <Sun size={18} className="text-amber-500" />
-              )}
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Display Theme
-              </h3>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                {theme === 'dark' ? (
+                  <Moon size={18} className="text-teal-400" />
+                ) : (
+                  <Sun size={18} className="text-amber-500" />
+                )}
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Display Theme
+                </h3>
+              </div>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                {themeMode === 'system' ? 'Auto (OS)' : theme === 'dark' ? 'Dark' : 'Light'}
+              </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
+            <div className="grid grid-cols-3 gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80">
               <button
                 type="button"
-                onClick={() => theme !== 'light' && toggleTheme()}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  theme === 'light'
+                onClick={() => selectThemeMode('light')}
+                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  themeMode === 'light'
                     ? 'bg-white text-teal-800 shadow-xs'
                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                <Sun size={15} className="text-amber-500" />
+                <Sun size={14} className="text-amber-500 shrink-0" />
                 <span>Light</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => theme !== 'dark' && toggleTheme()}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  theme === 'dark'
+                onClick={() => selectThemeMode('dark')}
+                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  themeMode === 'dark'
                     ? 'bg-slate-700 text-white shadow-xs'
                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                <Moon size={15} className="text-teal-400" />
+                <Moon size={14} className="text-teal-400 shrink-0" />
                 <span>Dark</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => selectThemeMode('system')}
+                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  themeMode === 'system'
+                    ? 'bg-teal-50 dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <Monitor size={14} className="text-slate-500 dark:text-slate-400 shrink-0" />
+                <span>System</span>
+              </button>
             </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              {themeMode === 'system'
+                ? `Automatically matches your browser and system preferences (currently ${theme}).`
+                : theme === 'dark'
+                ? 'Soft, eye-friendly dark palette tuned for reduced eye fatigue.'
+                : 'Clean, high-clarity daylight theme.'}
+            </p>
           </Card>
 
           {/* Executive Mastery & Next Unlock (Psychological Goal-Gradient Effect) */}
@@ -785,6 +1205,59 @@ export const SettingsPage = () => {
           </Card>
         </div>
       </div>
+
+      {/* Reset Everything Confirmation Modal */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl flex flex-col gap-4 text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                <AlertTriangle size={24} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
+                  Reset All Application Data?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  This action is permanent and cannot be reversed.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 text-xs text-rose-800 dark:text-rose-300 leading-relaxed">
+              You are about to delete <strong>{tasks.length} tasks</strong>, <strong>{goals.length} goals</strong>, <strong>{courses.length} courses</strong>, and <strong>{habits.length} habits</strong>. All completion history, streaks, and XP will be reset back to Level 1.
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              We recommend clicking <strong>Export JSON</strong> first if you wish to retain a backup file.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsResetModalOpen(false)}
+                disabled={isResetting}
+                className="cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                isLoading={isResetting}
+                onClick={handleExecuteReset}
+                className="gap-2 cursor-pointer"
+              >
+                <Trash2 size={14} />
+                <span>Yes, Reset Everything</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

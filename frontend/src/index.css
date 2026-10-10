@@ -7,11 +7,22 @@
   --color-teal-brand-hover: #086f5b;
   --color-teal-brand-light: #e6f7f4;
   --color-amber-brand: #f59e0b;
+
+  /* Ergonomic, eye-friendly dark palette (soft charcoal-slate tones, reduced glare) */
+  --color-slate-950: #0b0e14;
+  --color-slate-900: #131722;
+  --color-slate-800: #1e2433;
+  --color-slate-700: #2c3445;
+  --color-slate-600: #475369;
 }
 
 @layer base {
   :root {
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
@@ -27,8 +38,8 @@
   }
 
   .dark body {
-    background-color: #0b131e;
-    color: #f1f5f9;
+    background-color: #0f1218;
+    color: #e2e8f0;
   }
 
   /* Custom scrollbars */

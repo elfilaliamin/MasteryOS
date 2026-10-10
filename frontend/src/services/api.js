@@ -64,6 +64,14 @@ export const api = {
     return handleResponse(res);
   },
 
+  async resetUserData() {
+    const res = await fetch(`${API_BASE}/auth/reset-data`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+
   // Task endpoints
   async getTasks(params = {}) {
     const query = new URLSearchParams();

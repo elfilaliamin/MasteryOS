@@ -5,6 +5,20 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MasteryOS — Tasks, Goals & Courses Tracker</title>
+    <script>
+      (function() {
+        try {
+          var mode = localStorage.getItem('taskmaster_theme_mode');
+          var saved = localStorage.getItem('taskmaster_theme');
+          var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (mode === 'dark' || (mode !== 'light' && (saved === 'dark' || (!saved && systemDark)))) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
