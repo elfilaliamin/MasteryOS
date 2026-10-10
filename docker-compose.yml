@@ -1,0 +1,69 @@
+services:
+  # Database Service (PostgreSQL 16 Alpine)
+  db:
+    image: postgres:16-alpine
+    container_name: tasks_postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres123}
+      POSTGRES_DB: ${DB_NAME:-tasktracker_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - tasks_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-tasktracker_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Backend REST API Service (Node 26 Slim)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tasks_backend_api
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres123}
+      DB_NAME: ${DB_NAME:-tasktracker_db}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_master_tasks_tracker_2026}
+      JWT_EXPIRES_IN: 7d
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - tasks_network
+
+  # Frontend Single Page App Service (Nginx Alpine)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tasks_frontend_web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - tasks_network
+
+networks:
+  tasks_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
