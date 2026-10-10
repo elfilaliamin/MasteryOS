@@ -47,7 +47,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: tasks_frontend_web
+    container_name: mastery_os_frontend_web
     restart: unless-stopped
     depends_on:
       - backend
