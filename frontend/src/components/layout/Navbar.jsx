@@ -1,9 +1,9 @@
-import { Menu, Search, Plus, Sun, Moon } from 'lucide-react';
+import { Menu, Plus, Sun, Moon } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useTheme } from '../../context/useTheme';
 import { XpProgressBar } from '../gamification/XpProgressBar';
 
-export const Navbar = ({ onOpenMobileSidebar, onQuickAddTask, searchQuery, setSearchQuery }) => {
+export const Navbar = ({ onOpenMobileSidebar, onQuickAddTask }) => {
   const { isDark, toggleTheme } = useTheme();
 
   return (
@@ -16,18 +16,6 @@ export const Navbar = ({ onOpenMobileSidebar, onQuickAddTask, searchQuery, setSe
         >
           <Menu size={20} />
         </button>
-
-        {/* Global Task Search */}
-        <div className="relative w-44 sm:w-72">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery || ''}
-            onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
-            placeholder="Search tasks, categories..."
-            className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-[#0d8a72] focus:ring-1 focus:ring-[#0d8a72]"
-          />
-        </div>
       </div>
 
       <div className="flex items-center gap-2.5 sm:gap-3">

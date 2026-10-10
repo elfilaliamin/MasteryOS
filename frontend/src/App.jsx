@@ -54,7 +54,6 @@ const AuthenticatedApp = () => {
   const [habits, setHabits] = useState([]);
   const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState({});
-  const [searchQuery, setSearchQuery] = useState('');
 
   // Task Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -611,8 +610,6 @@ const AuthenticatedApp = () => {
                   setEditingTask(null);
                   setIsModalOpen(true);
                 }}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
               />
             }
           >
@@ -700,7 +697,6 @@ const AuthenticatedApp = () => {
                   categories={categories}
                   goals={goals}
                   courses={courses}
-                  searchQuery={searchQuery}
                   onOpenNewTask={() => {
                     setEditingTask(null);
                     setIsModalOpen(true);
