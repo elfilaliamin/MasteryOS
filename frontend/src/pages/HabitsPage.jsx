@@ -740,7 +740,6 @@ export const HabitsPage = ({
                 const dates = habit.completed_dates || [];
                 const isCompleted = dates.includes(selectedDayKey);
                 const habitColor = habit.color || '#0d8a72';
-                const streak = habit.current_streak || 0;
 
                 return (
                   <div key={`day-habit-${habit.id}`} className="relative pl-3 flex flex-col gap-1.5">
@@ -757,31 +756,21 @@ export const HabitsPage = ({
                         className="p-3.5 rounded-2xl text-white transition-all shadow-sm flex flex-col justify-between gap-3"
                         style={{ backgroundColor: habitColor }}
                       >
-                        {/* Card Header: Icon + Title + Streak Badge + 3-dots */}
+                        {/* Card Header: Icon + Title + 3-dots */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
                             <span className="text-xs font-black truncate">{habit.title}</span>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            {/* Big Bold Filled Fire Streak Badge */}
-                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/25 backdrop-blur-xs border border-white/20 shadow-xs">
-                              <Flame size={18} className="fill-amber-300 text-amber-300 shrink-0 drop-shadow-[0_2px_8px_rgba(252,211,77,0.8)] animate-pulse" />
-                              <span className="text-sm font-black text-white tracking-tight">
-                                {streak} <span className="text-[10px] uppercase font-bold text-amber-200">streak</span>
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => onEditHabit(habit)}
-                              className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-black/15 cursor-pointer transition-colors"
-                              title="Edit Habit"
-                            >
-                              <MoreVertical size={15} />
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onEditHabit(habit)}
+                            className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-black/15 cursor-pointer transition-colors shrink-0"
+                            title="Edit Habit"
+                          >
+                            <MoreVertical size={15} />
+                          </button>
                         </div>
 
                         {/* Card Footer: ✓ Completed text + Undo button */}
@@ -803,7 +792,7 @@ export const HabitsPage = ({
                     ) : (
                       /* PENDING STATE: Clean Card with Mark Complete outline button */
                       <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 transition-all hover:border-slate-300 flex flex-col justify-between gap-3 text-left">
-                        {/* Header: Icon + Title + Streak + 3-dots */}
+                        {/* Header: Icon + Title + 3-dots */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
@@ -812,24 +801,14 @@ export const HabitsPage = ({
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            {/* Big Bold Filled Fire Streak Badge */}
-                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-2xs">
-                              <Flame size={18} className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_2px_8px_rgba(245,158,11,0.5)] animate-pulse" />
-                              <span className="text-sm font-black tracking-tight text-slate-900 dark:text-slate-100">
-                                {streak} <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">streak</span>
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => onEditHabit(habit)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors"
-                              title="Edit Habit"
-                            >
-                              <MoreVertical size={15} />
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onEditHabit(habit)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors shrink-0"
+                            title="Edit Habit"
+                          >
+                            <MoreVertical size={15} />
+                          </button>
                         </div>
 
                         {/* Action: Mark Complete outline button with mobile touch height */}
