@@ -49,9 +49,6 @@ export const LoginPage = () => {
             <span className="text-3xl font-black text-[#0d8a72] dark:text-teal-400 tracking-tight">Mastery</span>
             <span className="text-3xl font-black text-amber-500 tracking-tight">OS</span>
           </div>
-          <span className="text-xs text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider mt-0.5">
-            Pro Version
-          </span>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Sign in to manage your tasks and level up</p>
         </div>
 
