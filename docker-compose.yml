@@ -2,7 +2,7 @@ services:
   # Database Service (PostgreSQL 16 Alpine)
   db:
     image: postgres:16-alpine
-    container_name: tasks_postgres_db
+    container_name: mastery_os_postgres_db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
@@ -24,7 +24,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: tasks_backend_api
+    container_name: mastery_os_backend_api
     restart: unless-stopped
     environment:
       PORT: 5000
