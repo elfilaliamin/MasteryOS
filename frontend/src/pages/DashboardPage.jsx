@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Circle,
   Flame,
-  CheckCircle2
+  CheckCircle2,
+  Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGamification } from '../context/useGamification';
@@ -29,7 +30,7 @@ const DASHBOARD_LIMITS = {
   GOALS: 3,             // Max 3 active strategic goals (1x3 grid)
 };
 
-const DEFAULT_DASHBOARD_CONFIG = {
+export const DEFAULT_DASHBOARD_CONFIG = {
   showHabits: true,
   showStats: true,
   showUrgentTasks: true,
@@ -37,6 +38,32 @@ const DEFAULT_DASHBOARD_CONFIG = {
   showActiveCourses: true,
   showGoalsOverview: true,
   order: ['habits', 'stats', 'urgent', 'deadlines', 'courses', 'goals'],
+};
+
+export const normalizeDashboardConfig = (raw) => {
+  if (!raw) return DEFAULT_DASHBOARD_CONFIG;
+  try {
+    const config = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    let order = Array.isArray(config.order) ? [...config.order] : [...DEFAULT_DASHBOARD_CONFIG.order];
+    if (!order.includes('habits')) {
+      order.unshift('habits');
+    }
+    DEFAULT_DASHBOARD_CONFIG.order.forEach((key) => {
+      if (!order.includes(key)) {
+        order.push(key);
+      }
+    });
+    order = order.filter((k) => DEFAULT_DASHBOARD_CONFIG.order.includes(k));
+
+    return {
+      ...DEFAULT_DASHBOARD_CONFIG,
+      ...config,
+      showHabits: config.showHabits !== false,
+      order,
+    };
+  } catch {
+    return DEFAULT_DASHBOARD_CONFIG;
+  }
 };
 
 export const DashboardPage = ({
@@ -56,7 +83,15 @@ export const DashboardPage = ({
   const [dashboardConfig, setDashboardConfig] = useState(() => {
     try {
       const saved = localStorage.getItem('mastery_dashboard_config');
-      return saved ? { ...DEFAULT_DASHBOARD_CONFIG, ...JSON.parse(saved) } : DEFAULT_DASHBOARD_CONFIG;
+      const normalized = normalizeDashboardConfig(saved);
+      if (saved) {
+        // Auto-heal stored config if habits was omitted in earlier session
+        const parsed = JSON.parse(saved);
+        if (!parsed.order?.includes('habits') || parsed.showHabits === undefined) {
+          localStorage.setItem('mastery_dashboard_config', JSON.stringify(normalized));
+        }
+      }
+      return normalized;
     } catch {
       return DEFAULT_DASHBOARD_CONFIG;
     }
@@ -67,7 +102,7 @@ export const DashboardPage = ({
     const handleStorage = () => {
       try {
         const saved = localStorage.getItem('mastery_dashboard_config');
-        if (saved) setDashboardConfig({ ...DEFAULT_DASHBOARD_CONFIG, ...JSON.parse(saved) });
+        if (saved) setDashboardConfig(normalizeDashboardConfig(saved));
       } catch (err) {
         void err;
       }
@@ -152,33 +187,82 @@ export const DashboardPage = ({
   const renderSection = (sectionKey) => {
     switch (sectionKey) {
       case 'habits':
-        if (!dashboardConfig.showHabits || habits.length === 0) return null;
-        return (
-          <div key="habits" className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
-                  <Flame size={16} />
-                </div>
-                <div>
+        if (!dashboardConfig.showHabits) return null;
+        if (habits.length === 0) {
+          return (
+            <div key="habits" className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
+                    <Flame size={16} className="fill-amber-500 text-amber-500" />
+                  </div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <span>Today's Habits Shortcut</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                      {completedHabitsCount} of {habits.length} Done ({habitsRate}%)
-                    </span>
+                    <span>Today's Habits & Streaks</span>
                   </h3>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => navigate('/habits')}
                   className="text-xs font-bold text-[#0d8a72] dark:text-teal-400 hover:underline cursor-pointer flex items-center gap-1"
                 >
+                  <span>Go to Habits</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+
+              <div className="p-6 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 flex flex-col items-center justify-center text-center gap-2">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-500">
+                  <Flame size={24} className="fill-amber-500 text-amber-500" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  No habits tracked yet
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
+                  Build unbreakable daily momentum. Add habits to track your daily progress and watch your streaks grow!
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigate('/habits')}
+                  className="mt-1"
+                >
+                  <Plus size={14} />
+                  <span>Set Up Habits</span>
+                </Button>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div key="habits" className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-500 border border-amber-500/30">
+                  <Flame size={18} className="fill-amber-500 text-amber-500 drop-shadow-[0_1px_4px_rgba(245,158,11,0.5)]" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+                    <span>Today's Habits & Streaks</span>
+                    <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/80 shadow-2xs">
+                      {completedHabitsCount} of {habits.length} Done ({habitsRate}%)
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Check off your daily habits to protect and extend your streak
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => navigate('/habits')}
+                  className="text-xs font-bold text-[#0d8a72] dark:text-teal-400 hover:underline cursor-pointer flex items-center gap-1 bg-teal-50/60 dark:bg-teal-950/40 px-2.5 py-1.5 rounded-xl border border-teal-200/70 dark:border-teal-800/70"
+                >
                   <span>
                     {habits.length > DASHBOARD_LIMITS.HABITS
                       ? `View all ${habits.length} Habits`
-                      : 'View all Habits'}
+                      : 'Habit Tracker'}
                   </span>
                   <ChevronRight size={13} />
                 </button>
@@ -186,7 +270,7 @@ export const DashboardPage = ({
             </div>
 
             {/* Habit Items Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3.5">
               {displayedHabits.map((habit) => {
                 const isCompleted = (habit.completed_dates || []).includes(todayStr);
                 const streak = habit.current_streak || 0;
@@ -195,37 +279,42 @@ export const DashboardPage = ({
                   <div
                     key={`dash-habit-${habit.id}`}
                     onClick={() => onToggleHabit && onToggleHabit(habit.id)}
-                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer select-none ${
+                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer select-none group ${
                       isCompleted
-                        ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/80 shadow-xs'
-                        : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-amber-400'
+                        ? 'bg-emerald-50/60 dark:bg-emerald-950/25 border-emerald-300/80 dark:border-emerald-800/80 shadow-xs ring-1 ring-emerald-400/20'
+                        : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500 shadow-2xs hover:shadow-xs'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 transition-transform group-hover:scale-105"
                         style={{
                           backgroundColor: `${habit.color || '#0d8a72'}18`,
-                          border: `1px solid ${habit.color || '#0d8a72'}30`,
+                          border: `1px solid ${habit.color || '#0d8a72'}35`,
                         }}
                       >
                         {habit.icon || '⚡'}
                       </div>
                       <div className="min-w-0">
                         <p
-                          className={`text-xs font-bold truncate ${
+                          className={`text-xs font-bold truncate transition-colors ${
                             isCompleted
                               ? 'line-through text-slate-400 dark:text-slate-500'
-                              : 'text-slate-900 dark:text-slate-100'
+                              : 'text-slate-900 dark:text-slate-100 group-hover:text-[#0d8a72] dark:group-hover:text-teal-300'
                           }`}
                         >
                           {habit.title}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[11px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-2xs">
-                            <Flame size={13} className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_1px_4px_rgba(245,158,11,0.4)] animate-pulse" />
-                            <span>{streak}d streak</span>
-                          </span>
+                          {/* Prominent Streak Badge with Filled Flame */}
+                          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-black text-xs shadow-2xs">
+                            <Flame
+                              size={14}
+                              className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_1px_4px_rgba(245,158,11,0.5)] animate-pulse"
+                            />
+                            <span>{streak}d</span>
+                            <span className="text-[10px] font-bold text-amber-700/80 dark:text-amber-300/80">streak</span>
+                          </div>
                           <span className="text-[10px] text-slate-400 uppercase font-semibold">
                             • {habit.time_of_day || 'ANYTIME'}
                           </span>
@@ -233,16 +322,25 @@ export const DashboardPage = ({
                       </div>
                     </div>
 
+                    {/* Quick check toggle */}
                     <button
                       type="button"
-                      aria-label="Toggle habit"
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                      aria-label="Toggle habit completion"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onToggleHabit) onToggleHabit(habit.id);
+                      }}
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all shrink-0 cursor-pointer ${
                         isCompleted
-                          ? 'bg-emerald-600 text-white'
-                          : 'border border-slate-300 dark:border-slate-700 text-transparent hover:border-[#0d8a72]'
+                          ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-500/30 scale-100'
+                          : 'border-2 border-slate-300 dark:border-slate-700 hover:border-amber-500 text-transparent bg-slate-50/50 dark:bg-slate-800/50 hover:bg-amber-50 dark:hover:bg-amber-950/20'
                       }`}
                     >
-                      <CheckCircle2 size={15} className={isCompleted ? 'text-white' : 'opacity-0'} />
+                      <Check
+                        size={15}
+                        strokeWidth={3}
+                        className={`transition-opacity ${isCompleted ? 'opacity-100 text-white' : 'opacity-0'}`}
+                      />
                     </button>
                   </div>
                 );

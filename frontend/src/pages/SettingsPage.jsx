@@ -24,19 +24,10 @@ import {
   ArrowDown,
   RotateCcw,
 } from 'lucide-react';
-
-const DEFAULT_DASHBOARD_CONFIG = {
-  showHabits: true,
-  showStats: true,
-  showUrgentTasks: true,
-  showDeadlines: true,
-  showActiveCourses: true,
-  showGoalsOverview: true,
-  order: ['habits', 'stats', 'urgent', 'deadlines', 'courses', 'goals'],
-};
+import { DEFAULT_DASHBOARD_CONFIG, normalizeDashboardConfig } from './DashboardPage';
 
 const SECTION_METADATA = {
-  habits: { title: "Today's Habits Shortcut", icon: '🔥', desc: "Check today's active habits and streak progress" },
+  habits: { title: "Today's Habits & Streaks", icon: '🔥', desc: "Check today's active habits and streak progress" },
   stats: { title: 'KPI Metrics & Summary Cards', icon: '📊', desc: 'Total tasks, completion rate, and active counts' },
   urgent: { title: 'High & Urgent Priority Tasks', icon: '⚡', desc: 'Direct access to critical execution items' },
   deadlines: { title: 'Upcoming & Nearest Deadlines', icon: '📅', desc: 'Tasks sorted by nearest due date' },
@@ -76,7 +67,14 @@ export const SettingsPage = () => {
   const [dashboardConfig, setDashboardConfig] = useState(() => {
     try {
       const saved = localStorage.getItem('mastery_dashboard_config');
-      return saved ? { ...DEFAULT_DASHBOARD_CONFIG, ...JSON.parse(saved) } : DEFAULT_DASHBOARD_CONFIG;
+      const normalized = normalizeDashboardConfig(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.order?.includes('habits') || parsed.showHabits === undefined) {
+          localStorage.setItem('mastery_dashboard_config', JSON.stringify(normalized));
+        }
+      }
+      return normalized;
     } catch {
       return DEFAULT_DASHBOARD_CONFIG;
     }
