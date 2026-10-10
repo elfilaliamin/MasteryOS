@@ -221,12 +221,12 @@ export const DashboardPage = ({
                         >
                           {habit.title}
                         </p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] font-bold text-amber-500 flex items-center gap-0.5">
-                            <Flame size={11} />
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[11px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-2xs">
+                            <Flame size={13} className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_1px_4px_rgba(245,158,11,0.4)] animate-pulse" />
                             <span>{streak}d streak</span>
                           </span>
-                          <span className="text-[9px] text-slate-400 uppercase">
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold">
                             • {habit.time_of_day || 'ANYTIME'}
                           </span>
                         </div>

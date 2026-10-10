@@ -529,16 +529,28 @@ export const HabitsPage = ({
                           key={habit.id}
                           className="grid grid-cols-12 gap-1.5 sm:gap-2 items-center py-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 rounded-2xl transition-colors px-1 sm:px-2 group"
                         >
-                          {/* Sticky Left: Indicator dot + Icon + Title */}
-                          <div className="col-span-5 sm:col-span-4 sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-850 z-10 flex items-center gap-2 sm:gap-2.5 min-w-0 pr-2 pl-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.4)]">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
-                              style={{ backgroundColor: habitColor }}
-                            />
-                            <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
-                              {habit.title}
-                            </span>
+                          {/* Sticky Left: Indicator dot + Icon + Title + Streak Badge */}
+                          <div className="col-span-5 sm:col-span-4 sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-850 z-10 flex items-center justify-between gap-1.5 sm:gap-2 min-w-0 pr-2 pl-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.4)]">
+                            <div className="flex items-center gap-2 min-w-0 truncate">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                                style={{ backgroundColor: habitColor }}
+                              />
+                              <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
+                                {habit.title}
+                              </span>
+                            </div>
+
+                            {(habit.current_streak || 0) > 0 && (
+                              <div
+                                className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-black text-xs"
+                                title={`Current streak: ${habit.current_streak} days`}
+                              >
+                                <Flame size={14} className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_1px_4px_rgba(245,158,11,0.4)]" />
+                                <span>{habit.current_streak}</span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Middle: Days Heatmap Blocks with touch target */}
@@ -645,6 +657,7 @@ export const HabitsPage = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {habits.map((habit) => {
                 const isDoneToday = (habit.completed_dates || []).includes(todayKey);
+                const streak = habit.current_streak || 0;
                 return (
                   <Card key={habit.id} className="p-4 flex flex-col justify-between gap-3">
                     <div className="flex items-start justify-between gap-2">
@@ -655,9 +668,10 @@ export const HabitsPage = ({
                           <span className="text-[10px] text-slate-400">{habit.time_of_day || 'ANYTIME'}</span>
                         </div>
                       </div>
-                      <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
-                        <Flame size={13} /> {habit.current_streak || 0}d
-                      </span>
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-black text-sm shadow-2xs">
+                        <Flame size={18} className="fill-amber-500 text-amber-500 animate-pulse shrink-0 drop-shadow-[0_2px_6px_rgba(245,158,11,0.5)]" />
+                        <span>{streak}d streak</span>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -759,19 +773,22 @@ export const HabitsPage = ({
                             <span className="text-xs font-black truncate">{habit.title}</span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-[11px] font-black flex items-center gap-0.5 bg-black/15 px-2 py-0.5 rounded-full">
-                              <span>{streak}</span>
-                              <Flame size={12} className="text-amber-300" />
-                            </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Big Bold Filled Fire Streak Badge */}
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/25 backdrop-blur-xs border border-white/20 shadow-xs">
+                              <Flame size={18} className="fill-amber-300 text-amber-300 shrink-0 drop-shadow-[0_2px_8px_rgba(252,211,77,0.8)] animate-pulse" />
+                              <span className="text-sm font-black text-white tracking-tight">
+                                {streak} <span className="text-[10px] uppercase font-bold text-amber-200">streak</span>
+                              </span>
+                            </div>
 
                             <button
                               type="button"
                               onClick={() => onEditHabit(habit)}
-                              className="p-1 rounded-md text-white/80 hover:text-white hover:bg-black/10 cursor-pointer"
+                              className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-black/15 cursor-pointer transition-colors"
                               title="Edit Habit"
                             >
-                              <MoreVertical size={14} />
+                              <MoreVertical size={15} />
                             </button>
                           </div>
                         </div>
@@ -804,21 +821,22 @@ export const HabitsPage = ({
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {streak > 0 && (
-                              <span className="text-[11px] font-bold text-amber-500 flex items-center gap-0.5">
-                                <span>{streak}</span>
-                                <Flame size={12} />
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Big Bold Filled Fire Streak Badge */}
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-2xs">
+                              <Flame size={18} className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_2px_8px_rgba(245,158,11,0.5)] animate-pulse" />
+                              <span className="text-sm font-black tracking-tight text-slate-900 dark:text-slate-100">
+                                {streak} <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">streak</span>
                               </span>
-                            )}
+                            </div>
 
                             <button
                               type="button"
                               onClick={() => onEditHabit(habit)}
-                              className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors"
                               title="Edit Habit"
                             >
-                              <MoreVertical size={14} />
+                              <MoreVertical size={15} />
                             </button>
                           </div>
                         </div>
