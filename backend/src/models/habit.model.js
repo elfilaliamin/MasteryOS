@@ -173,11 +173,6 @@ export const getHabitsByUser = async (userId) => {
     );
 
     if (habitsRes && habitsRes.rows) {
-      if (habitsRes.rows.length === 0) {
-        await seedDefaultHabits(userId);
-        return getHabitsByUser(userId);
-      }
-
       return habitsRes.rows.map((h) => {
         const datesArray = (h.completed_dates || []).map(d => typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d));
         const dateSet = new Set(datesArray);
@@ -197,11 +192,7 @@ export const getHabitsByUser = async (userId) => {
   }
 
   // Fallback in-memory
-  let userHabits = fallbackHabits.get(userId);
-  if (!userHabits || userHabits.length === 0) {
-    await seedDefaultHabits(userId);
-    userHabits = fallbackHabits.get(userId) || [];
-  }
+  const userHabits = fallbackHabits.get(userId) || [];
 
   const userLogs = fallbackHabitLogs.get(userId) || [];
   return userHabits.map((h) => {

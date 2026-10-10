@@ -46,24 +46,6 @@ export const getCoursesByUser = async (userId) => {
     );
 
     if (res && res.rows) {
-      if (res.rows.length === 0) {
-        await seedDefaultCourses(userId);
-        const retry = await query(
-          `SELECT c.*,
-            COUNT(t.id)::int as total_tasks,
-            COUNT(CASE WHEN t.status = 'COMPLETED' THEN 1 END)::int as completed_tasks
-           FROM courses c
-           LEFT JOIN tasks t ON t.course_id = c.id AND t.is_archived = false
-           WHERE c.user_id = $1
-           GROUP BY c.id
-           ORDER BY c.created_at DESC`,
-          [userId]
-        );
-        return retry.rows.map(c => ({
-          ...c,
-          progress_percent: c.total_lessons > 0 ? Math.min(100, Math.round((c.finished_lessons / c.total_lessons) * 100)) : 0
-        }));
-      }
       return res.rows.map(c => ({
         ...c,
         progress_percent: c.total_lessons > 0 ? Math.min(100, Math.round((c.finished_lessons / c.total_lessons) * 100)) : 0
@@ -74,42 +56,7 @@ export const getCoursesByUser = async (userId) => {
   }
 
   // Fallback memory store
-  let userCourses = fallbackCourses.get(userId);
-  if (!userCourses || userCourses.length === 0) {
-    userCourses = [
-      {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        title: 'Full Stack React & Node Mastery',
-        description: 'Comprehensive guide to building modern containerized web applications with PostgreSQL.',
-        cover_image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60',
-        finished_lessons: 18,
-        total_lessons: 24,
-        certification_url: 'https://example.com/certificates/react-node-mastery.pdf',
-        certification_filename: 'React_Node_Mastery_Certificate.pdf',
-        total_tasks: 2,
-        completed_tasks: 1,
-        progress_percent: 75,
-        created_at: new Date().toISOString()
-      },
-      {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        title: 'DevOps & Docker Multi-Stage Builds',
-        description: 'Master containerization with Alpine Linux, Node, PostgreSQL, and Nginx reverse proxies.',
-        cover_image: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&auto=format&fit=crop&q=60',
-        finished_lessons: 12,
-        total_lessons: 12,
-        certification_url: 'https://example.com/certificates/devops-docker-pro.pdf',
-        certification_filename: 'Docker_DevOps_Expert.pdf',
-        total_tasks: 1,
-        completed_tasks: 1,
-        progress_percent: 100,
-        created_at: new Date().toISOString()
-      }
-    ];
-    fallbackCourses.set(userId, userCourses);
-  }
+  const userCourses = fallbackCourses.get(userId) || [];
   return userCourses;
 };
 

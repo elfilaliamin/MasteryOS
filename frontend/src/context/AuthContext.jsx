@@ -91,7 +91,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const clearUserLocalData = () => {
+    try {
+      localStorage.removeItem('mastery_local_habits');
+      localStorage.removeItem('mastery_acknowledged_level');
+      localStorage.removeItem('taskmaster_equipped_title');
+    } catch {
+      // ignore
+    }
+  };
+
   const register = async (fullName, email, password) => {
+    clearUserLocalData();
     try {
       const data = await api.register(fullName, email, password);
       setToken(data.token);
@@ -176,6 +187,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    clearUserLocalData();
     setUser(null);
     setToken(null);
     localStorage.removeItem('master_tasks_token');

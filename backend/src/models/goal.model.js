@@ -59,27 +59,6 @@ export const getGoalsByUser = async (userId) => {
       [userId]
     );
     if (res && res.rows) {
-      if (res.rows.length === 0) {
-        await seedDefaultGoals(userId);
-        const retry = await query(
-          `SELECT g.*,
-            COUNT(t.id)::int as total_tasks,
-            COUNT(CASE WHEN t.status = 'COMPLETED' THEN 1 END)::int as completed_tasks
-           FROM goals g
-           LEFT JOIN tasks t ON t.goal_id = g.id AND t.is_archived = false
-           WHERE g.user_id = $1
-           GROUP BY g.id
-           ORDER BY g.created_at DESC`,
-          [userId]
-        );
-        return retry.rows.map(g => ({
-          ...g,
-          due_date: g.due_date || g.target_date,
-          days_until_due: calcDaysUntilDue(g.due_date || g.target_date),
-          priority: g.priority || 'MEDIUM',
-          progress_percent: g.total_tasks > 0 ? Math.round((g.completed_tasks / g.total_tasks) * 100) : 0
-        }));
-      }
       return res.rows.map(g => ({
         ...g,
         due_date: g.due_date || g.target_date,
@@ -93,57 +72,7 @@ export const getGoalsByUser = async (userId) => {
   }
 
   // Fallback memory store
-  let userGoals = fallbackGoals.get(userId);
-  if (!userGoals || userGoals.length === 0) {
-    userGoals = [
-      {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        title: 'Full Stack App Deployment',
-        description: 'Deploy Master Tasks Tracker across Docker containers with nginx, node, and postgres.',
-        due_date: new Date(Date.now() + 86400000 * 7).toISOString(),
-        days_until_due: 7,
-        priority: 'HIGH',
-        color: '#0d8a72',
-        icon: '🚀',
-        total_tasks: 2,
-        completed_tasks: 1,
-        progress_percent: 50,
-        created_at: new Date().toISOString()
-      },
-      {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        title: 'Healthy Habits & Running',
-        description: 'Consistent morning 5k workouts, hydration, and meal prep.',
-        due_date: new Date(Date.now() + 86400000 * 14).toISOString(),
-        days_until_due: 14,
-        priority: 'MEDIUM',
-        color: '#10b981',
-        icon: '🏃‍♂️',
-        total_tasks: 3,
-        completed_tasks: 1,
-        progress_percent: 33,
-        created_at: new Date().toISOString()
-      },
-      {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        title: 'Design System & Gamification',
-        description: 'Implement modern Khademni teal and amber palette with dark/light themes.',
-        due_date: new Date(Date.now() + 86400000 * 21).toISOString(),
-        days_until_due: 21,
-        priority: 'URGENT',
-        color: '#f59e0b',
-        icon: '💻',
-        total_tasks: 3,
-        completed_tasks: 2,
-        progress_percent: 67,
-        created_at: new Date().toISOString()
-      }
-    ];
-    fallbackGoals.set(userId, userGoals);
-  }
+  const userGoals = fallbackGoals.get(userId) || [];
   return userGoals;
 };
 

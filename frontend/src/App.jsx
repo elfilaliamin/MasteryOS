@@ -26,214 +26,11 @@ import { LevelUpModal } from './components/gamification/LevelUpModal';
 import { api } from './services/api';
 import './App.css';
 
-const getRecentDate = (daysAgo) => {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const INITIAL_DEMO_HABITS = [
-  {
-    id: 'habit-1',
-    title: 'Drink 2L Water',
-    description: 'Stay properly hydrated throughout the workday to boost focus.',
-    icon: '💧',
-    color: '#0284c7',
-    time_of_day: 'MORNING',
-    frequency: 'DAILY',
-    completed_dates: [getRecentDate(0), getRecentDate(1), getRecentDate(2), getRecentDate(3), getRecentDate(4)],
-    current_streak: 5,
-    longest_streak: 12,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'habit-2',
-    title: 'Morning Cardio or 5K Run',
-    description: 'Elevate heart rate and build physical momentum.',
-    icon: '🏃',
-    color: '#10b981',
-    time_of_day: 'MORNING',
-    frequency: 'DAILY',
-    completed_dates: [getRecentDate(0), getRecentDate(1), getRecentDate(2)],
-    current_streak: 3,
-    longest_streak: 9,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'habit-3',
-    title: 'Deep Work & Coding Sprint (60m)',
-    description: 'Uninterrupted block for high-leverage architectural building.',
-    icon: '💻',
-    color: '#0d8a72',
-    time_of_day: 'AFTERNOON',
-    frequency: 'DAILY',
-    completed_dates: [getRecentDate(1), getRecentDate(2), getRecentDate(3), getRecentDate(4)],
-    current_streak: 4,
-    longest_streak: 14,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'habit-4',
-    title: 'Read 15 Pages',
-    description: 'Read high-impact non-fiction, systems thinking, or philosophy.',
-    icon: '📚',
-    color: '#8b5cf6',
-    time_of_day: 'EVENING',
-    frequency: 'DAILY',
-    completed_dates: [getRecentDate(0), getRecentDate(1), getRecentDate(2), getRecentDate(3)],
-    current_streak: 4,
-    longest_streak: 10,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'habit-5',
-    title: 'Mindful Meditation (15m)',
-    description: 'Calm the nervous system and practice stillness.',
-    icon: '🧘',
-    color: '#f59e0b',
-    time_of_day: 'MORNING',
-    frequency: 'DAILY',
-    completed_dates: [getRecentDate(0), getRecentDate(2), getRecentDate(4)],
-    current_streak: 1,
-    longest_streak: 7,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'habit-6',
-    title: 'Evening Journal & Review',
-    description: 'Reflect on wins, insights, and prepare priorities for tomorrow.',
-    icon: '✏️',
-    color: '#ec4899',
-    time_of_day: 'EVENING',
-    frequency: 'DAILY',
-    completed_dates: [getRecentDate(0), getRecentDate(1), getRecentDate(2), getRecentDate(3), getRecentDate(4), getRecentDate(5)],
-    current_streak: 6,
-    longest_streak: 15,
-    created_at: new Date().toISOString()
-  }
-];
-
-// Initial demo goals with Due Date, Priority, and categorized icons
-const INITIAL_DEMO_GOALS = [
-  {
-    id: 'goal-1',
-    title: 'Launch Master Task Tracker v1.0',
-    description: 'Complete full containerized platform with authentication, goals, courses, and analytics.',
-    due_date: '2026-11-01T00:00:00.000Z',
-    priority: 'HIGH',
-    color: '#0d8a72',
-    icon: '🚀',
-    created_at: '2026-10-10T10:00:00.000Z'
-  },
-  {
-    id: 'goal-2',
-    title: 'Morning 5K & Daily Hydration Habit',
-    description: 'Consistent cardiovascular routine, nutritional tracking, and mindful recovery.',
-    due_date: '2026-11-15T00:00:00.000Z',
-    priority: 'MEDIUM',
-    color: '#10b981',
-    icon: '🏃‍♂️',
-    created_at: '2026-10-10T10:00:00.000Z'
-  },
-  {
-    id: 'goal-3',
-    title: 'Master Frontend & DevOps Stack',
-    description: 'Implement modern Tailwind, Docker multi-stage builds, and PostgreSQL best practices.',
-    due_date: '2026-12-15T00:00:00.000Z',
-    priority: 'URGENT',
-    color: '#f59e0b',
-    icon: '💻',
-    created_at: '2026-10-10T10:00:00.000Z'
-  }
-];
-
-// Initial demo courses
-const INITIAL_DEMO_COURSES = [
-  {
-    id: 'course-1',
-    title: 'Full Stack React & Node Mastery',
-    description: 'Comprehensive guide to building modern containerized web applications with PostgreSQL.',
-    cover_image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60',
-    finished_lessons: 18,
-    total_lessons: 24,
-    certification_url: 'https://example.com/certificates/react-node-mastery.pdf',
-    certification_filename: 'React_Node_Mastery_Certificate.pdf',
-    created_at: '2026-10-10T10:00:00.000Z'
-  },
-  {
-    id: 'course-2',
-    title: 'DevOps & Docker Multi-Stage Builds',
-    description: 'Master containerization with Alpine Linux, Node, PostgreSQL, and Nginx reverse proxies.',
-    cover_image: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&auto=format&fit=crop&q=60',
-    finished_lessons: 12,
-    total_lessons: 12,
-    certification_url: 'https://example.com/certificates/devops-docker-pro.pdf',
-    certification_filename: 'Docker_DevOps_Expert.pdf',
-    created_at: '2026-10-10T10:00:00.000Z'
-  }
-];
-
-// Initial demo tasks with Personal, Work, School categories and goal/course assignments
-const INITIAL_DEMO_TASKS = [
-  {
-    id: 'task-1',
-    title: 'Setup Docker multi-container environment',
-    description: 'Run nginx:alpine, node:26-slim, and postgres:16-alpine with compose.',
-    status: 'COMPLETED',
-    priority: 'HIGH',
-    due_date: '2026-10-15T00:00:00.000Z',
-    estimated_minutes: 45,
-    category_id: 'cat-2',
-    category_name: 'Work',
-    category_color: '#0d8a72',
-    goal_id: 'goal-1',
-    goal_title: 'Launch Master Task Tracker v1.0',
-    course_id: 'course-2',
-    course_title: 'DevOps & Docker Multi-Stage Builds',
-    completed_at: new Date().toISOString(),
-    created_at: '2026-10-10T10:00:00.000Z'
-  },
-  {
-    id: 'task-2',
-    title: 'Design Kanban board and List switch',
-    description: 'Implement drag/drop status advance and flexible filtering.',
-    status: 'IN_PROGRESS',
-    priority: 'URGENT',
-    due_date: '2026-10-18T00:00:00.000Z',
-    estimated_minutes: 60,
-    category_id: 'cat-3',
-    category_name: 'School',
-    category_color: '#0284c7',
-    goal_id: 'goal-1',
-    goal_title: 'Launch Master Task Tracker v1.0',
-    course_id: 'course-1',
-    course_title: 'Full Stack React & Node Mastery',
-    created_at: '2026-10-10T10:00:00.000Z'
-  },
-  {
-    id: 'task-3',
-    title: 'Integrate JWT Authentication with Bcrypt',
-    description: 'Secure passwords and handle session persistence.',
-    status: 'TODO',
-    priority: 'MEDIUM',
-    due_date: '2026-10-20T00:00:00.000Z',
-    estimated_minutes: 30,
-    category_id: 'cat-1',
-    category_name: 'Personal',
-    category_color: '#10b981',
-    goal_id: 'goal-3',
-    goal_title: 'Master Frontend & DevOps Stack',
-    created_at: '2026-10-10T10:00:00.000Z'
-  }
-];
-
 const INITIAL_CATEGORIES = [
-  { id: 'cat-1', name: 'Personal', color: '#10b981', task_count: 1 },
-  { id: 'cat-2', name: 'Work', color: '#0d8a72', task_count: 1 },
-  { id: 'cat-3', name: 'School', color: '#0284c7', task_count: 1 }
+  { id: 'cat-1', name: 'Work', color: '#3b82f6', task_count: 0 },
+  { id: 'cat-2', name: 'Personal', color: '#10b981', task_count: 0 },
+  { id: 'cat-3', name: 'Urgent', color: '#ef4444', task_count: 0 },
+  { id: 'cat-4', name: 'Learning', color: '#8b5cf6', task_count: 0 }
 ];
 
 // Inner Level Up Pop-up Listener Component
@@ -250,18 +47,11 @@ const LevelUpListener = () => {
 
 // Inner Authenticated App
 const AuthenticatedApp = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [goals, setGoals] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [habits, setHabits] = useState(() => {
-    try {
-      const saved = localStorage.getItem('mastery_local_habits');
-      return saved ? JSON.parse(saved) : INITIAL_DEMO_HABITS;
-    } catch {
-      return INITIAL_DEMO_HABITS;
-    }
-  });
+  const [habits, setHabits] = useState([]);
   const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -283,18 +73,20 @@ const AuthenticatedApp = () => {
   const [editingHabit, setEditingHabit] = useState(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('mastery_local_habits', JSON.stringify(habits));
-    } catch {
-      // ignore
-    }
-  }, [habits]);
-
-  useEffect(() => {
     let isMounted = true;
 
     const loadData = async () => {
-      if (!isAuthenticated) return;
+      if (!isAuthenticated) {
+        if (isMounted) {
+          setTasks([]);
+          setGoals([]);
+          setCourses([]);
+          setHabits([]);
+          setCategories([]);
+          setStats({});
+        }
+        return;
+      }
 
       try {
         const [tasksRes, catsRes, statsRes, goalsRes, coursesRes, habitsRes] = await Promise.allSettled([
@@ -309,25 +101,27 @@ const AuthenticatedApp = () => {
         if (!isMounted) return;
 
         if (tasksRes.status === 'fulfilled' && tasksRes.value?.tasks) {
-          setTasks(tasksRes.value.tasks.length > 0 ? tasksRes.value.tasks : INITIAL_DEMO_TASKS);
+          setTasks(tasksRes.value.tasks);
         } else {
-          setTasks((prev) => (prev.length ? prev : INITIAL_DEMO_TASKS));
+          setTasks([]);
         }
 
         if (goalsRes.status === 'fulfilled' && goalsRes.value?.goals) {
-          setGoals(goalsRes.value.goals.length > 0 ? goalsRes.value.goals : INITIAL_DEMO_GOALS);
+          setGoals(goalsRes.value.goals);
         } else {
-          setGoals((prev) => (prev.length ? prev : INITIAL_DEMO_GOALS));
+          setGoals([]);
         }
 
         if (coursesRes.status === 'fulfilled' && coursesRes.value?.courses) {
-          setCourses(coursesRes.value.courses.length > 0 ? coursesRes.value.courses : INITIAL_DEMO_COURSES);
+          setCourses(coursesRes.value.courses);
         } else {
-          setCourses((prev) => (prev.length ? prev : INITIAL_DEMO_COURSES));
+          setCourses([]);
         }
 
-        if (habitsRes.status === 'fulfilled' && habitsRes.value?.habits && habitsRes.value.habits.length > 0) {
+        if (habitsRes.status === 'fulfilled' && habitsRes.value?.habits) {
           setHabits(habitsRes.value.habits);
+        } else {
+          setHabits([]);
         }
 
         if (catsRes.status === 'fulfilled' && catsRes.value?.categories && catsRes.value.categories.length > 0) {
@@ -349,7 +143,7 @@ const AuthenticatedApp = () => {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.id]);
 
   // Task actions
   const handleCreateOrUpdateTask = async (taskData) => {
