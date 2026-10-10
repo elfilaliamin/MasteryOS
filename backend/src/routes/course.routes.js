@@ -6,7 +6,7 @@ import {
   incrementLesson,
   removeCourse
 } from '../controllers/course.controller.js';
-import { requireAuth } from '../middlewares/auth.middleware.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
