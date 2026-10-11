@@ -10,6 +10,7 @@ import {
   Layers,
   Eye,
   EyeOff,
+  X,
 } from 'lucide-react';
 
 const PRIORITY_WEIGHTS = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
@@ -93,6 +94,40 @@ export const TasksPage = ({
     }
   }, [viewMode, statusFilter, priorityFilter, categoryFilter, goalFilter, courseFilter, sortBy, groupBy, hideCompleted]);
 
+  // Validate and auto-clear orphaned saved filters
+  useEffect(() => {
+    if (categoryFilter !== 'ALL' && categories.length > 0 && !categories.some((c) => String(c.id) === String(categoryFilter))) {
+      setCategoryFilter('ALL');
+    }
+  }, [categories, categoryFilter]);
+
+  useEffect(() => {
+    if (goalFilter !== 'ALL' && goals.length > 0 && !goals.some((g) => String(g.id) === String(goalFilter))) {
+      setGoalFilter('ALL');
+    }
+  }, [goals, goalFilter]);
+
+  useEffect(() => {
+    if (courseFilter !== 'ALL' && courses.length > 0 && !courses.some((cr) => String(cr.id) === String(courseFilter))) {
+      setCourseFilter('ALL');
+    }
+  }, [courses, courseFilter]);
+
+  const hasActiveFilters =
+    statusFilter !== 'ALL' ||
+    priorityFilter !== 'ALL' ||
+    categoryFilter !== 'ALL' ||
+    goalFilter !== 'ALL' ||
+    courseFilter !== 'ALL';
+
+  const handleClearFilters = () => {
+    setStatusFilter('ALL');
+    setPriorityFilter('ALL');
+    setCategoryFilter('ALL');
+    setGoalFilter('ALL');
+    setCourseFilter('ALL');
+  };
+
   // Reset pagination when any filter changes
   const [prevFilterKey, setPrevFilterKey] = useState('');
   const currentFilterKey = `${statusFilter}_${priorityFilter}_${categoryFilter}_${goalFilter}_${courseFilter}_${searchQuery || ''}_${hideCompleted}`;
@@ -109,9 +144,9 @@ export const TasksPage = ({
     if (isHidingCompleted && t.status === 'COMPLETED') return false;
     if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
     if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
-    if (categoryFilter !== 'ALL' && t.category_id !== categoryFilter) return false;
-    if (goalFilter !== 'ALL' && t.goal_id !== goalFilter) return false;
-    if (courseFilter !== 'ALL' && t.course_id !== courseFilter) return false;
+    if (categoryFilter !== 'ALL' && String(t.category_id) !== String(categoryFilter)) return false;
+    if (goalFilter !== 'ALL' && String(t.goal_id) !== String(goalFilter)) return false;
+    if (courseFilter !== 'ALL' && String(t.course_id) !== String(courseFilter)) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const inTitle = (t.title || '').toLowerCase().includes(q);
@@ -268,128 +303,149 @@ export const TasksPage = ({
       </div>
 
       {/* Filter Row matching Khademni card styling */}
-      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 sm:gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
-        <div className="col-span-2 sm:col-auto flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400">
-          <Filter size={15} className="text-[#0d8a72]" />
-          <span>Filters:</span>
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0">
+            <Filter size={15} className="text-[#0d8a72]" />
+            <span>Filters:</span>
+          </div>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[135px] sm:max-w-[155px] truncate ${
+              statusFilter !== 'ALL'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
+            }`}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="TODO">To Do</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="IN_REVIEW">In Review</option>
+            <option value="COMPLETED">Completed</option>
+          </select>
+
+          {/* Priority Filter */}
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[135px] sm:max-w-[155px] truncate ${
+              priorityFilter !== 'ALL'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
+            }`}
+          >
+            <option value="ALL">All Priorities</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="URGENT">Urgent</option>
+          </select>
+
+          {/* Category Filter */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[140px] sm:max-w-[165px] truncate ${
+              categoryFilter !== 'ALL'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
+            }`}
+          >
+            <option value="ALL">All Categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Goal Filter */}
+          {goals.length > 0 && (
+            <select
+              value={goalFilter}
+              onChange={(e) => setGoalFilter(e.target.value)}
+              className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[140px] sm:max-w-[165px] truncate ${
+                goalFilter !== 'ALL'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                  : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
+              }`}
+            >
+              <option value="ALL">All Goals</option>
+              {goals.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.icon || '🎯'} {g.title}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Course Filter */}
+          {courses.length > 0 && (
+            <select
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[140px] sm:max-w-[165px] truncate ${
+                courseFilter !== 'ALL'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                  : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
+              }`}
+            >
+              <option value="ALL">All Courses</option>
+              {courses.map((cr) => (
+                <option key={cr.id} value={cr.id}>
+                  📚 {cr.title}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all cursor-pointer shrink-0"
+              title="Reset all filters"
+            >
+              <X size={13} />
+              <span>Clear filters</span>
+            </button>
+          )}
         </div>
 
-        {/* Status Filter */}
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
-        >
-          <option value="ALL">All Statuses</option>
-          <option value="TODO">To Do</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="IN_REVIEW">In Review</option>
-          <option value="COMPLETED">Completed</option>
-        </select>
-
-        {/* Priority Filter */}
-        <select
-          value={priorityFilter}
-          onChange={(e) => setPriorityFilter(e.target.value)}
-          className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
-        >
-          <option value="ALL">All Priorities</option>
-          <option value="LOW">Low</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HIGH">High</option>
-          <option value="URGENT">Urgent</option>
-        </select>
-
-        {/* Category Filter */}
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
-        >
-          <option value="ALL">All Categories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-
-        {/* Goal Filter */}
-        {goals.length > 0 && (
-          <select
-            value={goalFilter}
-            onChange={(e) => setGoalFilter(e.target.value)}
-            className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
-          >
-            <option value="ALL">All Goals</option>
-            {goals.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.icon || '🎯'} {g.title}
-              </option>
-            ))}
-          </select>
+        {/* Drag and Drop Quick Hint for Board */}
+        {viewMode === 'kanban' && (
+          <div className="hidden xl:flex items-center gap-1.5 ml-auto text-[11px] font-semibold text-slate-400 dark:text-slate-500 shrink-0">
+            <span className="text-[#0d8a72] dark:text-teal-400">💡</span>
+            <span>Drag & drop cards across columns to change status</span>
+          </div>
         )}
 
-        {/* Course Filter */}
-        {courses.length > 0 && (
-          <select
-            value={courseFilter}
-            onChange={(e) => setCourseFilter(e.target.value)}
-            className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
-          >
-            <option value="ALL">All Courses</option>
-            {courses.map((cr) => (
-              <option key={cr.id} value={cr.id}>
-                📚 {cr.title}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {/* Hide Completed Toggle Button (List View only) */}
+        {/* List View Controls: Hide Completed, Sort by, Group by */}
         {viewMode === 'list' && (
-          <button
-            type="button"
-            onClick={() => setHideCompleted((prev) => !prev)}
-            className={`col-span-2 sm:col-auto flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-              isHidingCompleted
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 shadow-2xs'
-                : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-            title={isHidingCompleted ? 'Completed tasks are currently hidden. Click to show.' : 'Click to hide completed tasks'}
-          >
-            {isHidingCompleted ? (
-              <EyeOff size={14} className="text-emerald-600 dark:text-emerald-400" />
-            ) : (
-              <Eye size={14} />
-            )}
-            <span>{isHidingCompleted ? 'Completed Hidden' : 'Hide Completed'}</span>
-          </button>
-        )}
+          <div className="flex items-center gap-2.5 flex-wrap shrink-0 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2.5 sm:pt-0 sm:pl-3 w-full sm:w-auto">
+            {/* Hide Completed Toggle Button (List View only) */}
+            <button
+              type="button"
+              onClick={() => setHideCompleted((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                isHidingCompleted
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 shadow-2xs'
+                  : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+              title={isHidingCompleted ? 'Completed tasks are currently hidden. Click to show.' : 'Click to hide completed tasks'}
+            >
+              {isHidingCompleted ? (
+                <EyeOff size={14} className="text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <Eye size={14} />
+              )}
+              <span>{isHidingCompleted ? 'Completed Hidden' : 'Hide Completed'}</span>
+            </button>
 
-        {/* Reset Filters */}
-        {(statusFilter !== 'ALL' ||
-          priorityFilter !== 'ALL' ||
-          categoryFilter !== 'ALL' ||
-          goalFilter !== 'ALL' ||
-          courseFilter !== 'ALL') && (
-          <button
-            onClick={() => {
-              setStatusFilter('ALL');
-              setPriorityFilter('ALL');
-              setCategoryFilter('ALL');
-              setGoalFilter('ALL');
-              setCourseFilter('ALL');
-            }}
-            className="col-span-2 sm:col-auto text-xs text-[#0d8a72] dark:text-teal-400 hover:underline font-bold sm:ml-auto cursor-pointer text-center sm:text-right"
-          >
-            Clear filters
-          </button>
-        )}
-
-        {/* List View Controls: Sort by and Group by */}
-        {viewMode === 'list' && (
-          <div className="col-span-2 sm:col-auto flex items-center gap-3 flex-wrap border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-3">
             {/* Sort by */}
             <div className="flex items-center gap-1.5 text-xs">
               <ArrowUpDown size={13} className="text-[#0d8a72] dark:text-teal-400" />
@@ -424,14 +480,6 @@ export const TasksPage = ({
                 <option value="course">By Course</option>
               </select>
             </div>
-          </div>
-        )}
-
-        {/* Drag and Drop Quick Hint for Board */}
-        {viewMode === 'kanban' && (
-          <div className="hidden lg:flex items-center gap-1.5 ml-auto text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-            <span className="text-[#0d8a72] dark:text-teal-400">💡</span>
-            <span>Drag & drop cards across columns to change status</span>
           </div>
         )}
       </div>
