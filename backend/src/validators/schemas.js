@@ -34,12 +34,21 @@ export const loginSchema = z.object({
 
 // Common enum parsers with case-insensitive normalization via z.preprocess
 const normalizedTaskStatus = z.preprocess(
-  (val) => (typeof val === 'string' ? (val.toLowerCase() === 'completed' ? 'done' : val.toLowerCase()) : val),
-  z.enum(['todo', 'in_progress', 'done'])
+  (val) => {
+    if (typeof val !== 'string') return val;
+    const lower = val.toLowerCase();
+    if (lower === 'done' || lower === 'completed') return 'COMPLETED';
+    if (lower === 'in_progress') return 'IN_PROGRESS';
+    if (lower === 'in_review') return 'IN_REVIEW';
+    if (lower === 'todo') return 'TODO';
+    return val.toUpperCase();
+  },
+  z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'COMPLETED'])
 );
+
 const normalizedPriority = z.preprocess(
-  (val) => (typeof val === 'string' ? val.toLowerCase() : val),
-  z.enum(['low', 'medium', 'high', 'urgent'])
+  (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+  z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
 );
 const normalizedGoalStatus = z.preprocess(
   (val) => (typeof val === 'string' ? val.toLowerCase() : val),
@@ -89,12 +98,31 @@ export const updateCategorySchema = createCategorySchema.partial();
 
 // Task Schemas
 export const taskQuerySchema = z.object({
-  status: z.string().transform((s) => s.toLowerCase()).pipe(z.enum(['todo', 'in_progress', 'done', 'all'])).optional(),
-  priority: z.string().transform((s) => s.toLowerCase()).pipe(z.enum(['low', 'medium', 'high', 'urgent', 'all'])).optional(),
-  category_id: z.string().uuid().optional().or(z.literal('')),
-  categoryId: z.string().uuid().optional().or(z.literal('')),
-  goal_id: z.string().uuid().optional().or(z.literal('')),
-  course_id: z.string().uuid().optional().or(z.literal('')),
+  status: z.preprocess(
+    (val) => {
+      if (typeof val !== 'string') return val;
+      const lower = val.toLowerCase();
+      if (lower === 'all') return 'all';
+      if (lower === 'done' || lower === 'completed') return 'COMPLETED';
+      if (lower === 'in_progress') return 'IN_PROGRESS';
+      if (lower === 'in_review') return 'IN_REVIEW';
+      if (lower === 'todo') return 'TODO';
+      return val.toUpperCase();
+    },
+    z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'COMPLETED', 'all'])
+  ).optional(),
+  priority: z.preprocess(
+    (val) => {
+      if (typeof val !== 'string') return val;
+      if (val.toLowerCase() === 'all') return 'all';
+      return val.toUpperCase();
+    },
+    z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT', 'all'])
+  ).optional(),
+  category_id: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
+  categoryId: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
+  goal_id: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
+  course_id: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
   sortBy: z.enum(['due_date', 'priority', 'created_at', 'title', 'order_index']).optional(),
   sortOrder: z.enum(['asc', 'desc', 'ASC', 'DESC']).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50).optional(),
@@ -107,21 +135,19 @@ export const createTaskSchema = z.object({
   description: z.string().max(5000).optional().nullable(),
   status: normalizedTaskStatus.optional(),
   priority: normalizedPriority.optional(),
-  due_date: z.string().optional().nullable(),
-  category_id: z.string().uuid().optional().nullable(),
-  goal_id: z.string().uuid().optional().nullable(),
-  course_id: z.string().uuid().optional().nullable(),
+  due_date: z.preprocess((val) => (val === '' ? null : val), z.string().optional().nullable()),
+  category_id: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
+  goal_id: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
+  course_id: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
   order_index: z.number().int().optional(),
+  estimated_minutes: z.coerce.number().int().min(0).optional().nullable(),
   tags: z.array(z.string().max(50)).optional()
 });
 
 export const updateTaskSchema = createTaskSchema.partial();
 
 export const updateTaskStatusSchema = z.object({
-  status: z.preprocess(
-    (val) => (typeof val === 'string' ? val.toLowerCase() : val),
-    z.enum(['todo', 'in_progress', 'in_review', 'done', 'completed'])
-  )
+  status: normalizedTaskStatus
 });
 
 export const batchReorderSchema = z.object({

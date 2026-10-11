@@ -149,13 +149,60 @@ const AuthenticatedApp = () => {
       }
     }
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // Fetch existing categories to resolve duplicates and default names
+    let currentCats = categories || [];
+    try {
+      const catsRes = await api.getCategories();
+      if (catsRes?.categories && Array.isArray(catsRes.categories) && catsRes.categories.length > 0) {
+        currentCats = catsRes.categories;
+      }
+    } catch {
+      // Use categories from state
+    }
+
     const categoryMap = new Map();
+    // Pre-seed category map with current categories by both id and lowercase name
+    currentCats.forEach((c) => {
+      if (c.id && UUID_REGEX.test(c.id)) {
+        categoryMap.set(c.id, c.id);
+      }
+      if (c.name) {
+        categoryMap.set(c.name.trim().toLowerCase(), c.id);
+      }
+    });
+
+    // Map default local category keys ('cat-1' -> Work, 'cat-2' -> Personal, etc.)
+    const defaultNameMap = {
+      'cat-1': 'work',
+      'cat-2': 'personal',
+      'cat-3': 'urgent',
+      'cat-4': 'learning'
+    };
+    Object.entries(defaultNameMap).forEach(([catKey, catName]) => {
+      const match = currentCats.find((c) => c.name?.toLowerCase() === catName);
+      if (match?.id) {
+        categoryMap.set(catKey, match.id);
+      }
+    });
+
     if (Array.isArray(importPayload.categories)) {
       for (const cat of importPayload.categories) {
+        const catNameLower = cat.name ? cat.name.trim().toLowerCase() : '';
+        const existingCat = currentCats.find((c) => c.name?.toLowerCase() === catNameLower);
+        if (existingCat?.id) {
+          categoryMap.set(cat.id, existingCat.id);
+          if (catNameLower) categoryMap.set(catNameLower, existingCat.id);
+          continue;
+        }
+
         try {
           const res = await api.createCategory({ name: cat.name, color: cat.color });
           if (res?.category?.id) {
             categoryMap.set(cat.id, res.category.id);
+            if (catNameLower) categoryMap.set(catNameLower, res.category.id);
+            currentCats.push(res.category);
           }
         } catch {
           // ignore duplicate category names
@@ -170,10 +217,10 @@ const AuthenticatedApp = () => {
           const res = await api.createGoal({
             title: g.title,
             description: g.description,
-            due_date: g.due_date || g.target_date,
-            priority: g.priority,
-            color: g.color,
-            icon: g.icon,
+            due_date: (g.due_date && String(g.due_date).trim()) || (g.target_date && String(g.target_date).trim()) || null,
+            priority: g.priority ? String(g.priority).toUpperCase() : 'MEDIUM',
+            color: g.color || '#0d8a72',
+            icon: g.icon || '🎯',
           });
           if (res?.goal?.id) {
             goalMap.set(g.id, res.goal.id);
@@ -192,8 +239,8 @@ const AuthenticatedApp = () => {
             title: c.title,
             description: c.description,
             cover_image: c.cover_image,
-            total_lessons: c.total_lessons,
-            finished_lessons: c.finished_lessons,
+            total_lessons: c.total_lessons != null ? c.total_lessons : null,
+            finished_lessons: c.finished_lessons != null ? c.finished_lessons : null,
             certification_url: c.certification_url,
             certification_filename: c.certification_filename,
           });
@@ -209,16 +256,50 @@ const AuthenticatedApp = () => {
     if (Array.isArray(importPayload.tasks)) {
       for (const t of importPayload.tasks) {
         try {
+          const rawCatId = t.category_id;
+          const mappedCatId = categoryMap.get(rawCatId) ||
+            categoryMap.get(defaultNameMap[rawCatId]) ||
+            (rawCatId && UUID_REGEX.test(rawCatId) ? rawCatId : null) ||
+            null;
+
+          const rawGoalId = t.goal_id;
+          const mappedGoalId = goalMap.get(rawGoalId) ||
+            (rawGoalId && UUID_REGEX.test(rawGoalId) ? rawGoalId : null) ||
+            null;
+
+          const rawCourseId = t.course_id;
+          const mappedCourseId = courseMap.get(rawCourseId) ||
+            (rawCourseId && UUID_REGEX.test(rawCourseId) ? rawCourseId : null) ||
+            null;
+
+          const cleanDueDate = t.due_date && String(t.due_date).trim() ? t.due_date : null;
+
+          let normalizedStatus = 'TODO';
+          if (t.status) {
+            const s = String(t.status).toUpperCase();
+            if (s === 'COMPLETED' || s === 'DONE') normalizedStatus = 'COMPLETED';
+            else if (s === 'IN_PROGRESS') normalizedStatus = 'IN_PROGRESS';
+            else if (s === 'IN_REVIEW') normalizedStatus = 'IN_REVIEW';
+          }
+
+          let normalizedPriority = 'MEDIUM';
+          if (t.priority) {
+            const p = String(t.priority).toUpperCase();
+            if (['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(p)) {
+              normalizedPriority = p;
+            }
+          }
+
           await api.createTask({
-            title: t.title,
-            description: t.description,
-            status: t.status,
-            priority: t.priority,
-            category_id: categoryMap.get(t.category_id) || null,
-            goal_id: goalMap.get(t.goal_id) || null,
-            course_id: courseMap.get(t.course_id) || null,
-            due_date: t.due_date,
-            estimated_minutes: t.estimated_minutes,
+            title: t.title?.trim() || 'Untitled Task',
+            description: t.description || '',
+            status: normalizedStatus,
+            priority: normalizedPriority,
+            category_id: mappedCatId,
+            goal_id: mappedGoalId,
+            course_id: mappedCourseId,
+            due_date: cleanDueDate,
+            estimated_minutes: t.estimated_minutes != null ? Math.max(0, parseInt(t.estimated_minutes, 10) || 0) : 0,
           });
         } catch (err) {
           console.warn('Import task notice:', err.message);
@@ -232,10 +313,10 @@ const AuthenticatedApp = () => {
           await api.createHabit({
             title: h.title,
             description: h.description,
-            icon: h.icon,
-            color: h.color,
-            frequency: h.frequency,
-            time_of_day: h.time_of_day,
+            icon: h.icon || '⚡',
+            color: h.color || '#0d8a72',
+            frequency: h.frequency || 'DAILY',
+            time_of_day: h.time_of_day || 'ANYTIME',
           });
         } catch (err) {
           console.warn('Import habit notice:', err.message);

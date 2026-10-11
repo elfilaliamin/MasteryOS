@@ -56,11 +56,13 @@ export const getTasksByUser = async (userId, filters = {}) => {
     const params = [userId];
 
     if (status && status !== 'all') {
-      params.push(status);
+      const dbStatus = safeTaskStatus(status);
+      params.push(dbStatus);
       sql += ` AND t.status = $${params.length}`;
     }
     if (priority && priority !== 'all') {
-      params.push(priority);
+      const dbPriority = safeTaskPriority(priority);
+      params.push(dbPriority);
       sql += ` AND t.priority = $${params.length}`;
     }
     if (categoryId) {
@@ -151,6 +153,25 @@ export const getTaskById = async (userId, taskId) => {
   return null;
 };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const safeUuid = (id) => (id && UUID_REGEX.test(id) ? id : null);
+
+const safeTaskStatus = (s) => {
+  if (!s) return 'TODO';
+  const upper = String(s).toUpperCase();
+  if (upper === 'DONE' || upper === 'COMPLETED') return 'COMPLETED';
+  if (upper === 'IN_PROGRESS') return 'IN_PROGRESS';
+  if (upper === 'IN_REVIEW') return 'IN_REVIEW';
+  return 'TODO';
+};
+
+const safeTaskPriority = (p) => {
+  if (!p) return 'MEDIUM';
+  const upper = String(p).toUpperCase();
+  if (['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(upper)) return upper;
+  return 'MEDIUM';
+};
+
 export const createTask = async (userId, data) => {
   const {
     title,
@@ -164,12 +185,20 @@ export const createTask = async (userId, data) => {
     estimated_minutes = 0
   } = data;
 
+  const validStatus = safeTaskStatus(status);
+  const validPriority = safeTaskPriority(priority);
+  const validCatId = safeUuid(category_id);
+  const validGoalId = safeUuid(goal_id);
+  const validCourseId = safeUuid(course_id);
+  const validDueDate = due_date && String(due_date).trim() ? due_date : null;
+  const validMinutes = Math.max(0, parseInt(estimated_minutes, 10) || 0);
+
   try {
     const res = await query(
       `INSERT INTO tasks (user_id, category_id, goal_id, course_id, title, description, status, priority, due_date, estimated_minutes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [userId, category_id, goal_id, course_id, title, description, status, priority, due_date, estimated_minutes]
+      [userId, validCatId, validGoalId, validCourseId, title, description, validStatus, validPriority, validDueDate, validMinutes]
     );
     if (res && res.rows) {
       const newTask = res.rows[0];
@@ -184,15 +213,15 @@ export const createTask = async (userId, data) => {
   const newTask = {
     id,
     user_id: userId,
-    category_id,
-    goal_id,
-    course_id,
+    category_id: validCatId,
+    goal_id: validGoalId,
+    course_id: validCourseId,
     title,
     description,
-    status,
-    priority,
-    due_date,
-    estimated_minutes,
+    status: validStatus,
+    priority: validPriority,
+    due_date: validDueDate,
+    estimated_minutes: validMinutes,
     is_archived: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -207,6 +236,14 @@ export const createTask = async (userId, data) => {
 
 export const updateTask = async (userId, taskId, data) => {
   const { title, description, status, priority, category_id, goal_id, course_id, due_date, estimated_minutes } = data;
+
+  const validStatus = status !== undefined ? safeTaskStatus(status) : undefined;
+  const validPriority = priority !== undefined ? safeTaskPriority(priority) : undefined;
+  const validCatId = category_id !== undefined ? safeUuid(category_id) : undefined;
+  const validGoalId = goal_id !== undefined ? safeUuid(goal_id) : undefined;
+  const validCourseId = course_id !== undefined ? safeUuid(course_id) : undefined;
+  const validDueDate = due_date !== undefined ? (due_date && String(due_date).trim() ? due_date : null) : undefined;
+  const validMinutes = estimated_minutes !== undefined ? Math.max(0, parseInt(estimated_minutes, 10) || 0) : undefined;
 
   try {
     const res = await query(
@@ -223,7 +260,7 @@ export const updateTask = async (userId, taskId, data) => {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $10 AND user_id = $11
        RETURNING *`,
-      [title, description, status, priority, category_id, goal_id, course_id, due_date, estimated_minutes, taskId, userId]
+      [title, description, validStatus, validPriority, validCatId, validGoalId, validCourseId, validDueDate, validMinutes, taskId, userId]
     );
     if (res && res.rows && res.rows[0]) {
       await logActivity(taskId, userId, 'EDITED', data);
@@ -239,6 +276,13 @@ export const updateTask = async (userId, taskId, data) => {
     userTasks[idx] = {
       ...userTasks[idx],
       ...data,
+      ...(validStatus !== undefined ? { status: validStatus } : {}),
+      ...(validPriority !== undefined ? { priority: validPriority } : {}),
+      ...(validCatId !== undefined ? { category_id: validCatId } : {}),
+      ...(validGoalId !== undefined ? { goal_id: validGoalId } : {}),
+      ...(validCourseId !== undefined ? { course_id: validCourseId } : {}),
+      ...(validDueDate !== undefined ? { due_date: validDueDate } : {}),
+      ...(validMinutes !== undefined ? { estimated_minutes: validMinutes } : {}),
       updated_at: new Date().toISOString()
     };
     await logActivity(taskId, userId, 'EDITED', data);
@@ -248,16 +292,17 @@ export const updateTask = async (userId, taskId, data) => {
 };
 
 export const updateTaskStatus = async (userId, taskId, newStatus) => {
+  const validStatus = safeTaskStatus(newStatus);
   try {
     const res = await query(
       `UPDATE tasks
        SET status = $1, updated_at = CURRENT_TIMESTAMP
        WHERE id = $2 AND user_id = $3
        RETURNING *`,
-      [newStatus, taskId, userId]
+      [validStatus, taskId, userId]
     );
     if (res && res.rows && res.rows[0]) {
-      await logActivity(taskId, userId, 'STATUS_CHANGED', { newStatus });
+      await logActivity(taskId, userId, 'STATUS_CHANGED', { newStatus: validStatus });
       return res.rows[0];
     }
   } catch (err) {
@@ -267,9 +312,9 @@ export const updateTaskStatus = async (userId, taskId, newStatus) => {
   const userTasks = fallbackTasks.get(userId) || [];
   const task = userTasks.find(t => t.id === taskId);
   if (task) {
-    task.status = newStatus;
+    task.status = validStatus;
     task.updated_at = new Date().toISOString();
-    await logActivity(taskId, userId, 'STATUS_CHANGED', { newStatus });
+    await logActivity(taskId, userId, 'STATUS_CHANGED', { newStatus: validStatus });
     return task;
   }
   return null;
