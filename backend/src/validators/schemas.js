@@ -158,9 +158,9 @@ export const createCourseSchema = z.object({
   certification_url: optionalHttpUrlSchema,
   certification_filename: z.string().max(255).optional().nullable(),
   task_ids: z.array(uuidSchema).optional(),
-  total_lessons: z.number().int().min(0).optional(),
-  completed_lessons: z.number().int().min(0).optional(),
-  finished_lessons: z.number().int().min(0).optional()
+  total_lessons: z.number().int().min(0).optional().nullable(),
+  completed_lessons: z.number().int().min(0).optional().nullable(),
+  finished_lessons: z.number().int().min(0).optional().nullable()
 });
 
 export const updateCourseSchema = createCourseSchema.partial();

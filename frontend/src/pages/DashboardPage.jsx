@@ -804,9 +804,11 @@ export const DashboardPage = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {activeCourses.map((course) => {
-                const finished = course.finished_lessons || 0;
-                const totalL = course.total_lessons || 1;
-                const pct = Math.min(100, Math.round((finished / totalL) * 100));
+                const hasTotal = course.total_lessons != null && course.total_lessons > 0;
+                const hasFinished = course.finished_lessons != null && course.finished_lessons >= 0;
+                const pct = (hasTotal && hasFinished)
+                  ? Math.min(100, Math.round(((course.finished_lessons || 0) / course.total_lessons) * 100))
+                  : 0;
 
                 return (
                   <div
@@ -874,7 +876,13 @@ export const DashboardPage = ({
                             <span className="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                               <BookOpen size={13} className="text-[#0d8a72] dark:text-teal-400" />
                               <span>
-                                {finished} of {totalL} lessons completed
+                                {hasTotal && hasFinished
+                                  ? `${course.finished_lessons} of ${course.total_lessons} lessons completed`
+                                  : hasTotal
+                                  ? `0 of ${course.total_lessons} lessons completed`
+                                  : hasFinished
+                                  ? `${course.finished_lessons} lessons completed`
+                                  : '0 lessons completed'}
                               </span>
                             </span>
                             <span

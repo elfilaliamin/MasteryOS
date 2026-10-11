@@ -48,7 +48,9 @@ export const getCoursesByUser = async (userId) => {
     if (res && res.rows) {
       return res.rows.map(c => ({
         ...c,
-        progress_percent: c.total_lessons > 0 ? Math.min(100, Math.round((c.finished_lessons / c.total_lessons) * 100)) : 0
+        progress_percent: (c.total_lessons != null && c.total_lessons > 0 && c.finished_lessons != null && c.finished_lessons >= 0)
+          ? Math.min(100, Math.round((c.finished_lessons / c.total_lessons) * 100))
+          : 0
       }));
     }
   } catch (err) {
@@ -65,14 +67,22 @@ export const createCourse = async (userId, data) => {
     title,
     description = '',
     cover_image = null,
-    finished_lessons = 0,
-    total_lessons = 1,
+    finished_lessons = null,
+    total_lessons = null,
     certification_url = null,
     certification_filename = null
   } = data;
 
-  const finishedNum = Math.max(0, parseInt(finished_lessons, 10) || 0);
-  const totalNum = Math.max(1, parseInt(total_lessons, 10) || 1);
+  const finishedNum = (finished_lessons !== null && finished_lessons !== undefined && finished_lessons !== '')
+    ? Math.max(0, parseInt(finished_lessons, 10))
+    : null;
+  const totalNum = (total_lessons !== null && total_lessons !== undefined && total_lessons !== '')
+    ? Math.max(0, parseInt(total_lessons, 10))
+    : null;
+
+  const progressPercent = (totalNum != null && totalNum > 0 && finishedNum != null && finishedNum >= 0)
+    ? Math.min(100, Math.round((finishedNum / totalNum) * 100))
+    : 0;
 
   try {
     const res = await query(
@@ -86,7 +96,7 @@ export const createCourse = async (userId, data) => {
         ...res.rows[0],
         total_tasks: 0,
         completed_tasks: 0,
-        progress_percent: Math.min(100, Math.round((finishedNum / totalNum) * 100))
+        progress_percent: progressPercent
       };
     }
   } catch (err) {
@@ -105,7 +115,7 @@ export const createCourse = async (userId, data) => {
     certification_filename,
     total_tasks: 0,
     completed_tasks: 0,
-    progress_percent: Math.min(100, Math.round((finishedNum / totalNum) * 100)),
+    progress_percent: progressPercent,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -127,26 +137,37 @@ export const updateCourse = async (userId, courseId, data) => {
     certification_filename
   } = data;
 
+  const updateFinished = 'finished_lessons' in data;
+  const updateTotal = 'total_lessons' in data;
+  const finishedVal = (finished_lessons !== null && finished_lessons !== undefined && finished_lessons !== '')
+    ? Math.max(0, parseInt(finished_lessons, 10))
+    : null;
+  const totalVal = (total_lessons !== null && total_lessons !== undefined && total_lessons !== '')
+    ? Math.max(0, parseInt(total_lessons, 10))
+    : null;
+
   try {
     const res = await query(
       `UPDATE courses
        SET title = COALESCE($1, title),
            description = COALESCE($2, description),
            cover_image = COALESCE($3, cover_image),
-           finished_lessons = COALESCE($4, finished_lessons),
-           total_lessons = COALESCE($5, total_lessons),
-           certification_url = COALESCE($6, certification_url),
-           certification_filename = COALESCE($7, certification_filename),
+           finished_lessons = CASE WHEN $4::boolean THEN $5::integer ELSE finished_lessons END,
+           total_lessons = CASE WHEN $6::boolean THEN $7::integer ELSE total_lessons END,
+           certification_url = COALESCE($8, certification_url),
+           certification_filename = COALESCE($9, certification_filename),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8 AND user_id = $9
+       WHERE id = $10 AND user_id = $11
        RETURNING *`,
-      [title, description, cover_image, finished_lessons, total_lessons, certification_url, certification_filename, courseId, userId]
+      [title, description, cover_image, updateFinished, finishedVal, updateTotal, totalVal, certification_url, certification_filename, courseId, userId]
     );
     if (res && res.rows && res.rows[0]) {
       const c = res.rows[0];
       return {
         ...c,
-        progress_percent: c.total_lessons > 0 ? Math.min(100, Math.round((c.finished_lessons / c.total_lessons) * 100)) : 0
+        progress_percent: (c.total_lessons != null && c.total_lessons > 0 && c.finished_lessons != null && c.finished_lessons >= 0)
+          ? Math.min(100, Math.round((c.finished_lessons / c.total_lessons) * 100))
+          : 0
       };
     }
   } catch (err) {
@@ -159,9 +180,11 @@ export const updateCourse = async (userId, courseId, data) => {
     const updated = {
       ...userCourses[idx],
       ...data,
+      ...(updateFinished ? { finished_lessons: finishedVal } : {}),
+      ...(updateTotal ? { total_lessons: totalVal } : {}),
       updated_at: new Date().toISOString()
     };
-    updated.progress_percent = updated.total_lessons > 0
+    updated.progress_percent = (updated.total_lessons != null && updated.total_lessons > 0 && updated.finished_lessons != null && updated.finished_lessons >= 0)
       ? Math.min(100, Math.round((updated.finished_lessons / updated.total_lessons) * 100))
       : 0;
     userCourses[idx] = updated;
@@ -174,7 +197,7 @@ export const incrementCourseLesson = async (userId, courseId) => {
   try {
     const res = await query(
       `UPDATE courses
-       SET finished_lessons = LEAST(total_lessons, finished_lessons + 1),
+       SET finished_lessons = COALESCE(LEAST(total_lessons, finished_lessons + 1), finished_lessons + 1, 1),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 AND user_id = $2
        RETURNING *`,
@@ -184,7 +207,9 @@ export const incrementCourseLesson = async (userId, courseId) => {
       const c = res.rows[0];
       return {
         ...c,
-        progress_percent: c.total_lessons > 0 ? Math.min(100, Math.round((c.finished_lessons / c.total_lessons) * 100)) : 0
+        progress_percent: (c.total_lessons != null && c.total_lessons > 0 && c.finished_lessons != null && c.finished_lessons >= 0)
+          ? Math.min(100, Math.round((c.finished_lessons / c.total_lessons) * 100))
+          : 0
       };
     }
   } catch (err) {
@@ -194,8 +219,10 @@ export const incrementCourseLesson = async (userId, courseId) => {
   const userCourses = fallbackCourses.get(userId) || [];
   const course = userCourses.find(c => c.id === courseId);
   if (course) {
-    course.finished_lessons = Math.min(course.total_lessons, (course.finished_lessons || 0) + 1);
-    course.progress_percent = course.total_lessons > 0
+    course.finished_lessons = course.total_lessons != null && course.total_lessons > 0
+      ? Math.min(course.total_lessons, (course.finished_lessons || 0) + 1)
+      : (course.finished_lessons || 0) + 1;
+    course.progress_percent = (course.total_lessons != null && course.total_lessons > 0 && course.finished_lessons != null && course.finished_lessons >= 0)
       ? Math.min(100, Math.round((course.finished_lessons / course.total_lessons) * 100))
       : 0;
     course.updated_at = new Date().toISOString();

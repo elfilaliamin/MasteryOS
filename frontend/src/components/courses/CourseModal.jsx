@@ -15,8 +15,12 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
   const [coverUrlInput, setCoverUrlInput] = useState(() => {
     return course?.cover_image && !course.cover_image.startsWith('data:') ? course.cover_image : '';
   });
-  const [totalLessons, setTotalLessons] = useState(course?.total_lessons || 10);
-  const [finishedLessons, setFinishedLessons] = useState(course?.finished_lessons || 0);
+  const [totalLessons, setTotalLessons] = useState(() => {
+    return course?.total_lessons != null ? String(course.total_lessons) : '';
+  });
+  const [finishedLessons, setFinishedLessons] = useState(() => {
+    return course?.finished_lessons != null ? String(course.finished_lessons) : '';
+  });
   const [certType, setCertType] = useState(course?.certification_filename ? 'file' : 'url');
   const [certUrl, setCertUrl] = useState(course?.certification_url || '');
   const [certFilename, setCertFilename] = useState(course?.certification_filename || '');
@@ -91,8 +95,17 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
       return;
     }
 
-    const total = Math.max(1, parseInt(totalLessons, 10) || 1);
-    const finished = Math.max(0, Math.min(total, parseInt(finishedLessons, 10) || 0));
+    const parsedTotal = totalLessons !== '' && totalLessons !== null && !isNaN(totalLessons)
+      ? Math.max(0, parseInt(totalLessons, 10))
+      : null;
+
+    const parsedFinished = finishedLessons !== '' && finishedLessons !== null && !isNaN(finishedLessons)
+      ? Math.max(0, parseInt(finishedLessons, 10))
+      : null;
+
+    const finalFinished = (parsedTotal !== null && parsedFinished !== null)
+      ? Math.min(parsedTotal, parsedFinished)
+      : parsedFinished;
 
     const activeCover = coverType === 'upload' ? coverImage : (coverUrlInput.trim() || null);
 
@@ -103,8 +116,8 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
         title: title.trim(),
         description: description.trim(),
         cover_image: activeCover,
-        total_lessons: total,
-        finished_lessons: finished,
+        total_lessons: parsedTotal,
+        finished_lessons: finalFinished,
         certification_url: certUrl.trim() || null,
         certification_filename: certFilename.trim() || null,
         task_ids: selectedTaskIds,
@@ -252,21 +265,21 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
       {/* Lessons Count Row */}
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Finished Lessons"
+          label="Finished Lessons (Optional)"
           type="number"
           min="0"
-          max={totalLessons}
+          max={totalLessons !== '' && !isNaN(totalLessons) ? parseInt(totalLessons, 10) : undefined}
           value={finishedLessons}
           onChange={(e) => setFinishedLessons(e.target.value)}
-          required
+          placeholder="e.g., 0"
         />
         <Input
-          label="Total Lessons"
+          label="Total Lessons (Optional)"
           type="number"
           min="1"
           value={totalLessons}
           onChange={(e) => setTotalLessons(e.target.value)}
-          required
+          placeholder="e.g., 10"
         />
       </div>
 

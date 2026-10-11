@@ -56,18 +56,24 @@ export const CoursesPage = ({
   const enrichedCourses = courses.map((course) => {
     const assignedTasks = tasks.filter((t) => t.course_id === course.id);
     const completedTasks = assignedTasks.filter((t) => t.status === 'COMPLETED');
-    const totalLessons = Math.max(1, course.total_lessons || 1);
-    const finishedLessons = Math.max(0, Math.min(totalLessons, course.finished_lessons || 0));
-    const progressPercent = Math.min(100, Math.round((finishedLessons / totalLessons) * 100));
-    const isCompleted = finishedLessons >= totalLessons;
-    const isNotStarted = finishedLessons === 0;
 
-    const status = isNotStarted ? 'NOT_STARTED' : isCompleted ? 'COMPLETED' : 'IN_PROGRESS';
+    const hasTotal = course.total_lessons != null && course.total_lessons > 0;
+    const hasFinished = course.finished_lessons != null && course.finished_lessons >= 0;
+
+    // If either value is empty or missing, treat the course progress as 0%
+    const progressPercent = (hasTotal && hasFinished)
+      ? Math.min(100, Math.round(((course.finished_lessons || 0) / course.total_lessons) * 100))
+      : 0;
+
+    const isCompleted = hasTotal && hasFinished && (course.finished_lessons || 0) >= course.total_lessons;
+    const isNotStarted = !hasFinished || (course.finished_lessons || 0) === 0;
+
+    const status = isCompleted ? 'COMPLETED' : (!isNotStarted ? 'IN_PROGRESS' : 'NOT_STARTED');
 
     return {
       ...course,
-      total_lessons: totalLessons,
-      finished_lessons: finishedLessons,
+      total_lessons: course.total_lessons ?? null,
+      finished_lessons: course.finished_lessons ?? null,
       progressPercent,
       isCompleted,
       isNotStarted,
@@ -357,7 +363,13 @@ export const CoursesPage = ({
                         <span className="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                           <BookOpen size={13} className="text-[#0d8a72] dark:text-teal-400" />
                           <span>
-                            {course.finished_lessons} of {course.total_lessons} lessons completed
+                            {course.total_lessons != null && course.finished_lessons != null
+                              ? `${course.finished_lessons} of ${course.total_lessons} lessons completed`
+                              : course.total_lessons != null
+                              ? `0 of ${course.total_lessons} lessons completed`
+                              : course.finished_lessons != null
+                              ? `${course.finished_lessons} lessons completed`
+                              : '0 lessons completed'}
                           </span>
                         </span>
                         <span
