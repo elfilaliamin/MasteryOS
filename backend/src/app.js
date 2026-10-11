@@ -11,7 +11,6 @@ import goalRoutes from './routes/goal.routes.js';
 import courseRoutes from './routes/course.routes.js';
 import habitRoutes from './routes/habit.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
-import { sanitizeLogData } from './utils/logger.js';
 
 const app = express();
 
