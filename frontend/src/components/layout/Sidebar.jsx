@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -11,7 +13,8 @@ import {
   Sun,
   Moon,
   Sparkles,
-  Flame
+  Flame,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { useTheme } from '../../context/useTheme';
@@ -22,6 +25,34 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   const { isDark, toggleTheme } = useTheme();
   const { playerStats } = useGamification();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isMobileOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onCloseMobile?.();
+      }
+    };
+
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        onCloseMobile?.();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isMobileOpen, onCloseMobile]);
 
   const handleLogout = () => {
     logout();
@@ -40,7 +71,7 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   ];
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200/90 dark:border-slate-800 w-64 p-5 select-none transition-colors">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200/90 dark:border-slate-800 w-64 p-5 select-none transition-colors overflow-y-auto">
       {/* Brand Header inspired by Khademni */}
       <div className="flex items-center justify-between px-2 py-3 mb-5">
         <div className="flex items-center gap-2.5">
@@ -58,14 +89,27 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
           </div>
         </div>
 
-        {/* Theme quick switch */}
-        <button
-          onClick={toggleTheme}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          title={isDark ? 'Light Mode' : 'Dark Mode'}
-        >
-          {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-[#0d8a72]" />}
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Theme quick switch */}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title={isDark ? 'Light Mode' : 'Dark Mode'}
+            aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-[#0d8a72]" />}
+          </button>
+
+          {/* Close button on mobile */}
+          <button
+            onClick={onCloseMobile}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md:hidden"
+            title="Close menu"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Main Navigation */}
@@ -140,13 +184,23 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
       </aside>
 
       {/* Mobile Drawer */}
-      {isMobileOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
-          <div className="fixed inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm" onClick={onCloseMobile} />
-          <div className="relative z-10 animate-fade-in">
+      {isMobileOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation Menu"
+        >
+          <div
+            className="fixed inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={onCloseMobile}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 h-full max-w-[85vw] flex flex-col shadow-2xl animate-fade-in">
             {sidebarContent}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
