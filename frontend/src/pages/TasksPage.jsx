@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   X,
+  Search,
 } from 'lucide-react';
 
 const PRIORITY_WEIGHTS = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
@@ -48,9 +49,17 @@ export const TasksPage = ({
   onEditTask,
   onDeleteTask,
   onStatusChange,
-  searchQuery,
+  searchQuery: externalSearchQuery = '',
 }) => {
   const [savedPrefs] = useState(getInitialTaskPrefs);
+  const [prevExternalSearchQuery, setPrevExternalSearchQuery] = useState(externalSearchQuery);
+  const [searchQuery, setSearchQuery] = useState(externalSearchQuery || '');
+
+  if (externalSearchQuery !== prevExternalSearchQuery) {
+    setPrevExternalSearchQuery(externalSearchQuery);
+    setSearchQuery(externalSearchQuery || '');
+  }
+
   const [viewMode, setViewMode] = useState(savedPrefs.viewMode || 'kanban'); // 'kanban' or 'list'
   const [statusFilter, setStatusFilter] = useState(savedPrefs.statusFilter || 'ALL');
   const [priorityFilter, setPriorityFilter] = useState(savedPrefs.priorityFilter || 'ALL');
@@ -119,7 +128,7 @@ export const TasksPage = ({
     effectiveGoalFilter !== 'ALL' ||
     effectiveCourseFilter !== 'ALL';
 
-  const isAnyFilterActive = hasActiveFilters || (viewMode === 'list' && hideCompleted);
+  const isAnyFilterActive = hasActiveFilters || Boolean(searchQuery) || (viewMode === 'list' && hideCompleted);
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -138,6 +147,7 @@ export const TasksPage = ({
     setCategoryFilter('ALL');
     setGoalFilter('ALL');
     setCourseFilter('ALL');
+    setSearchQuery('');
     if (viewMode === 'list') {
       setHideCompleted(false);
     }
@@ -328,6 +338,28 @@ export const TasksPage = ({
             <span>Create Task</span>
           </Button>
         </div>
+      </div>
+
+      {/* Search Bar - Separated Row */}
+      <div className="relative w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs p-2 sm:p-2.5 flex items-center">
+        <Search size={15} className="text-slate-400 dark:text-slate-500 ml-2.5 shrink-0" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search tasks by title or description..."
+          className="w-full bg-transparent border-0 pl-2.5 pr-8 py-1 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
+            title="Clear search"
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       {/* Desktop View: Primary Filters Card */}

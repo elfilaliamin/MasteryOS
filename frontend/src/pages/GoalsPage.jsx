@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -15,7 +15,8 @@ import {
   Clock,
   Filter,
   Search,
-  AlertCircle
+  AlertCircle,
+  X,
 } from 'lucide-react';
 
 const STORAGE_KEY_GOALS = 'mastery_goals_filters';
@@ -43,6 +44,28 @@ export const GoalsPage = ({
   const [statusFilter, setStatusFilter] = useState(savedFilters.statusFilter || 'ALL');
   const [priorityFilter, setPriorityFilter] = useState(savedFilters.priorityFilter || 'ALL');
   const [searchFilter, setSearchFilter] = useState(savedFilters.searchFilter || '');
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (statusFilter !== 'ALL') count++;
+    if (priorityFilter !== 'ALL') count++;
+    return count;
+  }, [statusFilter, priorityFilter]);
+
+  const hasActiveFilters = statusFilter !== 'ALL' || priorityFilter !== 'ALL';
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsMobileFilterOpen(false);
+      }
+    };
+    if (isMobileFilterOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isMobileFilterOpen]);
 
   useEffect(() => {
     try {
@@ -234,23 +257,33 @@ export const GoalsPage = ({
         </Card>
       </div>
 
-      {/* Filters Row */}
-      <div className="flex items-center justify-between gap-3 flex-wrap p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
-        <div className="flex items-center gap-3 flex-wrap flex-1 min-w-[240px]">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[180px] max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Search goals..."
-              className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0d8a72]"
-            />
-          </div>
+      {/* Search Bar - Separated Row */}
+      <div className="relative w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs p-2 sm:p-2.5 flex items-center">
+        <Search size={15} className="text-slate-400 dark:text-slate-500 ml-2.5 shrink-0" />
+        <input
+          type="text"
+          value={searchFilter}
+          onChange={(e) => setSearchFilter(e.target.value)}
+          placeholder="Search goals by title or description..."
+          className="w-full bg-transparent border-0 pl-2.5 pr-8 py-1 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none"
+        />
+        {searchFilter && (
+          <button
+            type="button"
+            onClick={() => setSearchFilter('')}
+            className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
+            title="Clear search"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
 
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400">
-            <Filter size={14} className="text-[#0d8a72]" />
+      {/* Desktop View: Primary Filters Card */}
+      <div className="hidden md:flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+        <div className="flex items-center gap-2.5 flex-wrap flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0 mr-0.5">
+            <Filter size={15} className="text-[#0d8a72]" />
             <span>Filters:</span>
           </div>
 
@@ -258,7 +291,11 @@ export const GoalsPage = ({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-[#0d8a72]"
+            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border min-w-[120px] max-w-[160px] truncate ${
+              statusFilter !== 'ALL'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
+            }`}
           >
             <option value="ALL">All Statuses</option>
             <option value="NOT_STARTED">Not Started</option>
@@ -270,7 +307,11 @@ export const GoalsPage = ({
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-[#0d8a72]"
+            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border min-w-[120px] max-w-[160px] truncate ${
+              priorityFilter !== 'ALL'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
+            }`}
           >
             <option value="ALL">All Priorities</option>
             <option value="LOW">Low</option>
@@ -279,24 +320,162 @@ export const GoalsPage = ({
             <option value="URGENT">Urgent</option>
           </select>
 
-          {(statusFilter !== 'ALL' || priorityFilter !== 'ALL' || searchFilter) && (
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
             <button
+              type="button"
               onClick={() => {
                 setStatusFilter('ALL');
                 setPriorityFilter('ALL');
-                setSearchFilter('');
               }}
-              className="text-xs text-rose-500 hover:underline font-semibold cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all cursor-pointer shrink-0"
+              title="Reset filters"
             >
-              Clear filters
+              <X size={13} />
+              <span>Clear filters</span>
             </button>
           )}
         </div>
 
-        <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold shrink-0">
           Showing {filteredGoals.length} of {totalGoals} goals
         </div>
       </div>
+
+      {/* Mobile View: Compact Filters Bar */}
+      <div className="flex md:hidden items-center justify-between gap-2 p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsMobileFilterOpen(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              hasActiveFilters
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 shadow-2xs'
+                : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+            aria-label="Open filter popup"
+          >
+            <Filter size={15} className={hasActiveFilters ? 'text-[#0d8a72] dark:text-emerald-400' : 'text-slate-500'} />
+            <span>Filters</span>
+            {activeFiltersCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-[#0d8a72] text-white text-[10px] font-bold">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter('ALL');
+                setPriorityFilter('ALL');
+              }}
+              className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900 transition-all cursor-pointer"
+              title="Clear all filters"
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+
+        <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 pr-1">
+          {filteredGoals.length} {filteredGoals.length === 1 ? 'goal' : 'goals'}
+        </div>
+      </div>
+
+      {/* Mobile Modal: Filter Popup */}
+      {isMobileFilterOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+          onClick={() => setIsMobileFilterOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#0d8a72] dark:text-emerald-400">
+                  <Filter size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Filter Goals</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Refine by status and priority</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form Fields */}
+            <div className="p-5 space-y-4 overflow-y-auto">
+              {/* Status */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72]"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="NOT_STARTED">Not Started</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Priority
+                </label>
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72]"
+                >
+                  <option value="ALL">All Priorities</option>
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50/80 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter('ALL');
+                  setPriorityFilter('ALL');
+                }}
+                disabled={!hasActiveFilters}
+                className="text-xs font-bold text-rose-600 dark:text-rose-400 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Reset All
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="px-4 py-2 rounded-xl bg-[#0d8a72] hover:bg-[#0b735f] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                Done ({filteredGoals.length} goals)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Single-Line Goals List View */}
       {filteredGoals.length === 0 ? (
