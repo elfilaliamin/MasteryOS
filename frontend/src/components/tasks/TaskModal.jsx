@@ -16,7 +16,7 @@ const TaskFormContent = ({
   const [description, setDescription] = useState(task?.description || '');
   const [status, setStatus] = useState(task?.status || 'TODO');
   const [priority, setPriority] = useState(task?.priority || 'MEDIUM');
-  const [categoryId, setCategoryId] = useState(task?.category_id || categories[0]?.id || '');
+  const [categoryId, setCategoryId] = useState(task?.category_id || '');
   const [goalId, setGoalId] = useState(task?.goal_id || '');
   const [courseId, setCourseId] = useState(task?.course_id || '');
   const [dueDate, setDueDate] = useState(() =>

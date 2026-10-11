@@ -56,6 +56,16 @@ const saveStoredTasks = (userId, tasksList) => {
   }
 };
 
+const formatDateKey = (d) => {
+  if (!d) return null;
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Inner Level Up Pop-up Listener Component
 const LevelUpListener = () => {
   const { levelUpData, closeLevelUpModal } = useGamification();
@@ -490,12 +500,14 @@ const AuthenticatedApp = () => {
 
         if (targetHabitId && datesToRestore.length > 0) {
           const existingDates = new Set(
-            (existingHabit?.completed_dates || []).map((d) => (typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)))
+            (existingHabit?.completed_dates || [])
+              .map((d) => (typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)))
+              .filter(Boolean)
           );
 
           for (const dItem of datesToRestore) {
             const dateStr = typeof dItem === 'string' ? dItem.substring(0, 10) : formatDateKey(dItem);
-            if (!existingDates.has(dateStr)) {
+            if (dateStr && !existingDates.has(dateStr)) {
               try {
                 await api.toggleHabit(targetHabitId, dateStr);
                 existingDates.add(dateStr);
