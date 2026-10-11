@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
+import { createPortal } from 'react-dom';
 import { TaskCard } from '../components/tasks/TaskCard';
 import { Button } from '../components/ui/Button';
 import {
@@ -165,6 +166,27 @@ export const TasksPage = ({
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
   }, [isMobileFilterOpen, isMobileSortOpen]);
+
+  useEffect(() => {
+    if (isMobileFilterOpen || isMobileSortOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isMobileFilterOpen, isMobileSortOpen]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsMobileFilterOpen(false);
+        setIsMobileSortOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Reset pagination when any filter changes
   const [prevFilterKey, setPrevFilterKey] = useState('');
@@ -647,280 +669,284 @@ export const TasksPage = ({
       </div>
 
       {/* Mobile Modal: Filter Popup */}
-      {isMobileFilterOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
-          onClick={() => setIsMobileFilterOpen(false)}
-        >
+      {isMobileFilterOpen &&
+        createPortal(
           <div
-            className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
+            onClick={() => setIsMobileFilterOpen(false)}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#0d8a72] dark:text-emerald-400">
-                  <Filter size={18} />
+            <div
+              className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#0d8a72] dark:text-emerald-400">
+                    <Filter size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Task Filters</h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Filter by status, priority, category & more</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Task Filters</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Filter by status, priority, category & more</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsMobileFilterOpen(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Form Fields */}
-            <div className="p-5 space-y-4 overflow-y-auto">
-              {/* Status */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Status
-                </label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72]"
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="TODO">To Do</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="IN_REVIEW">In Review</option>
-                  <option value="COMPLETED">Completed</option>
-                </select>
+                  <X size={18} />
+                </button>
               </div>
 
-              {/* Priority */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Priority
-                </label>
-                <select
-                  value={priorityFilter}
-                  onChange={(e) => setPriorityFilter(e.target.value)}
-                  className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72]"
-                >
-                  <option value="ALL">All Priorities</option>
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
-                </select>
-              </div>
-
-              {/* Category */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Category
-                </label>
-                <select
-                  value={effectiveCategoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72]"
-                >
-                  <option value="ALL">All Categories</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Goal */}
-              {goals.length > 0 && (
+              {/* Form Fields */}
+              <div className="p-5 space-y-4 overflow-y-auto">
+                {/* Status */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Goal
+                    Status
                   </label>
                   <select
-                    value={effectiveGoalFilter}
-                    onChange={(e) => setGoalFilter(e.target.value)}
-                    className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72]"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
                   >
-                    <option value="ALL">All Goals</option>
-                    {goals.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.icon || '🎯'} {g.title}
+                    <option value="ALL">All Statuses</option>
+                    <option value="TODO">To Do</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="IN_REVIEW">In Review</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </div>
+
+                {/* Priority */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Priority
+                  </label>
+                  <select
+                    value={priorityFilter}
+                    onChange={(e) => setPriorityFilter(e.target.value)}
+                    className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
+                  >
+                    <option value="ALL">All Priorities</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                  </select>
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Category
+                  </label>
+                  <select
+                    value={effectiveCategoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
+                  >
+                    <option value="ALL">All Categories</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
                       </option>
                     ))}
                   </select>
                 </div>
-              )}
 
-              {/* Course */}
-              {courses.length > 0 && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Course
-                  </label>
-                  <select
-                    value={effectiveCourseFilter}
-                    onChange={(e) => setCourseFilter(e.target.value)}
-                    className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72]"
-                  >
-                    <option value="ALL">All Courses</option>
-                    {courses.map((cr) => (
-                      <option key={cr.id} value={cr.id}>
-                        📚 {cr.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                {/* Goal */}
+                {goals.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Goal
+                    </label>
+                    <select
+                      value={effectiveGoalFilter}
+                      onChange={(e) => setGoalFilter(e.target.value)}
+                      className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
+                    >
+                      <option value="ALL">All Goals</option>
+                      {goals.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.icon || '🎯'} {g.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              {/* Hide Completed Toggle (List View) */}
-              {viewMode === 'list' && (
-                <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800">
-                  <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
-                    <div className="flex items-center gap-2.5">
-                      {isHidingCompleted ? (
-                        <EyeOff size={16} className="text-emerald-600 dark:text-emerald-400" />
-                      ) : (
-                        <Eye size={16} className="text-slate-500" />
-                      )}
-                      <div>
-                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          Hide Completed Tasks
-                        </div>
-                        <div className="text-[11px] text-slate-400">
-                          Exclude completed tasks from the list
+                {/* Course */}
+                {courses.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Course
+                    </label>
+                    <select
+                      value={effectiveCourseFilter}
+                      onChange={(e) => setCourseFilter(e.target.value)}
+                      className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
+                    >
+                      <option value="ALL">All Courses</option>
+                      {courses.map((cr) => (
+                        <option key={cr.id} value={cr.id}>
+                          📚 {cr.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Hide Completed Toggle (List View) */}
+                {viewMode === 'list' && (
+                  <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800">
+                    <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
+                      <div className="flex items-center gap-2.5">
+                        {isHidingCompleted ? (
+                          <EyeOff size={16} className="text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                          <Eye size={16} className="text-slate-500" />
+                        )}
+                        <div>
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Hide Completed Tasks
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            Exclude completed tasks from the list
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={hideCompleted}
-                      onChange={(e) => setHideCompleted(e.target.checked)}
-                      className="w-4 h-4 text-[#0d8a72] rounded focus:ring-[#0d8a72] cursor-pointer"
-                    />
-                  </label>
-                </div>
-              )}
-            </div>
+                      <input
+                        type="checkbox"
+                        checked={hideCompleted}
+                        onChange={(e) => setHideCompleted(e.target.checked)}
+                        className="w-4 h-4 text-[#0d8a72] rounded focus:ring-[#0d8a72] cursor-pointer"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50/80 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={handleClearFilters}
-                disabled={!isAnyFilterActive}
-                className="text-xs font-bold text-rose-600 dark:text-rose-400 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                Reset All
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsMobileFilterOpen(false)}
-                className="px-4 py-2 rounded-xl bg-[#0d8a72] hover:bg-[#0b735f] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-              >
-                Done ({filteredTasks.length} tasks)
-              </button>
+              {/* Footer */}
+              <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50/80 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  disabled={!isAnyFilterActive}
+                  className="text-xs font-bold text-rose-600 dark:text-rose-400 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Reset All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-[#0d8a72] hover:bg-[#0b735f] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  Done ({filteredTasks.length} tasks)
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Mobile Modal: Sorting & Grouping Popup */}
-      {isMobileSortOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
-          onClick={() => setIsMobileSortOpen(false)}
-        >
+      {isMobileSortOpen &&
+        createPortal(
           <div
-            className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
+            onClick={() => setIsMobileSortOpen(false)}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#0d8a72] dark:text-emerald-400">
-                  <ArrowUpDown size={18} />
+            <div
+              className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#0d8a72] dark:text-emerald-400">
+                    <ArrowUpDown size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Sort & Group</h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Organize tasks in list view</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSortOpen(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Form Fields */}
+              <div className="p-5 space-y-4 overflow-y-auto">
+                {/* Sort by */}
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Sort & Group</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Organize tasks in list view</p>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Sort Tasks By
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
+                  >
+                    <option value="default">Default</option>
+                    <option value="due_date">Due Date</option>
+                    <option value="priority">Priority</option>
+                    <option value="title">Title (A-Z)</option>
+                    <option value="status">Status</option>
+                  </select>
+                </div>
+
+                {/* Group by */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Group Tasks By
+                  </label>
+                  <select
+                    value={groupBy}
+                    onChange={(e) => setGroupBy(e.target.value)}
+                    className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
+                  >
+                    <option value="none">None</option>
+                    <option value="status">By Status</option>
+                    <option value="priority">By Priority</option>
+                    <option value="category">By Category</option>
+                    <option value="goal">By Goal</option>
+                    <option value="course">By Course</option>
+                  </select>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsMobileSortOpen(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
 
-            {/* Form Fields */}
-            <div className="p-5 space-y-4 overflow-y-auto">
-              {/* Sort by */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Sort Tasks By
-                </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72]"
+              {/* Footer */}
+              <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50/80 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSortBy('default');
+                    setGroupBy('none');
+                  }}
+                  disabled={sortBy === 'default' && groupBy === 'none'}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  <option value="default">Default</option>
-                  <option value="due_date">Due Date</option>
-                  <option value="priority">Priority</option>
-                  <option value="title">Title (A-Z)</option>
-                  <option value="status">Status</option>
-                </select>
-              </div>
-
-              {/* Group by */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Group Tasks By
-                </label>
-                <select
-                  value={groupBy}
-                  onChange={(e) => setGroupBy(e.target.value)}
-                  className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72]"
+                  Reset to Default
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSortOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-[#0d8a72] hover:bg-[#0b735f] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
-                  <option value="none">None</option>
-                  <option value="status">By Status</option>
-                  <option value="priority">By Priority</option>
-                  <option value="category">By Category</option>
-                  <option value="goal">By Goal</option>
-                  <option value="course">By Course</option>
-                </select>
+                  Done
+                </button>
               </div>
             </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50/80 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setSortBy('default');
-                  setGroupBy('none');
-                }}
-                disabled={sortBy === 'default' && groupBy === 'none'}
-                className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                Reset to Default
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsMobileSortOpen(false)}
-                className="px-4 py-2 rounded-xl bg-[#0d8a72] hover:bg-[#0b735f] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Kanban Board View */}
       {viewMode === 'kanban' ? (
