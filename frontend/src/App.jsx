@@ -13,7 +13,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { TasksPage } from './pages/TasksPage';
 import { GoalsPage } from './pages/GoalsPage';
 import { CoursesPage } from './pages/CoursesPage';
-import { HabitsPage } from './pages/HabitsPage';
+import { HabitsPage, computeHabitStreak } from './pages/HabitsPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -958,53 +958,29 @@ const AuthenticatedApp = () => {
       return `${year}-${month}-${day}`;
     })();
 
-    try {
-      await api.toggleHabit(habitId, dateKey);
-    } catch {
-      // Local optimistic update
-    }
-
+    // 1. Instant optimistic update so UI, badges, and streaks respond with ZERO latency
     setHabits((prev) =>
       prev.map((h) => {
         if (h.id === habitId) {
-          const currentDates = new Set(h.completed_dates || []);
+          const normalizedDates = (h.completed_dates || []).map((d) =>
+            typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
+          );
+          const currentDates = new Set(normalizedDates);
           if (currentDates.has(dateKey)) {
             currentDates.delete(dateKey);
           } else {
             currentDates.add(dateKey);
           }
 
-          // Streak calculation
-          const todayKey = (() => {
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-          })();
-
-          let streak = 0;
-          let checkD = new Date();
-          if (!currentDates.has(todayKey)) {
-            checkD.setDate(checkD.getDate() - 1);
-          }
-          while (true) {
-            const y = checkD.getFullYear();
-            const m = String(checkD.getMonth() + 1).padStart(2, '0');
-            const day = String(checkD.getDate()).padStart(2, '0');
-            const k = `${y}-${m}-${day}`;
-            if (currentDates.has(k)) {
-              streak++;
-              checkD.setDate(checkD.getDate() - 1);
-            } else {
-              break;
-            }
-          }
-
           const newDatesArray = Array.from(currentDates);
-          return {
+          const tempHabit = {
             ...h,
-            completed_dates: newDatesArray,
+            completed_dates: newDatesArray
+          };
+          const streak = computeHabitStreak(tempHabit);
+
+          return {
+            ...tempHabit,
             current_streak: streak,
             longest_streak: Math.max(h.longest_streak || 0, streak)
           };
@@ -1012,6 +988,13 @@ const AuthenticatedApp = () => {
         return h;
       })
     );
+
+    // 2. Persist to API in background
+    try {
+      await api.toggleHabit(habitId, dateKey);
+    } catch (err) {
+      console.warn('API toggleHabit notice:', err.message);
+    }
   };
 
   const handleDeleteHabit = async (habitId) => {

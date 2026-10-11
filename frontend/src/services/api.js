@@ -88,6 +88,14 @@ export const api = {
     return handleResponse(res);
   },
 
+  async updateSettings(settings) {
+    const res = await fetchClient(`${API_BASE}/auth/settings`, {
+      method: 'PUT',
+      body: JSON.stringify({ settings }),
+    });
+    return handleResponse(res);
+  },
+
   async resetUserData() {
     const res = await fetchClient(`${API_BASE}/auth/reset-data`, {
       method: 'POST',

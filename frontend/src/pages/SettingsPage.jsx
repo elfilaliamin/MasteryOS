@@ -52,7 +52,7 @@ export const SettingsPage = ({
   onResetData,
   onImportData,
 }) => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, updateSettings } = useAuth();
   const { theme, themeMode, selectThemeMode } = useTheme();
   const { playerStats, equippedTitleId, equipTitle } = useGamification();
 
@@ -186,6 +186,17 @@ export const SettingsPage = ({
   const strengthLabels = ['Too Weak', 'Weak', 'Good', 'Strong'];
   const strengthColors = ['bg-rose-500', 'bg-amber-500', 'bg-teal-500', 'bg-emerald-500'];
 
+  // Sync dashboard config if updated from backend
+  useEffect(() => {
+    const handleConfigSync = (e) => {
+      if (e.detail) {
+        setDashboardConfig(normalizeDashboardConfig(JSON.stringify(e.detail)));
+      }
+    };
+    window.addEventListener('mastery_dashboard_config_sync', handleConfigSync);
+    return () => window.removeEventListener('mastery_dashboard_config_sync', handleConfigSync);
+  }, []);
+
   // Notion-inspired dashboard view config handlers
   const toggleWidget = (propName) => {
     const updated = {
@@ -194,6 +205,7 @@ export const SettingsPage = ({
     };
     setDashboardConfig(updated);
     localStorage.setItem('mastery_dashboard_config', JSON.stringify(updated));
+    updateSettings?.({ dashboardConfig: updated });
     showConfigToast();
   };
 
@@ -208,12 +220,14 @@ export const SettingsPage = ({
     const updated = { ...dashboardConfig, order: newOrder };
     setDashboardConfig(updated);
     localStorage.setItem('mastery_dashboard_config', JSON.stringify(updated));
+    updateSettings?.({ dashboardConfig: updated });
     showConfigToast();
   };
 
   const resetDashboardConfig = () => {
     setDashboardConfig(DEFAULT_DASHBOARD_CONFIG);
     localStorage.setItem('mastery_dashboard_config', JSON.stringify(DEFAULT_DASHBOARD_CONFIG));
+    updateSettings?.({ dashboardConfig: DEFAULT_DASHBOARD_CONFIG });
     showConfigToast();
   };
 

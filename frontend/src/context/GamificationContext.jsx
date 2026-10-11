@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { GamificationContext } from './gamificationContextInstance';
 import { calculateGamification } from '../services/gamification';
 import { useAuth } from './useAuth';
+import { api } from '../services/api';
 
 export const GamificationProvider = ({ children, tasks = [], goals = [], courses = [], habits = [] }) => {
   const { user } = useAuth();
@@ -17,6 +18,17 @@ export const GamificationProvider = ({ children, tasks = [], goals = [], courses
   const isInitializedRef = useRef(false);
   const previousLevelRef = useRef(null);
   const lastUserIdRef = useRef(userId);
+
+  // Sync title from backend
+  useEffect(() => {
+    const handleTitleSync = (e) => {
+      if (e.detail) {
+        setEquippedTitleId(e.detail);
+      }
+    };
+    window.addEventListener('taskmaster_title_sync', handleTitleSync);
+    return () => window.removeEventListener('taskmaster_title_sync', handleTitleSync);
+  }, []);
 
   const playerStats = calculateGamification(tasks, goals, courses, equippedTitleId, habits);
 
@@ -64,6 +76,9 @@ export const GamificationProvider = ({ children, tasks = [], goals = [], courses
   const equipTitle = (titleId) => {
     setEquippedTitleId(titleId);
     localStorage.setItem(equippedTitleKey, titleId);
+    if (user?.id) {
+      api.updateSettings({ equippedTitleId: titleId }).catch(() => {});
+    }
   };
 
   const closeLevelUpModal = () => {

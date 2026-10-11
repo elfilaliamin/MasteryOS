@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeContext } from './themeContextInstance';
+import { api } from '../services/api';
 
 export const ThemeProvider = ({ children }) => {
   const getSystemTheme = useCallback(() => {
@@ -20,6 +21,23 @@ export const ThemeProvider = ({ children }) => {
     if (legacySaved === 'dark' || legacySaved === 'light') return legacySaved;
     return getSystemTheme();
   });
+
+  // Listen for settings sync from backend
+  useEffect(() => {
+    const handleSettingsSync = (e) => {
+      const syncedMode = e.detail?.themeMode;
+      if (syncedMode && (syncedMode === 'light' || syncedMode === 'dark' || syncedMode === 'system')) {
+        setThemeMode(syncedMode);
+        if (syncedMode === 'system') {
+          setTheme(getSystemTheme());
+        } else {
+          setTheme(syncedMode);
+        }
+      }
+    };
+    window.addEventListener('taskmaster_settings_sync', handleSettingsSync);
+    return () => window.removeEventListener('taskmaster_settings_sync', handleSettingsSync);
+  }, [getSystemTheme]);
 
   // Listen to live system preference changes when in 'system' mode
   useEffect(() => {
@@ -52,6 +70,10 @@ export const ThemeProvider = ({ children }) => {
       setTheme(getSystemTheme());
     } else {
       setTheme(mode);
+    }
+
+    if (localStorage.getItem('master_tasks_token')) {
+      api.updateSettings({ themeMode: mode }).catch(() => {});
     }
   };
 

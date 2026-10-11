@@ -37,6 +37,20 @@ export const AuthProvider = ({ children }) => {
           if (isMounted && res.user) {
             setUser(res.user);
             localStorage.setItem('master_tasks_user', JSON.stringify(res.user));
+            if (res.user.settings) {
+              if (res.user.settings.themeMode) {
+                localStorage.setItem('taskmaster_theme_mode', res.user.settings.themeMode);
+                window.dispatchEvent(new CustomEvent('taskmaster_settings_sync', { detail: res.user.settings }));
+              }
+              if (res.user.settings.dashboardConfig) {
+                localStorage.setItem('mastery_dashboard_config', JSON.stringify(res.user.settings.dashboardConfig));
+                window.dispatchEvent(new CustomEvent('mastery_dashboard_config_sync', { detail: res.user.settings.dashboardConfig }));
+              }
+              if (res.user.settings.equippedTitleId) {
+                localStorage.setItem(`taskmaster_equipped_title_${res.user.id}`, res.user.settings.equippedTitleId);
+                window.dispatchEvent(new CustomEvent('taskmaster_title_sync', { detail: res.user.settings.equippedTitleId }));
+              }
+            }
           }
         } catch (err) {
           console.warn('Session verification warning:', err.message);
@@ -61,6 +75,20 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       localStorage.setItem('master_tasks_token', data.token);
       localStorage.setItem('master_tasks_user', JSON.stringify(data.user));
+      if (data.user?.settings) {
+        if (data.user.settings.themeMode) {
+          localStorage.setItem('taskmaster_theme_mode', data.user.settings.themeMode);
+          window.dispatchEvent(new CustomEvent('taskmaster_settings_sync', { detail: data.user.settings }));
+        }
+        if (data.user.settings.dashboardConfig) {
+          localStorage.setItem('mastery_dashboard_config', JSON.stringify(data.user.settings.dashboardConfig));
+          window.dispatchEvent(new CustomEvent('mastery_dashboard_config_sync', { detail: data.user.settings.dashboardConfig }));
+        }
+        if (data.user.settings.equippedTitleId) {
+          localStorage.setItem(`taskmaster_equipped_title_${data.user.id}`, data.user.settings.equippedTitleId);
+          window.dispatchEvent(new CustomEvent('taskmaster_title_sync', { detail: data.user.settings.equippedTitleId }));
+        }
+      }
       return { success: true };
     } catch (err) {
       // Offline fallback: check registered local users
@@ -186,6 +214,42 @@ export const AuthProvider = ({ children }) => {
     return updatedUser;
   };
 
+  const updateSettings = async (partialSettings) => {
+    if (!partialSettings || typeof partialSettings !== 'object') return;
+
+    const currentSettings = user?.settings || {};
+    const updatedSettings = {
+      ...currentSettings,
+      ...partialSettings,
+    };
+    const updatedUser = {
+      ...(user || {}),
+      settings: updatedSettings,
+    };
+    setUser(updatedUser);
+    localStorage.setItem('master_tasks_user', JSON.stringify(updatedUser));
+
+    if (partialSettings.themeMode) {
+      localStorage.setItem('taskmaster_theme_mode', partialSettings.themeMode);
+    }
+    if (partialSettings.dashboardConfig) {
+      localStorage.setItem('mastery_dashboard_config', JSON.stringify(partialSettings.dashboardConfig));
+    }
+    if (partialSettings.equippedTitleId && user?.id) {
+      localStorage.setItem(`taskmaster_equipped_title_${user.id}`, partialSettings.equippedTitleId);
+    }
+
+    try {
+      const res = await api.updateSettings(partialSettings);
+      if (res?.user) {
+        setUser(res.user);
+        localStorage.setItem('master_tasks_user', JSON.stringify(res.user));
+      }
+    } catch (err) {
+      console.warn('Persist settings to DB notice:', err.message);
+    }
+  };
+
   const logout = async () => {
     clearUserLocalData();
     try {
@@ -209,6 +273,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         updateProfile,
+        updateSettings,
         logout,
       }}
     >

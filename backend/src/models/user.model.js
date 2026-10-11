@@ -19,7 +19,7 @@ export const findUserByEmail = async (email) => {
 
 export const findUserById = async (id) => {
   try {
-    const res = await query('SELECT id, email, password_hash, full_name, avatar_url, token_version, created_at FROM users WHERE id = $1', [id]);
+    const res = await query('SELECT id, email, password_hash, full_name, avatar_url, settings, token_version, created_at FROM users WHERE id = $1', [id]);
     if (res && res.rows && res.rows[0]) {
       return res.rows[0];
     }
@@ -41,7 +41,7 @@ export const createUser = async ({ email, password_hash, full_name }) => {
     const res = await query(
       `INSERT INTO users (email, password_hash, full_name, token_version)
        VALUES ($1, $2, $3, 1)
-       RETURNING id, email, full_name, avatar_url, token_version, created_at`,
+       RETURNING id, email, full_name, avatar_url, settings, token_version, created_at`,
       [normalizedEmail, password_hash, full_name]
     );
     if (res && res.rows) {
@@ -59,6 +59,7 @@ export const createUser = async ({ email, password_hash, full_name }) => {
     password_hash,
     full_name,
     avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(full_name)}`,
+    settings: {},
     token_version: 1,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -134,7 +135,7 @@ export const updateUserProfile = async (userId, { full_name, avatar_url }) => {
            avatar_url = COALESCE($2, avatar_url),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3
-       RETURNING id, email, full_name, avatar_url`,
+       RETURNING id, email, full_name, avatar_url, settings`,
       [full_name, avatar_url, userId]
     );
     if (res && res.rows && res.rows[0]) {
@@ -149,6 +150,36 @@ export const updateUserProfile = async (userId, { full_name, avatar_url }) => {
     if (user.id === userId) {
       if (full_name) user.full_name = full_name;
       if (avatar_url) user.avatar_url = avatar_url;
+      user.updated_at = new Date().toISOString();
+      const { password_hash: _, ...safeUser } = user;
+      return safeUser;
+    }
+  }
+  return null;
+};
+
+export const updateUserSettings = async (userId, settings) => {
+  try {
+    const settingsJson = JSON.stringify(settings || {});
+    const res = await query(
+      `UPDATE users
+       SET settings = COALESCE(settings, '{}'::jsonb) || $1::jsonb,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, email, full_name, avatar_url, settings`,
+      [settingsJson, userId]
+    );
+    if (res && res.rows && res.rows[0]) {
+      return res.rows[0];
+    }
+  } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
+    console.warn('[DB Fallback] Updating settings in memory store:', err.message);
+  }
+
+  for (const user of fallbackUsers.values()) {
+    if (user.id === userId) {
+      user.settings = { ...(user.settings || {}), ...(settings || {}) };
       user.updated_at = new Date().toISOString();
       const { password_hash: _, ...safeUser } = user;
       return safeUser;

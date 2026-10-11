@@ -26,20 +26,23 @@ const formatDateKey = (d) => {
   return `${year}-${month}-${day}`;
 };
 
-// Real-time Consecutive Streak Calculator
+// Real-time Consecutive Streak Calculator with robust normalization & recent run fallback
 export const computeHabitStreak = (habit) => {
-  const dates = habit?.completed_dates || [];
-  if (!dates.length) return Number(habit?.current_streak) || 0;
+  const rawDates = habit?.completed_dates || [];
+  if (!rawDates.length) return Number(habit?.current_streak) || 0;
 
   const dateSet = new Set(
-    dates.map((d) => (typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)))
+    rawDates.map((d) => (typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d))).filter(Boolean)
   );
+  if (!dateSet.size) return Number(habit?.current_streak) || 0;
+
   const todayKey = formatDateKey(new Date());
 
+  // 1. Check current continuous streak up to today or yesterday
   let streak = 0;
   let checkDate = new Date();
 
-  // If today is completed, count starting from today; if not yet completed today, check from yesterday
+  // If today is not checked yet, start evaluation from yesterday
   if (!dateSet.has(todayKey)) {
     checkDate.setDate(checkDate.getDate() - 1);
   }
@@ -54,49 +57,107 @@ export const computeHabitStreak = (habit) => {
     }
   }
 
+  // 2. Fallback for recent active completions within the current week/grace period:
+  // If consecutive-to-today is 0, but the user has marked completions:
+  if (streak === 0 && dateSet.size > 0) {
+    if (dateSet.has(todayKey)) {
+      streak = 1;
+    } else {
+      // Find the most recent continuous run of completions in history
+      const sortedDates = Array.from(dateSet).sort().reverse();
+      const latestDateStr = sortedDates[0];
+      const latestDate = new Date(latestDateStr + 'T00:00:00');
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((now - latestDate) / (1000 * 60 * 60 * 24));
+
+      // If the latest check-in is within this week (<= 7 days ago), calculate consecutive run ending at that date
+      if (diffDays <= 7) {
+        let runCount = 0;
+        let dCursor = new Date(latestDate);
+        while (true) {
+          const k = formatDateKey(dCursor);
+          if (dateSet.has(k)) {
+            runCount++;
+            dCursor.setDate(dCursor.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+        streak = Math.max(1, runCount);
+      }
+    }
+  }
+
   return Math.max(streak, Number(habit?.current_streak) || 0);
 };
 
-// Duolingo-inspired Flame & Streak Badge
+// Duolingo-inspired Interactive Flame & Streak Badge
 export const DuolingoStreakBadge = ({
   streak = 0,
   variant = 'default',
   size = 'sm',
   className = '',
+  onClick = null,
+  isCompletedToday = false,
+  titleText = '',
 }) => {
   const count = Math.max(0, Number(streak) || 0);
-  const isActive = count > 0;
+  const isActive = count > 0 || isCompletedToday;
+  const isClickable = typeof onClick === 'function';
 
   const badgeStyles = () => {
     if (variant === 'light') {
       return isActive
-        ? 'bg-black/25 backdrop-blur-xs border border-white/25 text-white shadow-xs'
-        : 'bg-black/15 text-white/70 border border-white/10';
+        ? 'bg-black/30 backdrop-blur-xs border border-white/35 text-white shadow-xs hover:bg-black/40'
+        : 'bg-black/15 text-white/75 border border-white/15 hover:bg-black/25';
     }
     return isActive
-      ? 'bg-gradient-to-r from-amber-500/15 via-orange-500/20 to-red-500/15 border border-orange-500/35 text-orange-600 dark:text-orange-400 shadow-[0_2px_8px_rgba(249,115,22,0.2)] hover:shadow-[0_2px_12px_rgba(249,115,22,0.35)]'
-      : 'bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 text-slate-400 dark:text-slate-500';
+      ? 'bg-gradient-to-r from-amber-500/15 via-orange-500/20 to-red-500/15 border border-orange-500/40 text-orange-600 dark:text-orange-400 shadow-[0_2px_8px_rgba(249,115,22,0.2)] hover:shadow-[0_2px_14px_rgba(249,115,22,0.4)] hover:border-orange-500/60'
+      : 'bg-slate-100 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700/60 text-slate-400 dark:text-slate-500 hover:border-orange-400/50 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50/40 dark:hover:bg-orange-950/20';
   };
 
+  const computedTitle =
+    titleText ||
+    (isCompletedToday
+      ? `🔥 ${count} Day Streak! Completed today! (Click to toggle)`
+      : isClickable
+      ? `⚡ ${count} Day Streak — Click to check in today & ignite streak! 🔥`
+      : count > 0
+      ? `🔥 ${count} Day Streak! Momentum is ablaze!`
+      : `0 Day Streak — check in today to ignite your flame!`);
+
+  const Component = isClickable ? 'button' : 'div';
+
   return (
-    <div
-      className={`inline-flex items-center gap-1 shrink-0 rounded-full select-none transition-all duration-300 font-black cursor-default hover:scale-105 active:scale-95 ${
-        size === 'lg' ? 'px-3 py-1 text-sm' : 'px-1.5 py-0.5 text-[11px]'
-      } ${badgeStyles()} ${className}`}
-      title={
-        isActive
-          ? `🔥 ${count} Day Streak! Momentum is ablaze!`
-          : `0 Day Streak — check in today to ignite your flame!`
-      }
+    <Component
+      type={isClickable ? 'button' : undefined}
+      onClick={(e) => {
+        if (isClickable) {
+          e.stopPropagation();
+          onClick(e);
+        }
+      }}
+      className={`inline-flex items-center gap-1 shrink-0 rounded-full select-none transition-all duration-300 font-black ${
+        isClickable ? 'cursor-pointer hover:scale-110 active:scale-95 group/streak' : 'cursor-default hover:scale-105'
+      } ${size === 'lg' ? 'px-3 py-1 text-sm' : 'px-1.5 py-0.5 text-[11px]'} ${badgeStyles()} ${className}`}
+      title={computedTitle}
+      aria-label={computedTitle}
     >
       {/* Duolingo-inspired Multi-layer Flame SVG */}
       <svg
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={`shrink-0 transition-transform ${
+        className={`shrink-0 transition-all duration-300 ${
           size === 'lg' ? 'w-5 h-5' : 'w-3.5 h-3.5'
-        } ${isActive ? 'scale-110 drop-shadow-[0_1px_3px_rgba(249,115,22,0.6)]' : 'opacity-40 grayscale'}`}
+        } ${
+          isActive
+            ? 'scale-110 drop-shadow-[0_1px_4px_rgba(249,115,22,0.65)] animate-pulse'
+            : isClickable
+            ? 'opacity-50 grayscale group-hover/streak:opacity-100 group-hover/streak:grayscale-0 group-hover/streak:scale-115'
+            : 'opacity-40 grayscale'
+        }`}
       >
         <defs>
           <linearGradient id="duoFlameOuter" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -128,7 +189,7 @@ export const DuolingoStreakBadge = ({
       <span className="font-mono text-[11px] leading-none font-black tracking-tight">
         {count}
       </span>
-    </div>
+    </Component>
   );
 };
 
@@ -622,9 +683,12 @@ export const HabitsPage = ({
                   {/* Habit Rows */}
                   <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
                     {habits.map((habit) => {
-                      const dates = habit.completed_dates || [];
+                      const dates = (habit.completed_dates || []).map((d) =>
+                        typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
+                      );
                       const habitColor = habit.color || '#0d8a72';
                       const habitStreak = computeHabitStreak(habit);
+                      const isCompletedToday = dates.includes(todayKey);
 
                       let completedInWeek = 0;
                       weekDays.forEach((wd) => {
@@ -647,8 +711,12 @@ export const HabitsPage = ({
                               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
                                 {habit.title}
                               </span>
-                              {/* Duolingo Streak Badge directly next to the habit title */}
-                              <DuolingoStreakBadge streak={habitStreak} />
+                              {/* Duolingo Streak Badge directly next to the habit title - Click to toggle today */}
+                              <DuolingoStreakBadge
+                                streak={habitStreak}
+                                isCompletedToday={isCompletedToday}
+                                onClick={() => onToggleHabit(habit.id, todayKey)}
+                              />
                             </div>
 
                             {/* Quick Edit & Delete Buttons */}
@@ -783,7 +851,10 @@ export const HabitsPage = ({
             /* Detailed Cards View fallback */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {habits.map((habit) => {
-                const isDoneToday = (habit.completed_dates || []).includes(todayKey);
+                const dates = (habit.completed_dates || []).map((d) =>
+                  typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
+                );
+                const isDoneToday = dates.includes(todayKey);
                 const streak = computeHabitStreak(habit);
                 return (
                   <Card key={habit.id} className="p-4 flex flex-col justify-between gap-3">
@@ -793,7 +864,11 @@ export const HabitsPage = ({
                         <div>
                           <div className="flex items-center gap-1.5">
                             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">{habit.title}</h4>
-                            <DuolingoStreakBadge streak={streak} />
+                            <DuolingoStreakBadge
+                              streak={streak}
+                              isCompletedToday={isDoneToday}
+                              onClick={() => onToggleHabit(habit.id, todayKey)}
+                            />
                           </div>
                           <span className="text-[10px] text-slate-400">{habit.time_of_day || 'ANYTIME'}</span>
                         </div>
@@ -883,7 +958,9 @@ export const HabitsPage = ({
             {/* Habit Items Vertical Timeline for the Selected Day */}
             <div className="flex flex-col gap-3">
               {habits.map((habit) => {
-                const dates = habit.completed_dates || [];
+                const dates = (habit.completed_dates || []).map((d) =>
+                  typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
+                );
                 const isCompleted = dates.includes(selectedDayKey);
                 const habitColor = habit.color || '#0d8a72';
                 const habitStreak = computeHabitStreak(habit);
@@ -908,7 +985,12 @@ export const HabitsPage = ({
                           <div className="flex items-center gap-1.5 min-w-0 truncate">
                             <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
                             <span className="text-xs font-black truncate">{habit.title}</span>
-                            <DuolingoStreakBadge streak={habitStreak} variant="light" />
+                            <DuolingoStreakBadge
+                              streak={habitStreak}
+                              variant="light"
+                              isCompletedToday={isCompleted}
+                              onClick={() => onToggleHabit(habit.id, selectedDayKey)}
+                            />
                           </div>
 
                           <div className="flex items-center gap-0.5 shrink-0">
@@ -959,7 +1041,11 @@ export const HabitsPage = ({
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                               {habit.title}
                             </span>
-                            <DuolingoStreakBadge streak={habitStreak} />
+                            <DuolingoStreakBadge
+                              streak={habitStreak}
+                              isCompletedToday={false}
+                              onClick={() => onToggleHabit(habit.id, selectedDayKey)}
+                            />
                           </div>
 
                           <div className="flex items-center gap-0.5 shrink-0">

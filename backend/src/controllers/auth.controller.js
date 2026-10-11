@@ -1,4 +1,4 @@
-import { findUserByEmail, findUserById, createUser, updateUserPassword, updateUserProfile } from '../models/user.model.js';
+import { findUserByEmail, findUserById, createUser, updateUserPassword, updateUserProfile, updateUserSettings } from '../models/user.model.js';
 import { hashPassword, comparePassword, generateToken, generateCsrfToken } from '../utils/auth.js';
 import { isEmailLocked, recordFailedLogin, clearFailedLogins } from '../utils/accountLockout.js';
 import { query } from '../config/db.js';
@@ -194,6 +194,24 @@ export const updateProfile = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update profile.' });
+  }
+};
+
+export const updateSettings = async (req, res) => {
+  try {
+    const { settings } = req.body;
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ error: 'Settings object is required.' });
+    }
+    const updated = await updateUserSettings(req.user.id, settings);
+    res.status(200).json({
+      message: 'Settings updated successfully.',
+      user: updated,
+      settings: updated?.settings || {}
+    });
+  } catch (err) {
+    console.error('Update settings error:', err);
+    res.status(500).json({ error: 'Failed to update settings.' });
   }
 };
 
