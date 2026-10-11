@@ -198,21 +198,32 @@ const AuthenticatedApp = () => {
 
   // Global Data Import
   const handleImportData = async (importPayload, mode = 'merge') => {
+    if (!importPayload || typeof importPayload !== 'object') return;
+
     if (mode === 'replace') {
       try {
         await api.resetUserData();
       } catch (err) {
         console.warn('API reset before import notice:', err.message);
       }
+      setTasks([]);
+      setGoals([]);
+      setCourses([]);
+      setHabits([]);
+      setCategories([]);
+      if (user?.id) {
+        localStorage.removeItem(`mastery_local_tasks_${user.id}`);
+      }
+      localStorage.removeItem('mastery_local_tasks');
     }
 
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    // Fetch existing categories to resolve duplicates and default names
-    let currentCats = categories || [];
+    // 1. Fetch current categories
+    let currentCats = mode === 'replace' ? [] : (categories || []);
     try {
       const catsRes = await api.getCategories();
-      if (catsRes?.categories && Array.isArray(catsRes.categories) && catsRes.categories.length > 0) {
+      if (catsRes?.categories && Array.isArray(catsRes.categories)) {
         currentCats = catsRes.categories;
       }
     } catch {
@@ -220,7 +231,6 @@ const AuthenticatedApp = () => {
     }
 
     const categoryMap = new Map();
-    // Pre-seed category map with current categories by both id and lowercase name
     currentCats.forEach((c) => {
       if (c.id && UUID_REGEX.test(c.id)) {
         categoryMap.set(c.id, c.id);
@@ -230,12 +240,11 @@ const AuthenticatedApp = () => {
       }
     });
 
-    // Map default local category keys ('cat-1' -> Work, 'cat-2' -> Personal, etc.)
     const defaultNameMap = {
       'cat-1': 'work',
       'cat-2': 'personal',
       'cat-3': 'urgent',
-      'cat-4': 'learning'
+      'cat-4': 'learning',
     };
     Object.entries(defaultNameMap).forEach(([catKey, catName]) => {
       const match = currentCats.find((c) => c.name?.toLowerCase() === catName);
@@ -244,30 +253,47 @@ const AuthenticatedApp = () => {
       }
     });
 
-    if (Array.isArray(importPayload.categories)) {
-      for (const cat of importPayload.categories) {
-        const catNameLower = cat.name ? cat.name.trim().toLowerCase() : '';
-        const existingCat = currentCats.find((c) => c.name?.toLowerCase() === catNameLower);
-        if (existingCat?.id) {
-          categoryMap.set(cat.id, existingCat.id);
-          if (catNameLower) categoryMap.set(catNameLower, existingCat.id);
-          continue;
-        }
-
-        try {
-          const res = await api.createCategory({ name: cat.name, color: cat.color });
-          if (res?.category?.id) {
-            categoryMap.set(cat.id, res.category.id);
-            if (catNameLower) categoryMap.set(catNameLower, res.category.id);
-            currentCats.push(res.category);
-          }
-        } catch {
-          // ignore duplicate category names
+    // Collect all categories to import (including any categories referenced on tasks)
+    const rawCategories = [...(importPayload.categories || [])];
+    if (Array.isArray(importPayload.tasks)) {
+      for (const t of importPayload.tasks) {
+        if (t.category_name && !rawCategories.some((c) => c.name?.toLowerCase().trim() === t.category_name.toLowerCase().trim())) {
+          rawCategories.push({
+            id: t.category_id || `cat-${Date.now()}-${Math.random()}`,
+            name: t.category_name,
+            color: t.category_color || '#0d8a72',
+          });
         }
       }
     }
 
-    let currentGoals = goals || [];
+    // Import / Restore Categories (ensures exact colors are created/updated)
+    for (const cat of rawCategories) {
+      if (!cat?.name || !cat.name.trim()) continue;
+      const catName = cat.name.trim();
+      const catNameLower = catName.toLowerCase();
+      const catColor = cat.color || '#0d8a72';
+
+      try {
+        const res = await api.createCategory({ name: catName, color: catColor });
+        const savedCat = res?.category;
+        if (savedCat?.id) {
+          if (cat.id) categoryMap.set(cat.id, savedCat.id);
+          categoryMap.set(catNameLower, savedCat.id);
+          const existingIdx = currentCats.findIndex((c) => c.id === savedCat.id);
+          if (existingIdx !== -1) {
+            currentCats[existingIdx] = savedCat;
+          } else {
+            currentCats.push(savedCat);
+          }
+        }
+      } catch (err) {
+        console.warn('Category import notice:', err.message);
+      }
+    }
+
+    // 2. Import / Restore Goals (preserves colors, icons, priorities, dates)
+    let currentGoals = mode === 'replace' ? [] : (goals || []);
     try {
       const goalsRes = await api.getGoals();
       if (goalsRes?.goals && Array.isArray(goalsRes.goals)) {
@@ -285,27 +311,47 @@ const AuthenticatedApp = () => {
 
     if (Array.isArray(importPayload.goals)) {
       for (const g of importPayload.goals) {
-        const goalTitleLower = g.title ? g.title.trim().toLowerCase() : '';
+        if (!g?.title || !g.title.trim()) continue;
+        const goalTitle = g.title.trim();
+        const goalTitleLower = goalTitle.toLowerCase();
+        const effectiveDueDate = (g.due_date && String(g.due_date).trim()) || (g.target_date && String(g.target_date).trim()) || null;
+        const goalPriority = g.priority ? String(g.priority).toUpperCase() : 'MEDIUM';
+        const goalColor = g.color || '#0d8a72';
+        const goalIcon = g.icon || '🎯';
+
         const existingGoal = currentGoals.find((ex) => ex.title?.trim().toLowerCase() === goalTitleLower);
-        if (existingGoal?.id) {
-          goalMap.set(g.id, existingGoal.id);
-          if (goalTitleLower) goalMap.set(goalTitleLower, existingGoal.id);
+
+        if (existingGoal?.id && mode !== 'replace') {
+          try {
+            await api.updateGoal(existingGoal.id, {
+              title: goalTitle,
+              description: g.description || '',
+              due_date: effectiveDueDate,
+              priority: goalPriority,
+              color: goalColor,
+              icon: goalIcon,
+            });
+          } catch {
+            // ignore
+          }
+          if (g.id) goalMap.set(g.id, existingGoal.id);
+          goalMap.set(goalTitleLower, existingGoal.id);
           continue;
         }
 
         try {
           const res = await api.createGoal({
-            title: g.title,
-            description: g.description,
-            due_date: (g.due_date && String(g.due_date).trim()) || (g.target_date && String(g.target_date).trim()) || null,
-            target_date: (g.target_date && String(g.target_date).trim()) || (g.due_date && String(g.due_date).trim()) || null,
-            priority: g.priority ? String(g.priority).toUpperCase() : 'MEDIUM',
-            color: g.color || '#0d8a72',
-            icon: g.icon || '🎯',
+            title: goalTitle,
+            description: g.description || '',
+            due_date: effectiveDueDate,
+            target_date: effectiveDueDate,
+            priority: goalPriority,
+            color: goalColor,
+            icon: goalIcon,
           });
           if (res?.goal?.id) {
-            goalMap.set(g.id, res.goal.id);
-            if (goalTitleLower) goalMap.set(goalTitleLower, res.goal.id);
+            if (g.id) goalMap.set(g.id, res.goal.id);
+            goalMap.set(goalTitleLower, res.goal.id);
             currentGoals.push(res.goal);
           }
         } catch (err) {
@@ -314,7 +360,8 @@ const AuthenticatedApp = () => {
       }
     }
 
-    let currentCourses = courses || [];
+    // 3. Import / Restore Courses (preserves cover_images, progress, certificates)
+    let currentCourses = mode === 'replace' ? [] : (courses || []);
     try {
       const coursesRes = await api.getCourses();
       if (coursesRes?.courses && Array.isArray(coursesRes.courses)) {
@@ -332,27 +379,43 @@ const AuthenticatedApp = () => {
 
     if (Array.isArray(importPayload.courses)) {
       for (const c of importPayload.courses) {
-        const courseTitleLower = c.title ? c.title.trim().toLowerCase() : '';
+        if (!c?.title || !c.title.trim()) continue;
+        const courseTitle = c.title.trim();
+        const courseTitleLower = courseTitle.toLowerCase();
         const existingCourse = currentCourses.find((ex) => ex.title?.trim().toLowerCase() === courseTitleLower);
-        if (existingCourse?.id) {
-          courseMap.set(c.id, existingCourse.id);
-          if (courseTitleLower) courseMap.set(courseTitleLower, existingCourse.id);
+
+        if (existingCourse?.id && mode !== 'replace') {
+          try {
+            await api.updateCourse(existingCourse.id, {
+              title: courseTitle,
+              description: c.description || '',
+              cover_image: c.cover_image || null,
+              total_lessons: c.total_lessons != null ? c.total_lessons : null,
+              finished_lessons: c.finished_lessons != null ? c.finished_lessons : null,
+              certification_url: c.certification_url || null,
+              certification_filename: c.certification_filename || null,
+            });
+          } catch {
+            // ignore
+          }
+          if (c.id) courseMap.set(c.id, existingCourse.id);
+          courseMap.set(courseTitleLower, existingCourse.id);
           continue;
         }
 
         try {
           const res = await api.createCourse({
-            title: c.title,
-            description: c.description,
-            cover_image: c.cover_image,
+            title: courseTitle,
+            description: c.description || '',
+            cover_image: c.cover_image || null,
             total_lessons: c.total_lessons != null ? c.total_lessons : null,
             finished_lessons: c.finished_lessons != null ? c.finished_lessons : null,
-            certification_url: c.certification_url,
-            certification_filename: c.certification_filename,
+            certification_url: c.certification_url || null,
+            certification_filename: c.certification_filename || null,
           });
           if (res?.course?.id) {
-            courseMap.set(c.id, res.course.id);
-            if (courseTitleLower) courseMap.set(courseTitleLower, res.course.id);
+            if (c.id) courseMap.set(c.id, res.course.id);
+            courseMap.set(courseTitleLower, res.course.id);
             currentCourses.push(res.course);
           }
         } catch (err) {
@@ -361,21 +424,123 @@ const AuthenticatedApp = () => {
       }
     }
 
+    // 4. Import / Restore Habits (preserves icons, colors, time_of_day, and completed_dates / streaks)
+    let currentHabits = mode === 'replace' ? [] : (habits || []);
+    try {
+      const habitsRes = await api.getHabits();
+      if (habitsRes?.habits && Array.isArray(habitsRes.habits)) {
+        currentHabits = habitsRes.habits;
+      }
+    } catch {
+      // Use habits from state
+    }
+
+    if (Array.isArray(importPayload.habits)) {
+      for (const h of importPayload.habits) {
+        if (!h?.title || !h.title.trim()) continue;
+        const habitTitle = h.title.trim();
+        const habitTitleLower = habitTitle.toLowerCase();
+        const habitIcon = h.icon || '⚡';
+        const habitColor = h.color || '#0d8a72';
+        const habitTimeOfDay = h.time_of_day || 'ANYTIME';
+        const habitFrequency = h.frequency || 'DAILY';
+
+        let targetHabitId = null;
+        const existingHabit = currentHabits.find((ex) => ex.title?.trim().toLowerCase() === habitTitleLower);
+
+        if (existingHabit?.id && mode !== 'replace') {
+          targetHabitId = existingHabit.id;
+          try {
+            await api.updateHabit(existingHabit.id, {
+              title: habitTitle,
+              description: h.description || '',
+              icon: habitIcon,
+              color: habitColor,
+              time_of_day: habitTimeOfDay,
+              frequency: habitFrequency,
+            });
+          } catch {
+            // ignore
+          }
+        } else {
+          try {
+            const res = await api.createHabit({
+              title: habitTitle,
+              description: h.description || '',
+              icon: habitIcon,
+              color: habitColor,
+              time_of_day: habitTimeOfDay,
+              frequency: habitFrequency,
+            });
+            if (res?.habit?.id) {
+              targetHabitId = res.habit.id;
+              currentHabits.push(res.habit);
+            }
+          } catch (err) {
+            console.warn('Import habit notice:', err.message);
+          }
+        }
+
+        // Restore Habit Check-ins / Streaks / Completed Dates History
+        const datesToRestore = Array.isArray(h.completed_dates)
+          ? h.completed_dates
+          : Array.isArray(h.history)
+          ? h.history
+          : [];
+
+        if (targetHabitId && datesToRestore.length > 0) {
+          const existingDates = new Set(
+            (existingHabit?.completed_dates || []).map((d) => (typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)))
+          );
+
+          for (const dItem of datesToRestore) {
+            const dateStr = typeof dItem === 'string' ? dItem.substring(0, 10) : formatDateKey(dItem);
+            if (!existingDates.has(dateStr)) {
+              try {
+                await api.toggleHabit(targetHabitId, dateStr);
+                existingDates.add(dateStr);
+              } catch {
+                // ignore
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Import / Restore Tasks (preserves category, goal, course relationships, colors, and statuses)
     const restoredTasks = [];
     if (Array.isArray(importPayload.tasks)) {
       for (const t of importPayload.tasks) {
-        const rawCatId = t.category_id;
-        const mappedCatId = categoryMap.get(rawCatId) ||
-          categoryMap.get(defaultNameMap[rawCatId]) ||
-          (currentCats.find((c) => c.id === rawCatId)?.id || null);
+        // Robust Category Resolution: Map by ID, by Name, or by Alias
+        let mappedCatId = categoryMap.get(t.category_id);
+        if (!mappedCatId && t.category_name) {
+          mappedCatId = categoryMap.get(t.category_name.trim().toLowerCase());
+        }
+        if (!mappedCatId && t.category_id && defaultNameMap[t.category_id]) {
+          mappedCatId = categoryMap.get(defaultNameMap[t.category_id]);
+        }
+        if (!mappedCatId) {
+          mappedCatId = currentCats.find((c) => c.id === t.category_id)?.id || null;
+        }
 
-        const rawGoalId = t.goal_id;
-        const mappedGoalId = goalMap.get(rawGoalId) ||
-          (currentGoals.find((g) => g.id === rawGoalId)?.id || null);
+        // Robust Goal Resolution: Map by ID or by Title
+        let mappedGoalId = goalMap.get(t.goal_id);
+        if (!mappedGoalId && t.goal_title) {
+          mappedGoalId = goalMap.get(t.goal_title.trim().toLowerCase());
+        }
+        if (!mappedGoalId) {
+          mappedGoalId = currentGoals.find((g) => g.id === t.goal_id)?.id || null;
+        }
 
-        const rawCourseId = t.course_id;
-        const mappedCourseId = courseMap.get(rawCourseId) ||
-          (currentCourses.find((c) => c.id === rawCourseId)?.id || null);
+        // Robust Course Resolution: Map by ID or by Title
+        let mappedCourseId = courseMap.get(t.course_id);
+        if (!mappedCourseId && t.course_title) {
+          mappedCourseId = courseMap.get(t.course_title.trim().toLowerCase());
+        }
+        if (!mappedCourseId) {
+          mappedCourseId = currentCourses.find((c) => c.id === t.course_id)?.id || null;
+        }
 
         const cleanDueDate = t.due_date && String(t.due_date).trim() ? t.due_date : null;
 
@@ -415,7 +580,7 @@ const AuthenticatedApp = () => {
             restoredTasks.push({
               ...taskPayload,
               id: t.id || `local-task-${Date.now()}-${Math.random()}`,
-              created_at: t.created_at || new Date().toISOString()
+              created_at: t.created_at || new Date().toISOString(),
             });
           }
         } catch (err) {
@@ -423,7 +588,7 @@ const AuthenticatedApp = () => {
           restoredTasks.push({
             ...taskPayload,
             id: t.id || `local-task-${Date.now()}-${Math.random()}`,
-            created_at: t.created_at || new Date().toISOString()
+            created_at: t.created_at || new Date().toISOString(),
           });
         }
       }
@@ -442,23 +607,16 @@ const AuthenticatedApp = () => {
       }
     }
 
-    if (Array.isArray(importPayload.habits)) {
-      for (const h of importPayload.habits) {
-        try {
-          await api.createHabit({
-            title: h.title,
-            description: h.description,
-            icon: h.icon || '⚡',
-            color: h.color || '#0d8a72',
-            frequency: h.frequency || 'DAILY',
-            time_of_day: h.time_of_day || 'ANYTIME',
-          });
-        } catch (err) {
-          console.warn('Import habit notice:', err.message);
-        }
+    // 6. Restore Dashboard Configuration if present
+    if (importPayload.dashboard_config && typeof importPayload.dashboard_config === 'object') {
+      try {
+        localStorage.setItem('mastery_dashboard_config', JSON.stringify(importPayload.dashboard_config));
+      } catch {
+        // ignore
       }
     }
 
+    // 7. Full App Data Refresh
     reloadData();
   };
 

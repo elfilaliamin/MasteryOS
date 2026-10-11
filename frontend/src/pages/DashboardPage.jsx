@@ -34,6 +34,26 @@ const DASHBOARD_LIMITS = {
   GOALS: 3,             // Max 3 active strategic goals (1x3 grid)
 };
 
+const PRIORITY_WEIGHTS = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+const STATUS_ORDER = { NOT_STARTED: 1, IN_PROGRESS: 2, COMPLETED: 3 };
+const COURSE_STATUS_ORDER = { IN_PROGRESS: 1, NOT_STARTED: 2, COMPLETED: 3 };
+
+const GOAL_SORT_LABELS = {
+  due_date: 'Due Date',
+  priority: 'Priority',
+  progress: 'Progress',
+  title: 'Title (A-Z)',
+  status: 'Status',
+};
+
+const COURSE_SORT_LABELS = {
+  progress: 'Progress',
+  title: 'Title (A-Z)',
+  finished_lessons: 'Lessons Finished',
+  total_lessons: 'Total Lessons',
+  status: 'Status',
+};
+
 export const DashboardPage = ({
   tasks = [],
   goals = [],
@@ -68,18 +88,55 @@ export const DashboardPage = ({
     }
   });
 
-  // Re-read config when page mounts or window focus
+  const [goalSortBy, setGoalSortBy] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mastery_goals_filters');
+      if (saved) return JSON.parse(saved).sortBy || 'default';
+    } catch {
+      // ignore
+    }
+    return 'default';
+  });
+
+  const [courseSortBy, setCourseSortBy] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mastery_courses_filters');
+      if (saved) return JSON.parse(saved).sortBy || 'default';
+    } catch {
+      // ignore
+    }
+    return 'default';
+  });
+
+  // Re-read config & sort preferences when page mounts or window focus/storage changes
   useEffect(() => {
-    const handleStorage = () => {
+    const handleSync = () => {
       try {
         const saved = localStorage.getItem('mastery_dashboard_config');
         if (saved) setDashboardConfig(normalizeDashboardConfig(saved));
       } catch (err) {
         void err;
       }
+      try {
+        const goalsSaved = localStorage.getItem('mastery_goals_filters');
+        if (goalsSaved) setGoalSortBy(JSON.parse(goalsSaved).sortBy || 'default');
+      } catch (err) {
+        void err;
+      }
+      try {
+        const coursesSaved = localStorage.getItem('mastery_courses_filters');
+        if (coursesSaved) setCourseSortBy(JSON.parse(coursesSaved).sortBy || 'default');
+      } catch (err) {
+        void err;
+      }
     };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('focus', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('focus', handleSync);
+    };
   }, []);
 
   const isBrandNewAccount = tasks.length === 0 && goals.length === 0 && courses.length === 0 && habits.length === 0;
@@ -181,14 +238,53 @@ export const DashboardPage = ({
     return { text: `${diffDays} days left`, isSoon: false };
   };
 
-  // 2. Active Courses In-Progress (lessons > 0 and lessons < total)
+  // 2. Courses (Active & In-Progress, sorted according to CoursesPage sort preference)
   const allActiveCourses = courses.filter((c) => {
     const finished = c.finished_lessons || 0;
     const totalLessons = c.total_lessons || 1;
-    return finished > 0 && finished < totalLessons;
+    return finished < totalLessons;
   });
 
-  const activeCourses = allActiveCourses.slice(0, DASHBOARD_LIMITS.ACTIVE_COURSES);
+  const enrichedActiveCourses = allActiveCourses.map((c) => {
+    const hasTotal = c.total_lessons != null && c.total_lessons > 0;
+    const hasFinished = c.finished_lessons != null && c.finished_lessons >= 0;
+    const progressPercent = (hasTotal && hasFinished)
+      ? Math.min(100, Math.round(((c.finished_lessons || 0) / c.total_lessons) * 100))
+      : 0;
+    const isCompleted = hasTotal && hasFinished && (c.finished_lessons || 0) >= c.total_lessons;
+    const isNotStarted = !hasFinished || (c.finished_lessons || 0) === 0;
+    const status = isCompleted ? 'COMPLETED' : (!isNotStarted ? 'IN_PROGRESS' : 'NOT_STARTED');
+
+    return {
+      ...c,
+      progressPercent,
+      isCompleted,
+      isNotStarted,
+      computedStatus: status,
+    };
+  });
+
+  const sortedActiveCourses = [...enrichedActiveCourses].sort((a, b) => {
+    if (courseSortBy === 'progress') {
+      return (b.progressPercent || 0) - (a.progressPercent || 0);
+    }
+    if (courseSortBy === 'title') {
+      return (a.title || '').localeCompare(b.title || '');
+    }
+    if (courseSortBy === 'finished_lessons') {
+      return (b.finished_lessons || 0) - (a.finished_lessons || 0);
+    }
+    if (courseSortBy === 'total_lessons') {
+      return (b.total_lessons || 0) - (a.total_lessons || 0);
+    }
+    if (courseSortBy === 'status') {
+      return (COURSE_STATUS_ORDER[a.computedStatus] || 99) - (COURSE_STATUS_ORDER[b.computedStatus] || 99);
+    }
+    // 'default': prioritize in-progress courses over not-started ones
+    return ((b.finished_lessons || 0) > 0 ? 1 : 0) - ((a.finished_lessons || 0) > 0 ? 1 : 0);
+  });
+
+  const activeCourses = sortedActiveCourses.slice(0, DASHBOARD_LIMITS.ACTIVE_COURSES);
 
   // 3. High & Urgent Priority Tasks
   const allUrgentTasks = tasks.filter(
@@ -197,7 +293,7 @@ export const DashboardPage = ({
 
   const urgentTasks = allUrgentTasks.slice(0, DASHBOARD_LIMITS.URGENT_TASKS);
 
-  // 4. Goals Progress (Exclude completed goals)
+  // 4. Goals Progress (Exclude completed goals, sorted according to GoalsPage sort preference)
   const activeGoals = goals.filter((g) => {
     if (g.status === 'COMPLETED') return false;
     const assigned = tasks.filter((t) => t.goal_id === g.id);
@@ -207,7 +303,56 @@ export const DashboardPage = ({
     return true;
   });
 
-  const displayedGoals = activeGoals.slice(0, DASHBOARD_LIMITS.GOALS);
+  const enrichedActiveGoals = activeGoals.map((g) => {
+    const assigned = tasks.filter((t) => t.goal_id === g.id);
+    const completedTasks = assigned.filter((t) => t.status === 'COMPLETED');
+    const totalCount = assigned.length;
+    const completedCount = completedTasks.length;
+    const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    let status = 'NOT_STARTED';
+    if (totalCount > 0 && completedCount === totalCount) {
+      status = 'COMPLETED';
+    } else if (completedCount > 0) {
+      status = 'IN_PROGRESS';
+    }
+
+    const effectiveDueDate = g.due_date || g.target_date;
+
+    return {
+      ...g,
+      assignedTasks: assigned,
+      totalCount,
+      completedCount,
+      progressPercent,
+      computedStatus: status,
+      effectiveDueDate,
+    };
+  });
+
+  const sortedActiveGoals = [...enrichedActiveGoals].sort((a, b) => {
+    if (goalSortBy === 'due_date') {
+      if (!a.effectiveDueDate && !b.effectiveDueDate) return 0;
+      if (!a.effectiveDueDate) return 1;
+      if (!b.effectiveDueDate) return -1;
+      return new Date(a.effectiveDueDate) - new Date(b.effectiveDueDate);
+    }
+    if (goalSortBy === 'priority') {
+      return (PRIORITY_WEIGHTS[b.priority] || 0) - (PRIORITY_WEIGHTS[a.priority] || 0);
+    }
+    if (goalSortBy === 'progress') {
+      return (b.progressPercent || 0) - (a.progressPercent || 0);
+    }
+    if (goalSortBy === 'title') {
+      return (a.title || '').localeCompare(b.title || '');
+    }
+    if (goalSortBy === 'status') {
+      return (STATUS_ORDER[a.computedStatus] || 0) - (STATUS_ORDER[b.computedStatus] || 0);
+    }
+    return 0;
+  });
+
+  const displayedGoals = sortedActiveGoals.slice(0, DASHBOARD_LIMITS.GOALS);
 
   // 5. Today's Habits Shortcut
   const todayStr = (() => {
@@ -787,9 +932,16 @@ export const DashboardPage = ({
                   <GraduationCap size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                    In-Progress Courses
-                  </h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                      In-Progress Courses
+                    </h3>
+                    {courseSortBy !== 'default' && COURSE_SORT_LABELS[courseSortBy] && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                        Sorted by {COURSE_SORT_LABELS[courseSortBy]}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                     Active learning modules with direct +1 lesson quick advance
                   </p>
@@ -1028,9 +1180,16 @@ export const DashboardPage = ({
                   <Target size={20} />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                    Goals Progress
-                  </h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                      Goals Progress
+                    </h3>
+                    {goalSortBy !== 'default' && GOAL_SORT_LABELS[goalSortBy] && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/40 text-[#0d8a72] dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                        Sorted by {GOAL_SORT_LABELS[goalSortBy]}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                     Active milestone targets and task completion tracking
                   </p>

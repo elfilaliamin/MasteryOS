@@ -64,6 +64,13 @@ const GoalFormContent = ({ goal, tasks = [], onSubmit, onClose }) => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const assignableTasks = tasks.filter((task) => {
+    if (task.status === 'COMPLETED') {
+      return Boolean(goal && selectedTaskIds.includes(task.id));
+    }
+    return true;
+  });
+
   const toggleTask = (taskId) => {
     setSelectedTaskIds((prev) =>
       prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
@@ -219,7 +226,7 @@ const GoalFormContent = ({ goal, tasks = [], onSubmit, onClose }) => {
           </span>
         </label>
 
-        {tasks.length > 0 && (
+        {assignableTasks.length > 0 && (
           <div className="relative">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
@@ -233,11 +240,11 @@ const GoalFormContent = ({ goal, tasks = [], onSubmit, onClose }) => {
         )}
 
         <div className="max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-950/30">
-          {tasks.length === 0 ? (
+          {assignableTasks.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-4">No tasks available to assign.</p>
           ) : (
             (() => {
-              const filtered = tasks.filter((task) =>
+              const filtered = assignableTasks.filter((task) =>
                 task.title.toLowerCase().includes(taskSearch.toLowerCase())
               );
               if (filtered.length === 0) {

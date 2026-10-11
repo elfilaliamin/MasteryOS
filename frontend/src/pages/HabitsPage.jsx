@@ -26,6 +26,112 @@ const formatDateKey = (d) => {
   return `${year}-${month}-${day}`;
 };
 
+// Real-time Consecutive Streak Calculator
+export const computeHabitStreak = (habit) => {
+  const dates = habit?.completed_dates || [];
+  if (!dates.length) return Number(habit?.current_streak) || 0;
+
+  const dateSet = new Set(
+    dates.map((d) => (typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)))
+  );
+  const todayKey = formatDateKey(new Date());
+
+  let streak = 0;
+  let checkDate = new Date();
+
+  // If today is completed, count starting from today; if not yet completed today, check from yesterday
+  if (!dateSet.has(todayKey)) {
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  while (true) {
+    const key = formatDateKey(checkDate);
+    if (dateSet.has(key)) {
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  return Math.max(streak, Number(habit?.current_streak) || 0);
+};
+
+// Duolingo-inspired Flame & Streak Badge
+export const DuolingoStreakBadge = ({
+  streak = 0,
+  variant = 'default',
+  size = 'sm',
+  className = '',
+}) => {
+  const count = Math.max(0, Number(streak) || 0);
+  const isActive = count > 0;
+
+  const badgeStyles = () => {
+    if (variant === 'light') {
+      return isActive
+        ? 'bg-black/25 backdrop-blur-xs border border-white/25 text-white shadow-xs'
+        : 'bg-black/15 text-white/70 border border-white/10';
+    }
+    return isActive
+      ? 'bg-gradient-to-r from-amber-500/15 via-orange-500/20 to-red-500/15 border border-orange-500/35 text-orange-600 dark:text-orange-400 shadow-[0_2px_8px_rgba(249,115,22,0.2)] hover:shadow-[0_2px_12px_rgba(249,115,22,0.35)]'
+      : 'bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 text-slate-400 dark:text-slate-500';
+  };
+
+  return (
+    <div
+      className={`inline-flex items-center gap-1 shrink-0 rounded-full select-none transition-all duration-300 font-black cursor-default hover:scale-105 active:scale-95 ${
+        size === 'lg' ? 'px-3 py-1 text-sm' : 'px-1.5 py-0.5 text-[11px]'
+      } ${badgeStyles()} ${className}`}
+      title={
+        isActive
+          ? `🔥 ${count} Day Streak! Momentum is ablaze!`
+          : `0 Day Streak — check in today to ignite your flame!`
+      }
+    >
+      {/* Duolingo-inspired Multi-layer Flame SVG */}
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={`shrink-0 transition-transform ${
+          size === 'lg' ? 'w-5 h-5' : 'w-3.5 h-3.5'
+        } ${isActive ? 'scale-110 drop-shadow-[0_1px_3px_rgba(249,115,22,0.6)]' : 'opacity-40 grayscale'}`}
+      >
+        <defs>
+          <linearGradient id="duoFlameOuter" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFA000" />
+            <stop offset="50%" stopColor="#FF5722" />
+            <stop offset="100%" stopColor="#F43F5E" />
+          </linearGradient>
+          <linearGradient id="duoFlameInner" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#FEF08A" />
+            <stop offset="100%" stopColor="#F59E0B" />
+          </linearGradient>
+        </defs>
+
+        {/* Outer Flame body */}
+        <path
+          d="M12 2C10.6 4.3 9.4 6.3 9.2 8.5C8.5 7.8 8 6.9 7.8 6.1C5.7 8.5 4.2 11.6 4.2 15C4.2 19.3 7.7 22.8 12 22.8C16.3 22.8 19.8 19.3 19.8 15C19.8 10.9 17.3 7.1 14.7 4.2C13.7 3.1 12.8 2.3 12 2Z"
+          fill={isActive ? 'url(#duoFlameOuter)' : 'currentColor'}
+        />
+
+        {/* Inner Heart/Droplet core */}
+        {isActive && (
+          <path
+            d="M12 12.8C10.9 14.2 10.3 15.4 10.3 16.7C10.3 18.1 11.1 19.2 12 19.2C12.9 19.2 13.7 18.1 13.7 16.7C13.7 15.4 13.1 14.2 12 12.8Z"
+            fill="url(#duoFlameInner)"
+          />
+        )}
+      </svg>
+
+      <span className="font-mono text-[11px] leading-none font-black tracking-tight">
+        {count}
+      </span>
+    </div>
+  );
+};
+
 export const HabitsPage = ({
   habits = [],
   onOpenNewHabit,
@@ -518,6 +624,7 @@ export const HabitsPage = ({
                     {habits.map((habit) => {
                       const dates = habit.completed_dates || [];
                       const habitColor = habit.color || '#0d8a72';
+                      const habitStreak = computeHabitStreak(habit);
 
                       let completedInWeek = 0;
                       weekDays.forEach((wd) => {
@@ -531,7 +638,7 @@ export const HabitsPage = ({
                         >
                           {/* Sticky Left: Indicator dot + Icon + Title + Streak Badge + Quick Actions */}
                           <div className="col-span-5 sm:col-span-4 sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-800/80 z-10 flex items-center justify-between gap-1.5 sm:gap-2 min-w-0 pr-2 pl-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.4)] transition-colors">
-                            <div className="flex items-center gap-2 min-w-0 truncate">
+                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 truncate">
                               <span
                                 className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
                                 style={{ backgroundColor: habitColor }}
@@ -540,46 +647,36 @@ export const HabitsPage = ({
                               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
                                 {habit.title}
                               </span>
+                              {/* Duolingo Streak Badge directly next to the habit title */}
+                              <DuolingoStreakBadge streak={habitStreak} />
                             </div>
 
-                            <div className="flex items-center gap-1 shrink-0">
-                              {(habit.current_streak || 0) > 0 && (
-                                <div
-                                  className="flex items-center gap-1 shrink-0 px-1.5 sm:px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-black text-xs"
-                                  title={`Current streak: ${habit.current_streak} days`}
-                                >
-                                  <Flame size={13} className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_1px_4px_rgba(245,158,11,0.4)]" />
-                                  <span>{habit.current_streak}</span>
-                                </div>
-                              )}
-
-                              {/* Quick Edit & Delete Buttons */}
-                              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            {/* Quick Edit & Delete Buttons */}
+                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditHabit(habit);
+                                }}
+                                className="p-1 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                                title="Edit Habit"
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                              {onDeleteHabit && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    onEditHabit(habit);
+                                    handleDelete(habit.id, habit.title);
                                   }}
-                                  className="p-1 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
-                                  title="Edit Habit"
+                                  className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                                  title="Delete Habit"
                                 >
-                                  <Edit2 size={12} />
+                                  <Trash2 size={12} />
                                 </button>
-                                {onDeleteHabit && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDelete(habit.id, habit.title);
-                                    }}
-                                    className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                                    title="Delete Habit"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                )}
-                              </div>
+                              )}
                             </div>
                           </div>
 
@@ -687,20 +784,19 @@ export const HabitsPage = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {habits.map((habit) => {
                 const isDoneToday = (habit.completed_dates || []).includes(todayKey);
-                const streak = habit.current_streak || 0;
+                const streak = computeHabitStreak(habit);
                 return (
                   <Card key={habit.id} className="p-4 flex flex-col justify-between gap-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
                         <span className="text-2xl">{habit.icon || '⚡'}</span>
                         <div>
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">{habit.title}</h4>
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">{habit.title}</h4>
+                            <DuolingoStreakBadge streak={streak} />
+                          </div>
                           <span className="text-[10px] text-slate-400">{habit.time_of_day || 'ANYTIME'}</span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-black text-sm shadow-2xs">
-                        <Flame size={18} className="fill-amber-500 text-amber-500 animate-pulse shrink-0 drop-shadow-[0_2px_6px_rgba(245,158,11,0.5)]" />
-                        <span>{streak}d streak</span>
                       </div>
                     </div>
 
@@ -790,6 +886,7 @@ export const HabitsPage = ({
                 const dates = habit.completed_dates || [];
                 const isCompleted = dates.includes(selectedDayKey);
                 const habitColor = habit.color || '#0d8a72';
+                const habitStreak = computeHabitStreak(habit);
 
                 return (
                   <div key={`day-habit-${habit.id}`} className="relative pl-3 flex flex-col gap-1.5">
@@ -806,11 +903,12 @@ export const HabitsPage = ({
                         className="p-3.5 rounded-2xl text-white transition-all shadow-sm flex flex-col justify-between gap-3"
                         style={{ backgroundColor: habitColor }}
                       >
-                        {/* Card Header: Icon + Title + Edit & Delete actions */}
+                        {/* Card Header: Icon + Title + Streak Badge + Edit & Delete actions */}
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0 truncate">
                             <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
                             <span className="text-xs font-black truncate">{habit.title}</span>
+                            <DuolingoStreakBadge streak={habitStreak} variant="light" />
                           </div>
 
                           <div className="flex items-center gap-0.5 shrink-0">
@@ -854,13 +952,14 @@ export const HabitsPage = ({
                     ) : (
                       /* PENDING STATE: Clean Card with Mark Complete outline button */
                       <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 transition-all hover:border-slate-300 flex flex-col justify-between gap-3 text-left">
-                        {/* Header: Icon + Title + Edit & Delete actions */}
+                        {/* Header: Icon + Title + Streak Badge + Edit & Delete actions */}
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0 truncate">
                             <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                               {habit.title}
                             </span>
+                            <DuolingoStreakBadge streak={habitStreak} />
                           </div>
 
                           <div className="flex items-center gap-0.5 shrink-0">

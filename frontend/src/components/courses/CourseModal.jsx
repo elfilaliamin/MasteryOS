@@ -8,12 +8,20 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
   const [title, setTitle] = useState(course?.title || '');
   const [description, setDescription] = useState(course?.description || '');
   const [coverType, setCoverType] = useState(() => {
-    if (course?.cover_image?.startsWith('data:')) return 'upload';
-    return 'url';
+    if (!course) return 'upload';
+    if (course.cover_image?.startsWith('http://') || course.cover_image?.startsWith('https://')) return 'url';
+    return 'upload';
   });
-  const [coverImage, setCoverImage] = useState(course?.cover_image || '');
+  const [coverImage, setCoverImage] = useState(() => {
+    if (course?.cover_image && !course.cover_image.startsWith('http://') && !course.cover_image.startsWith('https://')) {
+      return course.cover_image;
+    }
+    return '';
+  });
   const [coverUrlInput, setCoverUrlInput] = useState(() => {
-    return course?.cover_image && !course.cover_image.startsWith('data:') ? course.cover_image : '';
+    return course?.cover_image && (course.cover_image.startsWith('http://') || course.cover_image.startsWith('https://'))
+      ? course.cover_image
+      : '';
   });
   const [totalLessons, setTotalLessons] = useState(() => {
     return course?.total_lessons != null ? String(course.total_lessons) : '';
@@ -81,6 +89,13 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
     };
     reader.readAsDataURL(file);
   };
+
+  const assignableTasks = tasks.filter((task) => {
+    if (task.status === 'COMPLETED') {
+      return Boolean(course && selectedTaskIds.includes(task.id));
+    }
+    return true;
+  });
 
   const toggleTask = (taskId) => {
     setSelectedTaskIds((prev) =>
@@ -374,7 +389,7 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
           </span>
         </label>
 
-        {tasks.length > 0 && (
+        {assignableTasks.length > 0 && (
           <div className="relative">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
@@ -388,11 +403,11 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
         )}
 
         <div className="max-h-36 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col gap-1.5 bg-slate-50/50 dark:bg-slate-950/30">
-          {tasks.length === 0 ? (
+          {assignableTasks.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-4">No tasks available to assign.</p>
           ) : (
             (() => {
-              const filtered = tasks.filter((task) =>
+              const filtered = assignableTasks.filter((task) =>
                 task.title.toLowerCase().includes(taskSearch.toLowerCase())
               );
               if (filtered.length === 0) {
