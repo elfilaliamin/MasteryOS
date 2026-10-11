@@ -303,9 +303,9 @@ export const TasksPage = ({
       </div>
 
       {/* Filter Row matching Khademni card styling */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0 mr-0.5">
             <Filter size={15} className="text-[#0d8a72]" />
             <span>Filters:</span>
           </div>
@@ -314,7 +314,7 @@ export const TasksPage = ({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[135px] sm:max-w-[155px] truncate ${
+            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[115px] max-w-[155px] truncate ${
               statusFilter !== 'ALL'
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
@@ -331,7 +331,7 @@ export const TasksPage = ({
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[135px] sm:max-w-[155px] truncate ${
+            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[115px] max-w-[155px] truncate ${
               priorityFilter !== 'ALL'
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
@@ -348,7 +348,7 @@ export const TasksPage = ({
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[140px] sm:max-w-[165px] truncate ${
+            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[120px] max-w-[165px] truncate ${
               categoryFilter !== 'ALL'
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
@@ -367,7 +367,7 @@ export const TasksPage = ({
             <select
               value={goalFilter}
               onChange={(e) => setGoalFilter(e.target.value)}
-              className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[140px] sm:max-w-[165px] truncate ${
+              className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[120px] max-w-[165px] truncate ${
                 goalFilter !== 'ALL'
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
                   : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
@@ -387,7 +387,7 @@ export const TasksPage = ({
             <select
               value={courseFilter}
               onChange={(e) => setCourseFilter(e.target.value)}
-              className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border max-w-[140px] sm:max-w-[165px] truncate ${
+              className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[120px] max-w-[165px] truncate ${
                 courseFilter !== 'ALL'
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
                   : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
@@ -426,7 +426,7 @@ export const TasksPage = ({
 
         {/* List View Controls: Hide Completed, Sort by, Group by */}
         {viewMode === 'list' && (
-          <div className="flex items-center gap-2.5 flex-wrap shrink-0 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2.5 sm:pt-0 sm:pl-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap shrink-0 pt-2.5 xl:pt-0 border-t xl:border-t-0 xl:border-l border-slate-200/90 dark:border-slate-800 xl:pl-3.5 w-full xl:w-auto">
             {/* Hide Completed Toggle Button (List View only) */}
             <button
               type="button"
@@ -448,16 +448,20 @@ export const TasksPage = ({
 
             {/* Sort by */}
             <div className="flex items-center gap-1.5 text-xs">
-              <ArrowUpDown size={13} className="text-[#0d8a72] dark:text-teal-400" />
-              <span className="font-bold text-slate-600 dark:text-slate-400">Sort:</span>
+              <ArrowUpDown size={13} className="text-[#0d8a72] dark:text-teal-400 shrink-0" />
+              <span className="font-bold text-slate-600 dark:text-slate-400 shrink-0">Sort:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
+                className={`border rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none transition-all cursor-pointer ${
+                  sortBy !== 'default'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                    : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:border-[#0d8a72]'
+                }`}
               >
                 <option value="default">Default</option>
-                <option value="due_date">Due Date (Earliest)</option>
-                <option value="priority">Priority (Highest)</option>
+                <option value="due_date">Due Date</option>
+                <option value="priority">Priority</option>
                 <option value="title">Title (A-Z)</option>
                 <option value="status">Status</option>
               </select>
@@ -465,12 +469,16 @@ export const TasksPage = ({
 
             {/* Group by */}
             <div className="flex items-center gap-1.5 text-xs">
-              <Layers size={13} className="text-[#0d8a72] dark:text-teal-400" />
-              <span className="font-bold text-slate-600 dark:text-slate-400">Group:</span>
+              <Layers size={13} className="text-[#0d8a72] dark:text-teal-400 shrink-0" />
+              <span className="font-bold text-slate-600 dark:text-slate-400 shrink-0">Group:</span>
               <select
                 value={groupBy}
                 onChange={(e) => setGroupBy(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
+                className={`border rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none transition-all cursor-pointer ${
+                  groupBy !== 'none'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                    : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:border-[#0d8a72]'
+                }`}
               >
                 <option value="none">None</option>
                 <option value="status">By Status</option>
