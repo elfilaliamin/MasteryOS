@@ -38,13 +38,20 @@ app.use(helmet({
 
 app.use(cookieParser());
 
-const defaultAllowedOrigins = process.env.NODE_ENV === 'production'
-  ? ['https://masteryos.app']
-  : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'];
+const defaultAllowedOrigins = [
+  'https://masteryos.elfilaiamin.online',
+  'http://masteryos.elfilaiamin.online',
+  'https://masteryos.app',
+  ...(process.env.NODE_ENV === 'production'
+    ? []
+    : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'])
+];
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
+const envOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
-  : defaultAllowedOrigins;
+  : [];
+
+const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -52,7 +59,11 @@ app.use(cors({
     if (!origin || process.env.NODE_ENV === 'test') {
       return callback(null, true);
     }
-    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    if (
+      allowedOrigins.includes(origin) ||
+      allowedOrigins.includes('*') ||
+      allowedOrigins.some((ao) => origin === `https://${ao}` || origin === `http://${ao}` || ao === origin.replace(/^https?:\/\//, ''))
+    ) {
       return callback(null, true);
     }
     return callback(new Error('Blocked by CORS policy: Origin not allowed'));
