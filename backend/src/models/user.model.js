@@ -18,7 +18,7 @@ export const findUserByEmail = async (email) => {
 
 export const findUserById = async (id) => {
   try {
-    const res = await query('SELECT id, email, password_hash, full_name, avatar_url, created_at FROM users WHERE id = $1', [id]);
+    const res = await query('SELECT id, email, password_hash, full_name, avatar_url, token_version, created_at FROM users WHERE id = $1', [id]);
     if (res && res.rows && res.rows[0]) {
       return res.rows[0];
     }
@@ -37,9 +37,9 @@ export const createUser = async ({ email, password_hash, full_name }) => {
   const normalizedEmail = email.toLowerCase().trim();
   try {
     const res = await query(
-      `INSERT INTO users (email, password_hash, full_name)
-       VALUES ($1, $2, $3)
-       RETURNING id, email, full_name, avatar_url, created_at`,
+      `INSERT INTO users (email, password_hash, full_name, token_version)
+       VALUES ($1, $2, $3, 1)
+       RETURNING id, email, full_name, avatar_url, token_version, created_at`,
       [normalizedEmail, password_hash, full_name]
     );
     if (res && res.rows) {
@@ -56,6 +56,7 @@ export const createUser = async ({ email, password_hash, full_name }) => {
     password_hash,
     full_name,
     avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(full_name)}`,
+    token_version: 1,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -68,9 +69,11 @@ export const updateUserPassword = async (userId, newPasswordHash) => {
   try {
     const res = await query(
       `UPDATE users
-       SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
+       SET password_hash = $1,
+           token_version = COALESCE(token_version, 1) + 1,
+           updated_at = CURRENT_TIMESTAMP
        WHERE id = $2
-       RETURNING id, email, full_name, avatar_url`,
+       RETURNING id, email, full_name, avatar_url, token_version`,
       [newPasswordHash, userId]
     );
     if (res && res.rows && res.rows[0]) {
@@ -83,9 +86,36 @@ export const updateUserPassword = async (userId, newPasswordHash) => {
   for (const user of fallbackUsers.values()) {
     if (user.id === userId) {
       user.password_hash = newPasswordHash;
+      user.token_version = (user.token_version || 1) + 1;
       user.updated_at = new Date().toISOString();
       const { password_hash: _, ...safeUser } = user;
       return safeUser;
+    }
+  }
+  return null;
+};
+
+export const revokeUserSessions = async (userId) => {
+  try {
+    const res = await query(
+      `UPDATE users
+       SET token_version = COALESCE(token_version, 1) + 1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING id, token_version`,
+      [userId]
+    );
+    if (res && res.rows) {
+      return res.rows[0];
+    }
+  } catch (err) {
+    // Fallback to memory
+  }
+
+  for (const user of fallbackUsers.values()) {
+    if (user.id === userId) {
+      user.token_version = (user.token_version || 1) + 1;
+      return { id: userId, token_version: user.token_version };
     }
   }
   return null;

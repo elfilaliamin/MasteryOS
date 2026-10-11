@@ -23,7 +23,7 @@ export const getCategoriesByUser = async (userId) => {
     const res = await query(
       `SELECT c.*, COUNT(t.id)::int as task_count
        FROM categories c
-       LEFT JOIN tasks t ON t.category_id = c.id AND t.is_archived = false
+       LEFT JOIN tasks t ON t.category_id = c.id AND t.user_id = c.user_id AND t.is_archived = false
        WHERE c.user_id = $1
        GROUP BY c.id
        ORDER BY c.created_at ASC`,
@@ -35,7 +35,7 @@ export const getCategoriesByUser = async (userId) => {
         const retryRes = await query(
           `SELECT c.*, COUNT(t.id)::int as task_count
            FROM categories c
-           LEFT JOIN tasks t ON t.category_id = c.id AND t.is_archived = false
+           LEFT JOIN tasks t ON t.category_id = c.id AND t.user_id = c.user_id AND t.is_archived = false
            WHERE c.user_id = $1
            GROUP BY c.id
            ORDER BY c.created_at ASC`,
@@ -112,3 +112,19 @@ export const deleteCategory = async (userId, categoryId) => {
   fallbackCategories.set(userId, filtered);
   return true;
 };
+
+export const isCategoryOwnedByUser = async (userId, categoryId) => {
+  if (!categoryId) return true;
+  try {
+    const res = await query('SELECT id FROM categories WHERE id = $1 AND user_id = $2', [categoryId, userId]);
+    if (res && res.rows) {
+      return res.rows.length > 0;
+    }
+  } catch (err) {
+    // Fallback to memory
+  }
+
+  const userCats = fallbackCategories.get(userId) || [];
+  return userCats.some(c => c.id === categoryId);
+};
+

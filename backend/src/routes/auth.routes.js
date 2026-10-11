@@ -1,14 +1,19 @@
 import { Router } from 'express';
-import { register, login, getMe, changePassword, updateProfile, resetUserData } from '../controllers/auth.controller.js';
+import { register, login, logout, getMe, changePassword, updateProfile, resetUserData } from '../controllers/auth.controller.js';
 import { verifyJWT } from '../middleware/auth.middleware.js';
+import { authLimiter, passwordChangeLimiter } from '../middleware/rateLimiter.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
+import { registerSchema, loginSchema, changePasswordSchema, updateProfileSchema } from '../validators/schemas.js';
 
 const router = Router();
 
-router.post('/register', register);
-router.post('/login', login);
+router.post('/register', authLimiter, validate({ body: registerSchema }), register);
+router.post('/login', authLimiter, validate({ body: loginSchema }), login);
+router.post('/logout', logout);
 router.get('/me', verifyJWT, getMe);
-router.put('/change-password', verifyJWT, changePassword);
-router.put('/profile', verifyJWT, updateProfile);
+router.post('/change-password', verifyJWT, passwordChangeLimiter, validate({ body: changePasswordSchema }), changePassword);
+router.put('/change-password', verifyJWT, passwordChangeLimiter, validate({ body: changePasswordSchema }), changePassword);
+router.put('/profile', verifyJWT, validate({ body: updateProfileSchema }), updateProfile);
 router.post('/reset-data', verifyJWT, resetUserData);
 
 export default router;

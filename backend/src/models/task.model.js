@@ -27,24 +27,39 @@ export const logActivity = async (taskId, userId, actionType, details = {}) => {
 };
 
 export const getTasksByUser = async (userId, filters = {}) => {
-  const { status, priority, categoryId, search } = filters;
+  const { status, priority, categoryId, goal_id, course_id, search, sortBy, sortOrder, limit, offset } = filters;
+
+  const ALLOWED_SORT_FIELDS = {
+    due_date: 't.due_date',
+    priority: 't.priority',
+    created_at: 't.created_at',
+    title: 't.title',
+    order_index: 't.order_index'
+  };
+
+  const sortColumn = ALLOWED_SORT_FIELDS[sortBy] || 't.created_at';
+  const orderDirection = (sortOrder || '').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+  const queryLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
+  const queryOffset = Math.max(parseInt(offset, 10) || 0, 0);
 
   try {
     let sql = `
       SELECT t.*, c.name as category_name, c.color as category_color,
-             g.title as goal_title, g.color as goal_color, g.icon as goal_icon
+             g.title as goal_title, g.color as goal_color, g.icon as goal_icon,
+             cr.title as course_title
       FROM tasks t
-      LEFT JOIN categories c ON c.id = t.category_id
-      LEFT JOIN goals g ON g.id = t.goal_id
+      LEFT JOIN categories c ON c.id = t.category_id AND c.user_id = t.user_id
+      LEFT JOIN goals g ON g.id = t.goal_id AND g.user_id = t.user_id
+      LEFT JOIN courses cr ON cr.id = t.course_id AND cr.user_id = t.user_id
       WHERE t.user_id = $1 AND t.is_archived = false
     `;
     const params = [userId];
 
-    if (status) {
+    if (status && status !== 'all') {
       params.push(status);
       sql += ` AND t.status = $${params.length}`;
     }
-    if (priority) {
+    if (priority && priority !== 'all') {
       params.push(priority);
       sql += ` AND t.priority = $${params.length}`;
     }
@@ -52,12 +67,26 @@ export const getTasksByUser = async (userId, filters = {}) => {
       params.push(categoryId);
       sql += ` AND t.category_id = $${params.length}`;
     }
+    if (goal_id) {
+      params.push(goal_id);
+      sql += ` AND t.goal_id = $${params.length}`;
+    }
+    if (course_id) {
+      params.push(course_id);
+      sql += ` AND t.course_id = $${params.length}`;
+    }
     if (search) {
       params.push(`%${search}%`);
       sql += ` AND (t.title ILIKE $${params.length} OR t.description ILIKE $${params.length})`;
     }
 
-    sql += ` ORDER BY t.created_at DESC`;
+    sql += ` ORDER BY ${sortColumn} ${orderDirection} NULLS LAST`;
+
+    params.push(queryLimit);
+    sql += ` LIMIT $${params.length}`;
+
+    params.push(queryOffset);
+    sql += ` OFFSET $${params.length}`;
 
     const res = await query(sql, params);
     if (res && res.rows) {
@@ -69,11 +98,13 @@ export const getTasksByUser = async (userId, filters = {}) => {
 
   // Fallback memory filtering
   let userTasks = fallbackTasks.get(userId) || [];
-  return userTasks.filter(t => {
+  let filtered = userTasks.filter(t => {
     if (t.is_archived) return false;
-    if (status && t.status !== status) return false;
-    if (priority && t.priority !== priority) return false;
+    if (status && status !== 'all' && t.status !== status) return false;
+    if (priority && priority !== 'all' && t.priority !== priority) return false;
     if (categoryId && t.category_id !== categoryId) return false;
+    if (goal_id && t.goal_id !== goal_id) return false;
+    if (course_id && t.course_id !== course_id) return false;
     if (search) {
       const q = search.toLowerCase();
       const inTitle = (t.title || '').toLowerCase().includes(q);
@@ -82,6 +113,8 @@ export const getTasksByUser = async (userId, filters = {}) => {
     }
     return true;
   });
+
+  return filtered.slice(queryOffset, queryOffset + queryLimit);
 };
 
 export const getTaskById = async (userId, taskId) => {
@@ -95,8 +128,8 @@ export const getTaskById = async (userId, taskId) => {
     );
     if (res && res.rows && res.rows[0]) {
       const actRes = await query(
-        `SELECT * FROM task_activities WHERE task_id = $1 ORDER BY created_at DESC`,
-        [taskId]
+        `SELECT * FROM task_activities WHERE task_id = $1 AND user_id = $2 ORDER BY created_at DESC`,
+        [taskId, userId]
       );
       return {
         ...res.rows[0],
@@ -126,16 +159,17 @@ export const createTask = async (userId, data) => {
     priority = 'MEDIUM',
     category_id = null,
     goal_id = null,
+    course_id = null,
     due_date = null,
     estimated_minutes = 0
   } = data;
 
   try {
     const res = await query(
-      `INSERT INTO tasks (user_id, category_id, goal_id, title, description, status, priority, due_date, estimated_minutes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO tasks (user_id, category_id, goal_id, course_id, title, description, status, priority, due_date, estimated_minutes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [userId, category_id, goal_id, title, description, status, priority, due_date, estimated_minutes]
+      [userId, category_id, goal_id, course_id, title, description, status, priority, due_date, estimated_minutes]
     );
     if (res && res.rows) {
       const newTask = res.rows[0];
@@ -152,6 +186,7 @@ export const createTask = async (userId, data) => {
     user_id: userId,
     category_id,
     goal_id,
+    course_id,
     title,
     description,
     status,
@@ -171,7 +206,7 @@ export const createTask = async (userId, data) => {
 };
 
 export const updateTask = async (userId, taskId, data) => {
-  const { title, description, status, priority, category_id, goal_id, due_date, estimated_minutes } = data;
+  const { title, description, status, priority, category_id, goal_id, course_id, due_date, estimated_minutes } = data;
 
   try {
     const res = await query(
@@ -182,12 +217,13 @@ export const updateTask = async (userId, taskId, data) => {
            priority = COALESCE($4, priority),
            category_id = $5,
            goal_id = $6,
-           due_date = $7,
-           estimated_minutes = COALESCE($8, estimated_minutes),
+           course_id = $7,
+           due_date = $8,
+           estimated_minutes = COALESCE($9, estimated_minutes),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9 AND user_id = $10
+       WHERE id = $10 AND user_id = $11
        RETURNING *`,
-      [title, description, status, priority, category_id, goal_id, due_date, estimated_minutes, taskId, userId]
+      [title, description, status, priority, category_id, goal_id, course_id, due_date, estimated_minutes, taskId, userId]
     );
     if (res && res.rows && res.rows[0]) {
       await logActivity(taskId, userId, 'EDITED', data);
@@ -286,3 +322,21 @@ export const getAnalytics = async (userId) => {
     overdue_count: userTasks.filter(t => t.due_date && new Date(t.due_date) < now && t.status !== 'COMPLETED').length
   };
 };
+
+export const areTasksOwnedByUser = async (userId, taskIds = []) => {
+  if (!Array.isArray(taskIds) || taskIds.length === 0) return true;
+  try {
+    const res = await query('SELECT id FROM tasks WHERE id = ANY($1::uuid[]) AND user_id = $2', [taskIds, userId]);
+    if (res && res.rows) {
+      const foundSet = new Set(res.rows.map(r => r.id));
+      return taskIds.every(id => foundSet.has(id));
+    }
+  } catch (err) {
+    // Fallback to memory
+  }
+
+  const userTasks = fallbackTasks.get(userId) || [];
+  const foundSet = new Set(userTasks.map(t => t.id));
+  return taskIds.every(id => foundSet.has(id));
+};
+

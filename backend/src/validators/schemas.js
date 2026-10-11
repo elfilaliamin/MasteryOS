@@ -1,0 +1,182 @@
+// backend/src/validators/schemas.js
+import { z } from 'zod';
+
+// Strict UUID regex / format
+export const uuidSchema = z.string().uuid({ message: 'Must be a valid UUID' });
+
+// Common ID param validator
+export const idParamSchema = z.object({
+  id: uuidSchema
+});
+
+// HTTP/HTTPS URL schema (strictly prevents javascript: or data: URIs)
+export const optionalHttpUrlSchema = z
+  .string()
+  .trim()
+  .refine(
+    (val) => !val || /^https?:\/\//i.test(val),
+    { message: 'URL must start with http:// or https://' }
+  )
+  .optional()
+  .nullable();
+
+// Authentication Schemas
+export const registerSchema = z.object({
+  full_name: z.string().min(1, 'Full name is required').max(100),
+  email: z.string().email('Invalid email address').max(255),
+  password: z.string().min(6, 'Password must be at least 6 characters').max(128)
+});
+
+export const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required')
+});
+
+// Common enum parsers with case-insensitive normalization via z.preprocess
+const normalizedTaskStatus = z.preprocess(
+  (val) => (typeof val === 'string' ? (val.toLowerCase() === 'completed' ? 'done' : val.toLowerCase()) : val),
+  z.enum(['todo', 'in_progress', 'done'])
+);
+const normalizedPriority = z.preprocess(
+  (val) => (typeof val === 'string' ? val.toLowerCase() : val),
+  z.enum(['low', 'medium', 'high', 'urgent'])
+);
+const normalizedGoalStatus = z.preprocess(
+  (val) => (typeof val === 'string' ? val.toLowerCase() : val),
+  z.enum(['in_progress', 'completed', 'archived'])
+);
+const normalizedCourseStatus = z.preprocess(
+  (val) => (typeof val === 'string' ? val.toLowerCase() : val),
+  z.enum(['not_started', 'in_progress', 'completed'])
+);
+const normalizedTimeOfDay = z.preprocess(
+  (val) => (typeof val === 'string' ? val.toLowerCase() : val),
+  z.enum(['morning', 'afternoon', 'evening', 'anytime'])
+);
+
+export const changePasswordSchema = z
+  .object({
+    current_password: z.string().min(1).optional(),
+    currentPassword: z.string().min(1).optional(),
+    new_password: z.string().min(6).max(128).optional(),
+    newPassword: z.string().min(6).max(128).optional()
+  })
+  .refine(
+    (data) => (data.current_password || data.currentPassword) && (data.new_password || data.newPassword),
+    { message: 'Both current password and new password are required' }
+  )
+  .transform((data) => ({
+    current_password: data.current_password || data.currentPassword,
+    new_password: data.new_password || data.newPassword,
+    currentPassword: data.currentPassword || data.current_password,
+    newPassword: data.newPassword || data.new_password
+  }));
+
+export const updateProfileSchema = z.object({
+  full_name: z.string().min(1).max(100).optional(),
+  avatar: optionalHttpUrlSchema,
+  bio: z.string().max(500).optional().nullable()
+});
+
+// Category Schemas
+export const createCategorySchema = z.object({
+  name: z.string().min(1, 'Category name is required').max(100),
+  color: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Color must be valid hex code').optional(),
+  icon: z.string().max(50).optional()
+});
+
+export const updateCategorySchema = createCategorySchema.partial();
+
+// Task Schemas
+export const taskQuerySchema = z.object({
+  status: z.string().transform((s) => s.toLowerCase()).pipe(z.enum(['todo', 'in_progress', 'done', 'all'])).optional(),
+  priority: z.string().transform((s) => s.toLowerCase()).pipe(z.enum(['low', 'medium', 'high', 'urgent', 'all'])).optional(),
+  category_id: z.string().uuid().optional().or(z.literal('')),
+  categoryId: z.string().uuid().optional().or(z.literal('')),
+  goal_id: z.string().uuid().optional().or(z.literal('')),
+  course_id: z.string().uuid().optional().or(z.literal('')),
+  sortBy: z.enum(['due_date', 'priority', 'created_at', 'title', 'order_index']).optional(),
+  sortOrder: z.enum(['asc', 'desc', 'ASC', 'DESC']).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50).optional(),
+  offset: z.coerce.number().int().min(0).default(0).optional(),
+  search: z.string().max(200).optional()
+});
+
+export const createTaskSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255),
+  description: z.string().max(5000).optional().nullable(),
+  status: normalizedTaskStatus.optional(),
+  priority: normalizedPriority.optional(),
+  due_date: z.string().optional().nullable(),
+  category_id: z.string().uuid().optional().nullable(),
+  goal_id: z.string().uuid().optional().nullable(),
+  course_id: z.string().uuid().optional().nullable(),
+  order_index: z.number().int().optional(),
+  tags: z.array(z.string().max(50)).optional()
+});
+
+export const updateTaskSchema = createTaskSchema.partial();
+
+export const updateTaskStatusSchema = z.object({
+  status: z.preprocess(
+    (val) => (typeof val === 'string' ? val.toLowerCase() : val),
+    z.enum(['todo', 'in_progress', 'in_review', 'done', 'completed'])
+  )
+});
+
+export const batchReorderSchema = z.object({
+  tasks: z.array(
+    z.object({
+      id: uuidSchema,
+      order_index: z.number().int(),
+      status: normalizedTaskStatus.optional()
+    })
+  ).min(1, 'At least one task required for reordering')
+});
+
+// Goal Schemas
+export const createGoalSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255),
+  description: z.string().max(5000).optional().nullable(),
+  target_date: z.string().optional().nullable(),
+  priority: normalizedPriority.optional(),
+  status: normalizedGoalStatus.optional(),
+  task_ids: z.array(uuidSchema).optional()
+});
+
+export const updateGoalSchema = createGoalSchema.partial();
+
+// Course Schemas
+export const createCourseSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255),
+  description: z.string().max(5000).optional().nullable(),
+  instructor: z.string().max(100).optional().nullable(),
+  platform: z.string().max(100).optional().nullable(),
+  status: normalizedCourseStatus.optional(),
+  cover_image: optionalHttpUrlSchema,
+  certificate_url: optionalHttpUrlSchema,
+  certification_url: optionalHttpUrlSchema,
+  certification_filename: z.string().max(255).optional().nullable(),
+  task_ids: z.array(uuidSchema).optional(),
+  total_lessons: z.number().int().min(0).optional(),
+  completed_lessons: z.number().int().min(0).optional(),
+  finished_lessons: z.number().int().min(0).optional()
+});
+
+export const updateCourseSchema = createCourseSchema.partial();
+
+// Habit Schemas
+export const createHabitSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255),
+  description: z.string().max(5000).optional().nullable(),
+  icon: z.string().max(50).optional(),
+  color: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Color must be valid hex code').optional(),
+  frequency: z.string().max(50).optional(),
+  time_of_day: normalizedTimeOfDay.optional()
+});
+
+export const updateHabitSchema = createHabitSchema.partial();
+
+export const toggleHabitSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional()
+});

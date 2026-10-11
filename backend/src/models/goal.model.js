@@ -52,7 +52,7 @@ export const getGoalsByUser = async (userId) => {
         COUNT(t.id)::int as total_tasks,
         COUNT(CASE WHEN t.status = 'COMPLETED' THEN 1 END)::int as completed_tasks
        FROM goals g
-       LEFT JOIN tasks t ON t.goal_id = g.id AND t.is_archived = false
+       LEFT JOIN tasks t ON t.goal_id = g.id AND t.user_id = g.user_id AND t.is_archived = false
        WHERE g.user_id = $1
        GROUP BY g.id
        ORDER BY g.created_at DESC`,
@@ -190,3 +190,19 @@ export const deleteGoal = async (userId, goalId) => {
   fallbackGoals.set(userId, userGoals.filter(g => g.id !== goalId));
   return true;
 };
+
+export const isGoalOwnedByUser = async (userId, goalId) => {
+  if (!goalId) return true;
+  try {
+    const res = await query('SELECT id FROM goals WHERE id = $1 AND user_id = $2', [goalId, userId]);
+    if (res && res.rows) {
+      return res.rows.length > 0;
+    }
+  } catch (err) {
+    // Fallback to memory
+  }
+
+  const userGoals = fallbackGoals.get(userId) || [];
+  return userGoals.some(g => g.id === goalId);
+};
+

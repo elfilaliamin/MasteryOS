@@ -38,7 +38,7 @@ export const getCoursesByUser = async (userId) => {
         COUNT(t.id)::int as total_tasks,
         COUNT(CASE WHEN t.status = 'COMPLETED' THEN 1 END)::int as completed_tasks
        FROM courses c
-       LEFT JOIN tasks t ON t.course_id = c.id AND t.is_archived = false
+       LEFT JOIN tasks t ON t.course_id = c.id AND t.user_id = c.user_id AND t.is_archived = false
        WHERE c.user_id = $1
        GROUP BY c.id
        ORDER BY c.created_at DESC`,
@@ -216,3 +216,19 @@ export const deleteCourse = async (userId, courseId) => {
   fallbackCourses.set(userId, userCourses.filter(c => c.id !== courseId));
   return true;
 };
+
+export const isCourseOwnedByUser = async (userId, courseId) => {
+  if (!courseId) return true;
+  try {
+    const res = await query('SELECT id FROM courses WHERE id = $1 AND user_id = $2', [courseId, userId]);
+    if (res && res.rows) {
+      return res.rows.length > 0;
+    }
+  } catch (err) {
+    // Fallback to memory
+  }
+
+  const userCourses = fallbackCourses.get(userId) || [];
+  return userCourses.some(c => c.id === courseId);
+};
+

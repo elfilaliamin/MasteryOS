@@ -6,6 +6,7 @@ import {
   deleteCourse
 } from '../models/course.model.js';
 import { query } from '../config/db.js';
+import { validateTaskBatchOwnership } from '../utils/ownership.js';
 
 export const getCourses = async (req, res) => {
   try {
@@ -31,6 +32,13 @@ export const addCourse = async (req, res) => {
 
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Course title is required.' });
+    }
+
+    if (Array.isArray(task_ids) && task_ids.length > 0) {
+      const taskCheck = await validateTaskBatchOwnership(req.user.id, task_ids);
+      if (!taskCheck.valid) {
+        return res.status(403).json({ error: taskCheck.message });
+      }
     }
 
     const course = await createCourse(req.user.id, {
@@ -73,6 +81,13 @@ export const editCourse = async (req, res) => {
       certification_filename,
       task_ids
     } = req.body;
+
+    if (Array.isArray(task_ids) && task_ids.length > 0) {
+      const taskCheck = await validateTaskBatchOwnership(req.user.id, task_ids);
+      if (!taskCheck.valid) {
+        return res.status(403).json({ error: taskCheck.message });
+      }
+    }
 
     const updated = await updateCourse(req.user.id, req.params.id, {
       title,

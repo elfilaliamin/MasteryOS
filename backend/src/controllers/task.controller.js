@@ -7,11 +7,27 @@ import {
   deleteTask,
   getAnalytics
 } from '../models/task.model.js';
+import { validateTaskForeignReferences } from '../utils/ownership.js';
 
 export const getTasks = async (req, res) => {
   try {
-    const { status, priority, categoryId, search } = req.query;
-    const tasks = await getTasksByUser(req.user.id, { status, priority, categoryId, search });
+    const { status, priority, categoryId, category_id, goal_id, course_id, sortBy, sortOrder, limit, offset, search } = req.query;
+    // Cap pagination limit to a maximum of 100 items per request
+    const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
+    const safeOffset = Math.max(parseInt(offset, 10) || 0, 0);
+
+    const tasks = await getTasksByUser(req.user.id, {
+      status,
+      priority,
+      categoryId: categoryId || category_id,
+      goal_id,
+      course_id,
+      sortBy,
+      sortOrder,
+      limit: safeLimit,
+      offset: safeOffset,
+      search
+    });
     res.status(200).json({ tasks });
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve tasks.' });
@@ -32,9 +48,14 @@ export const getTask = async (req, res) => {
 
 export const createNewTask = async (req, res) => {
   try {
-    const { title, description, status, priority, category_id, goal_id, due_date, estimated_minutes } = req.body;
+    const { title, description, status, priority, category_id, goal_id, course_id, due_date, estimated_minutes } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Task title is required.' });
+    }
+
+    const ownershipCheck = await validateTaskForeignReferences(req.user.id, { category_id, goal_id, course_id });
+    if (!ownershipCheck.valid) {
+      return res.status(403).json({ error: ownershipCheck.message });
     }
 
     const task = await createTask(req.user.id, {
@@ -44,6 +65,7 @@ export const createNewTask = async (req, res) => {
       priority,
       category_id,
       goal_id,
+      course_id,
       due_date,
       estimated_minutes
     });
@@ -56,6 +78,12 @@ export const createNewTask = async (req, res) => {
 
 export const updateTaskDetails = async (req, res) => {
   try {
+    const { category_id, goal_id, course_id } = req.body;
+    const ownershipCheck = await validateTaskForeignReferences(req.user.id, { category_id, goal_id, course_id });
+    if (!ownershipCheck.valid) {
+      return res.status(403).json({ error: ownershipCheck.message });
+    }
+
     const updated = await updateTask(req.user.id, req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ error: 'Task not found.' });
@@ -69,9 +97,10 @@ export const updateTaskDetails = async (req, res) => {
 export const updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const validStatuses = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'COMPLETED'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    const normalized = (status || '').toLowerCase();
+    const valid = ['todo', 'in_progress', 'in_review', 'done', 'completed'];
+    if (!valid.includes(normalized)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${valid.join(', ')}` });
     }
 
     const updated = await updateTaskStatus(req.user.id, req.params.id, status);

@@ -1,12 +1,23 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-const getHeaders = () => {
+const getCookie = (name) => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+  return match ? decodeURIComponent(match[3]) : null;
+};
+
+const getHeaders = (extraHeaders = {}) => {
   const token = localStorage.getItem('master_tasks_token');
+  const csrfToken = getCookie('XSRF-TOKEN');
   const headers = {
     'Content-Type': 'application/json',
+    ...extraHeaders
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken;
   }
   return headers;
 };
@@ -19,55 +30,67 @@ const handleResponse = async (res) => {
   return data;
 };
 
+const fetchClient = (url, options = {}) => {
+  return fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers: getHeaders(options.headers)
+  });
+};
+
 export const api = {
   // Auth endpoints
   async login(email, password) {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    const res = await fetchClient(`${API_BASE}/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
     return handleResponse(res);
   },
 
   async register(full_name, email, password) {
-    const res = await fetch(`${API_BASE}/auth/register`, {
+    const res = await fetchClient(`${API_BASE}/auth/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ full_name, email, password }),
     });
     return handleResponse(res);
   },
 
+  async logout() {
+    try {
+      const res = await fetchClient(`${API_BASE}/auth/logout`, {
+        method: 'POST',
+      });
+      return await handleResponse(res);
+    } catch (err) {
+      console.warn('Logout notice:', err.message);
+    }
+  },
+
   async getMe() {
-    const res = await fetch(`${API_BASE}/auth/me`, {
-      headers: getHeaders(),
-    });
+    const res = await fetchClient(`${API_BASE}/auth/me`);
     return handleResponse(res);
   },
 
   async changePassword(current_password, new_password) {
-    const res = await fetch(`${API_BASE}/auth/change-password`, {
-      method: 'PUT',
-      headers: getHeaders(),
+    const res = await fetchClient(`${API_BASE}/auth/change-password`, {
+      method: 'POST',
       body: JSON.stringify({ current_password, new_password }),
     });
     return handleResponse(res);
   },
 
   async updateProfile(full_name, avatar_url) {
-    const res = await fetch(`${API_BASE}/auth/profile`, {
+    const res = await fetchClient(`${API_BASE}/auth/profile`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify({ full_name, avatar_url }),
     });
     return handleResponse(res);
   },
 
   async resetUserData() {
-    const res = await fetch(`${API_BASE}/auth/reset-data`, {
+    const res = await fetchClient(`${API_BASE}/auth/reset-data`, {
       method: 'POST',
-      headers: getHeaders(),
     });
     return handleResponse(res);
   },
@@ -81,187 +104,170 @@ export const api = {
     if (params.search) query.append('search', params.search);
 
     const url = `${API_BASE}/tasks${query.toString() ? '?' + query.toString() : ''}`;
-    const res = await fetch(url, { headers: getHeaders() });
+    const res = await fetchClient(url);
     return handleResponse(res);
   },
 
   async getTask(id) {
-    const res = await fetch(`${API_BASE}/tasks/${id}`, { headers: getHeaders() });
+    const res = await fetchClient(`${API_BASE}/tasks/${id}`);
     return handleResponse(res);
   },
 
   async createTask(taskData) {
-    const res = await fetch(`${API_BASE}/tasks`, {
+    const res = await fetchClient(`${API_BASE}/tasks`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(taskData),
     });
     return handleResponse(res);
   },
 
   async updateTask(id, taskData) {
-    const res = await fetch(`${API_BASE}/tasks/${id}`, {
+    const res = await fetchClient(`${API_BASE}/tasks/${id}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(taskData),
     });
     return handleResponse(res);
   },
 
   async updateTaskStatus(id, status) {
-    const res = await fetch(`${API_BASE}/tasks/${id}/status`, {
+    const res = await fetchClient(`${API_BASE}/tasks/${id}/status`, {
       method: 'PATCH',
-      headers: getHeaders(),
       body: JSON.stringify({ status }),
     });
     return handleResponse(res);
   },
 
   async deleteTask(id) {
-    const res = await fetch(`${API_BASE}/tasks/${id}`, {
+    const res = await fetchClient(`${API_BASE}/tasks/${id}`, {
       method: 'DELETE',
-      headers: getHeaders(),
     });
     return handleResponse(res);
   },
 
   async getStats() {
-    const res = await fetch(`${API_BASE}/tasks/stats`, { headers: getHeaders() });
+    const res = await fetchClient(`${API_BASE}/tasks/stats`);
     return handleResponse(res);
   },
 
   // Category endpoints
   async getCategories() {
-    const res = await fetch(`${API_BASE}/categories`, { headers: getHeaders() });
+    const res = await fetchClient(`${API_BASE}/categories`);
     return handleResponse(res);
   },
 
   async createCategory(categoryData) {
-    const res = await fetch(`${API_BASE}/categories`, {
+    const res = await fetchClient(`${API_BASE}/categories`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(categoryData),
     });
     return handleResponse(res);
   },
 
   async deleteCategory(id) {
-    const res = await fetch(`${API_BASE}/categories/${id}`, {
+    const res = await fetchClient(`${API_BASE}/categories/${id}`, {
       method: 'DELETE',
-      headers: getHeaders(),
     });
     return handleResponse(res);
   },
 
   // Goals endpoints
   async getGoals() {
-    const res = await fetch(`${API_BASE}/goals`, { headers: getHeaders() });
+    const res = await fetchClient(`${API_BASE}/goals`);
     return handleResponse(res);
   },
 
   async createGoal(goalData) {
-    const res = await fetch(`${API_BASE}/goals`, {
+    const res = await fetchClient(`${API_BASE}/goals`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(goalData),
     });
     return handleResponse(res);
   },
 
   async updateGoal(id, goalData) {
-    const res = await fetch(`${API_BASE}/goals/${id}`, {
+    const res = await fetchClient(`${API_BASE}/goals/${id}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(goalData),
     });
     return handleResponse(res);
   },
 
   async deleteGoal(id) {
-    const res = await fetch(`${API_BASE}/goals/${id}`, {
+    const res = await fetchClient(`${API_BASE}/goals/${id}`, {
       method: 'DELETE',
-      headers: getHeaders(),
     });
     return handleResponse(res);
   },
 
   // Courses endpoints
   async getCourses() {
-    const res = await fetch(`${API_BASE}/courses`, { headers: getHeaders() });
+    const res = await fetchClient(`${API_BASE}/courses`);
     return handleResponse(res);
   },
 
   async createCourse(courseData) {
-    const res = await fetch(`${API_BASE}/courses`, {
+    const res = await fetchClient(`${API_BASE}/courses`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(courseData),
     });
     return handleResponse(res);
   },
 
   async updateCourse(id, courseData) {
-    const res = await fetch(`${API_BASE}/courses/${id}`, {
+    const res = await fetchClient(`${API_BASE}/courses/${id}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(courseData),
     });
     return handleResponse(res);
   },
 
   async incrementCourseLesson(id) {
-    const res = await fetch(`${API_BASE}/courses/${id}/increment`, {
+    const res = await fetchClient(`${API_BASE}/courses/${id}/increment`, {
       method: 'POST',
-      headers: getHeaders(),
     });
     return handleResponse(res);
   },
 
   async deleteCourse(id) {
-    const res = await fetch(`${API_BASE}/courses/${id}`, {
+    const res = await fetchClient(`${API_BASE}/courses/${id}`, {
       method: 'DELETE',
-      headers: getHeaders(),
     });
     return handleResponse(res);
   },
 
   // Habits endpoints
   async getHabits() {
-    const res = await fetch(`${API_BASE}/habits`, { headers: getHeaders() });
+    const res = await fetchClient(`${API_BASE}/habits`);
     return handleResponse(res);
   },
 
   async createHabit(habitData) {
-    const res = await fetch(`${API_BASE}/habits`, {
+    const res = await fetchClient(`${API_BASE}/habits`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(habitData),
     });
     return handleResponse(res);
   },
 
   async updateHabit(id, habitData) {
-    const res = await fetch(`${API_BASE}/habits/${id}`, {
+    const res = await fetchClient(`${API_BASE}/habits/${id}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(habitData),
     });
     return handleResponse(res);
   },
 
   async toggleHabit(id, date = null) {
-    const res = await fetch(`${API_BASE}/habits/${id}/toggle`, {
+    const res = await fetchClient(`${API_BASE}/habits/${id}/toggle`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ date }),
     });
     return handleResponse(res);
   },
 
   async deleteHabit(id) {
-    const res = await fetch(`${API_BASE}/habits/${id}`, {
+    const res = await fetchClient(`${API_BASE}/habits/${id}`, {
       method: 'DELETE',
-      headers: getHeaders(),
     });
     return handleResponse(res);
   },

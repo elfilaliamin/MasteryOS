@@ -186,8 +186,13 @@ export const AuthProvider = ({ children }) => {
     return updatedUser;
   };
 
-  const logout = () => {
+  const logout = async () => {
     clearUserLocalData();
+    try {
+      await api.logout();
+    } catch {
+      // ignore
+    }
     setUser(null);
     setToken(null);
     localStorage.removeItem('master_tasks_token');

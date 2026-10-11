@@ -1,5 +1,6 @@
 import { getGoalsByUser, createGoal, updateGoal, deleteGoal } from '../models/goal.model.js';
 import { query } from '../config/db.js';
+import { validateTaskBatchOwnership } from '../utils/ownership.js';
 
 export const getGoals = async (req, res) => {
   try {
@@ -15,6 +16,13 @@ export const addGoal = async (req, res) => {
     const { title, description, due_date, target_date, priority, color, icon, task_ids = [] } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Goal title is required.' });
+    }
+
+    if (Array.isArray(task_ids) && task_ids.length > 0) {
+      const taskCheck = await validateTaskBatchOwnership(req.user.id, task_ids);
+      if (!taskCheck.valid) {
+        return res.status(403).json({ error: taskCheck.message });
+      }
     }
 
     const goal = await createGoal(req.user.id, {
@@ -46,7 +54,15 @@ export const addGoal = async (req, res) => {
 
 export const editGoal = async (req, res) => {
   try {
-    const { title, description, due_date, target_date, priority, color, icon } = req.body;
+    const { title, description, due_date, target_date, priority, color, icon, task_ids } = req.body;
+
+    if (Array.isArray(task_ids) && task_ids.length > 0) {
+      const taskCheck = await validateTaskBatchOwnership(req.user.id, task_ids);
+      if (!taskCheck.valid) {
+        return res.status(403).json({ error: taskCheck.message });
+      }
+    }
+
     const updated = await updateGoal(req.user.id, req.params.id, {
       title,
       description,
@@ -58,6 +74,25 @@ export const editGoal = async (req, res) => {
     if (!updated) {
       return res.status(404).json({ error: 'Goal not found.' });
     }
+
+    // Sync assigned tasks if task_ids array was provided
+    if (Array.isArray(task_ids)) {
+      try {
+        await query(
+          `UPDATE tasks SET goal_id = NULL WHERE goal_id = $1 AND user_id = $2`,
+          [req.params.id, req.user.id]
+        );
+        if (task_ids.length > 0) {
+          await query(
+            `UPDATE tasks SET goal_id = $1 WHERE id = ANY($2::uuid[]) AND user_id = $3`,
+            [req.params.id, task_ids, req.user.id]
+          );
+        }
+      } catch (err) {
+        console.warn('Sync goal tasks warning:', err.message);
+      }
+    }
+
     res.status(200).json({ goal: updated });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update goal.' });

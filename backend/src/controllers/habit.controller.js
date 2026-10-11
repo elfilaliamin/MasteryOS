@@ -47,6 +47,9 @@ export const toggleHabit = async (req, res, next) => {
   try {
     const { date } = req.body;
     const result = await HabitModel.toggleHabitLog(req.user.id, req.params.id, date);
+    if (!result) {
+      return res.status(404).json({ error: 'Habit not found or does not belong to you.' });
+    }
     res.status(200).json({ success: true, ...result });
   } catch (err) {
     next(err);

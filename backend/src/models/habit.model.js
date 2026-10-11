@@ -307,8 +307,33 @@ export const updateHabit = async (userId, habitId, data) => {
   return null;
 };
 
+export const getHabitById = async (userId, habitId) => {
+  try {
+    const res = await query('SELECT * FROM habits WHERE id = $1 AND user_id = $2', [habitId, userId]);
+    if (res && res.rows && res.rows[0]) {
+      return res.rows[0];
+    }
+  } catch (err) {
+    // Fallback to memory
+  }
+
+  const userHabits = fallbackHabits.get(userId) || [];
+  return userHabits.find((h) => h.id === habitId) || null;
+};
+
+export const isHabitOwnedByUser = async (userId, habitId) => {
+  const habit = await getHabitById(userId, habitId);
+  return !!habit;
+};
+
 export const toggleHabitLog = async (userId, habitId, targetDate = null) => {
   const dateKey = targetDate || formatDateKey(new Date());
+
+  // Strictly verify habit exists and belongs to user
+  const habit = await getHabitById(userId, habitId);
+  if (!habit) {
+    return null;
+  }
 
   try {
     // Check if already completed on that date
