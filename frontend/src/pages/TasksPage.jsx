@@ -73,27 +73,6 @@ export const TasksPage = ({
     }
   };
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        STORAGE_KEY_TASKS,
-        JSON.stringify({
-          viewMode,
-          statusFilter,
-          priorityFilter,
-          categoryFilter,
-          goalFilter,
-          courseFilter,
-          sortBy,
-          groupBy,
-          hideCompleted,
-        })
-      );
-    } catch {
-      // ignore
-    }
-  }, [viewMode, statusFilter, priorityFilter, categoryFilter, goalFilter, courseFilter, sortBy, groupBy, hideCompleted]);
-
   // Derive effective filter values during render to avoid cascading renders and orphaned states
   const effectiveCategoryFilter =
     categoryFilter !== 'ALL' && categories.length > 0 && !categories.some((c) => String(c.id) === String(categoryFilter))
@@ -109,6 +88,27 @@ export const TasksPage = ({
     courseFilter !== 'ALL' && courses.length > 0 && !courses.some((cr) => String(cr.id) === String(courseFilter))
       ? 'ALL'
       : courseFilter;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY_TASKS,
+        JSON.stringify({
+          viewMode,
+          statusFilter,
+          priorityFilter,
+          categoryFilter: effectiveCategoryFilter,
+          goalFilter: effectiveGoalFilter,
+          courseFilter: effectiveCourseFilter,
+          sortBy,
+          groupBy,
+          hideCompleted,
+        })
+      );
+    } catch {
+      // ignore
+    }
+  }, [viewMode, statusFilter, priorityFilter, effectiveCategoryFilter, effectiveGoalFilter, effectiveCourseFilter, sortBy, groupBy, hideCompleted]);
 
   const hasActiveFilters =
     statusFilter !== 'ALL' ||
