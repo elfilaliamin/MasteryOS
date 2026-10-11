@@ -38,40 +38,94 @@ app.use(helmet({
 
 app.use(cookieParser());
 
-const defaultAllowedOrigins = [
-  'https://masteryos.elfilaiamin.online',
-  'http://masteryos.elfilaiamin.online',
-  'https://masteryos.app',
-  ...(process.env.NODE_ENV === 'production'
-    ? []
-    : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'])
-];
+const envOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
 
-const envOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
-  : [];
+export const isOriginAllowed = (origin) => {
+  // Allow requests with no origin (curl, mobile apps, server-to-server)
+  if (!origin) {
+    return true;
+  }
 
-const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
+  const cleanOrigin = origin.trim().replace(/\/+$/, '');
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (curl, mobile, test harness) or test env
-    if (!origin || process.env.NODE_ENV === 'test') {
-      return callback(null, true);
-    }
+  // Wildcard allowed
+  if (envOrigins.includes('*')) {
+    return true;
+  }
+
+  // Direct match against env origins
+  if (envOrigins.includes(cleanOrigin)) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(cleanOrigin);
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Allow all subdomains and apex domains of elfilaliamin.online and elfilaiamin.online
     if (
-      allowedOrigins.includes(origin) ||
-      allowedOrigins.includes('*') ||
-      allowedOrigins.some((ao) => origin === `https://${ao}` || origin === `http://${ao}` || ao === origin.replace(/^https?:\/\//, ''))
+      hostname === 'elfilaliamin.online' ||
+      hostname.endsWith('.elfilaliamin.online') ||
+      hostname === 'elfilaiamin.online' ||
+      hostname.endsWith('.elfilaiamin.online')
     ) {
+      return true;
+    }
+
+    // Allow masteryos.app and all subdomains
+    if (hostname === 'masteryos.app' || hostname.endsWith('.masteryos.app')) {
+      return true;
+    }
+
+    // Allow localhost and loopback interfaces on any port
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '[::1]'
+    ) {
+      return true;
+    }
+
+    // Match against any env origins (by origin string or hostname)
+    for (const allowed of envOrigins) {
+      if (allowed === cleanOrigin) return true;
+      try {
+        const allowedParsed = new URL(allowed.startsWith('http') ? allowed : `https://${allowed}`);
+        if (allowedParsed.hostname.toLowerCase() === hostname) {
+          return true;
+        }
+      } catch {
+        // ignore invalid URL in env
+      }
+    }
+  } catch {
+    // If URL parsing fails, fallback to direct list check
+    return envOrigins.includes(cleanOrigin);
+  }
+
+  return false;
+};
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (isOriginAllowed(origin)) {
       return callback(null, true);
     }
+    console.warn(`[CORS Blocked] Origin not allowed: "${origin}"`);
     return callback(new Error('Blocked by CORS policy: Origin not allowed'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-XSRF-Token']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-XSRF-Token'],
+  exposedHeaders: ['Set-Cookie']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
