@@ -65,17 +65,26 @@ export const getTasksByUser = async (userId, filters = {}) => {
       params.push(dbPriority);
       sql += ` AND t.priority = $${params.length}`;
     }
-    if (categoryId) {
-      params.push(categoryId);
-      sql += ` AND t.category_id = $${params.length}`;
+    if (categoryId && categoryId !== 'all') {
+      const validCatId = safeUuid(categoryId);
+      if (validCatId) {
+        params.push(validCatId);
+        sql += ` AND t.category_id = $${params.length}`;
+      }
     }
-    if (goal_id) {
-      params.push(goal_id);
-      sql += ` AND t.goal_id = $${params.length}`;
+    if (goal_id && goal_id !== 'all') {
+      const validGoalId = safeUuid(goal_id);
+      if (validGoalId) {
+        params.push(validGoalId);
+        sql += ` AND t.goal_id = $${params.length}`;
+      }
     }
-    if (course_id) {
-      params.push(course_id);
-      sql += ` AND t.course_id = $${params.length}`;
+    if (course_id && course_id !== 'all') {
+      const validCourseId = safeUuid(course_id);
+      if (validCourseId) {
+        params.push(validCourseId);
+        sql += ` AND t.course_id = $${params.length}`;
+      }
     }
     if (search) {
       params.push(`%${search}%`);

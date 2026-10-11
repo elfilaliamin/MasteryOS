@@ -33,6 +33,29 @@ const INITIAL_CATEGORIES = [
   { id: 'cat-4', name: 'Learning', color: '#8b5cf6', task_count: 0 }
 ];
 
+const getLocalTasksKey = (userId) => (userId ? `mastery_local_tasks_${userId}` : 'mastery_local_tasks');
+
+const getStoredTasks = (userId) => {
+  try {
+    const raw = localStorage.getItem(getLocalTasksKey(userId));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+};
+
+const saveStoredTasks = (userId, tasksList) => {
+  try {
+    localStorage.setItem(getLocalTasksKey(userId), JSON.stringify(tasksList));
+  } catch {
+    // ignore
+  }
+};
+
 // Inner Level Up Pop-up Listener Component
 const LevelUpListener = () => {
   const { levelUpData, closeLevelUpModal } = useGamification();
@@ -48,7 +71,7 @@ const LevelUpListener = () => {
 // Inner Authenticated App
 const AuthenticatedApp = () => {
   const { isAuthenticated, user } = useAuth();
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState(() => getStoredTasks(user?.id));
   const [goals, setGoals] = useState([]);
   const [courses, setCourses] = useState([]);
   const [habits, setHabits] = useState([]);
@@ -96,7 +119,39 @@ const AuthenticatedApp = () => {
 
         if (!isMounted) return;
 
-        setTasks(tasksRes.status === 'fulfilled' && tasksRes.value?.tasks ? tasksRes.value.tasks : []);
+        if (tasksRes.status === 'fulfilled' && Array.isArray(tasksRes.value?.tasks)) {
+          const serverTasks = tasksRes.value.tasks;
+          const localTasks = getStoredTasks(user?.id);
+          // Preserve any unsynced locally created tasks
+          const pendingLocalTasks = localTasks.filter((lt) =>
+            String(lt.id).startsWith('local-task-') && !serverTasks.some((st) => st.title === lt.title)
+          );
+          const mergedTasks = [...serverTasks, ...pendingLocalTasks];
+          setTasks(mergedTasks);
+          saveStoredTasks(user?.id, mergedTasks);
+
+          // Background sync for pending local tasks
+          if (pendingLocalTasks.length > 0) {
+            for (const pending of pendingLocalTasks) {
+              api.createTask(pending).then((res) => {
+                if (res?.task && isMounted) {
+                  setTasks((prev) => {
+                    const updated = prev.map((t) => (t.id === pending.id ? res.task : t));
+                    saveStoredTasks(user?.id, updated);
+                    return updated;
+                  });
+                }
+              }).catch(() => {});
+            }
+          }
+        } else {
+          // If server call fails, preserve cached tasks from localStorage
+          const cached = getStoredTasks(user?.id);
+          if (cached && cached.length > 0) {
+            setTasks(cached);
+          }
+        }
+
         setGoals(goalsRes.status === 'fulfilled' && goalsRes.value?.goals ? goalsRes.value.goals : []);
         setCourses(coursesRes.status === 'fulfilled' && coursesRes.value?.courses ? coursesRes.value.courses : []);
         setHabits(habitsRes.status === 'fulfilled' && habitsRes.value?.habits ? habitsRes.value.habits : []);
@@ -130,9 +185,11 @@ const AuthenticatedApp = () => {
     setCategories(INITIAL_CATEGORIES);
     setStats({});
     if (user?.id) {
+      localStorage.removeItem(`mastery_local_tasks_${user.id}`);
       localStorage.removeItem(`mastery_acknowledged_level_${user.id}`);
       localStorage.removeItem(`taskmaster_equipped_title_${user.id}`);
     }
+    localStorage.removeItem('mastery_local_tasks');
     localStorage.removeItem('mastery_acknowledged_level');
     localStorage.removeItem('taskmaster_equipped_title');
     localStorage.removeItem('mastery_local_habits');
@@ -375,8 +432,13 @@ const AuthenticatedApp = () => {
     if (restoredTasks.length > 0) {
       if (mode === 'replace') {
         setTasks(restoredTasks);
+        saveStoredTasks(user?.id, restoredTasks);
       } else {
-        setTasks((prev) => [...restoredTasks, ...prev]);
+        setTasks((prev) => {
+          const next = [...restoredTasks, ...prev];
+          saveStoredTasks(user?.id, next);
+          return next;
+        });
       }
     }
 
@@ -402,64 +464,95 @@ const AuthenticatedApp = () => {
 
   // Task actions
   const handleCreateOrUpdateTask = async (taskData) => {
+    // Map default category aliases (e.g. 'cat-1' -> Work) to real backend category UUID if available
+    let resolvedCategoryId = taskData.category_id;
+    if (resolvedCategoryId) {
+      const aliasMap = { 'cat-1': 'work', 'cat-2': 'personal', 'cat-3': 'urgent', 'cat-4': 'learning' };
+      const targetName = aliasMap[resolvedCategoryId];
+      const matchedCat = categories.find(
+        (c) => c.id === resolvedCategoryId || (targetName && c.name?.toLowerCase().trim() === targetName)
+      );
+      if (matchedCat && matchedCat.id && !matchedCat.id.startsWith('cat-')) {
+        resolvedCategoryId = matchedCat.id;
+      }
+    }
+
+    const payloadToSend = {
+      ...taskData,
+      category_id: resolvedCategoryId,
+    };
+
     let serverTask = null;
     try {
-      if (taskData.id) {
-        const res = await api.updateTask(taskData.id, taskData);
+      if (taskData.id && !String(taskData.id).startsWith('local-task-')) {
+        const res = await api.updateTask(taskData.id, payloadToSend);
         serverTask = res?.task;
       } else {
-        const res = await api.createTask(taskData);
+        const res = await api.createTask(payloadToSend);
         serverTask = res?.task;
       }
       api.getStats().then((sRes) => sRes?.stats && setStats(sRes.stats)).catch(() => {});
-    } catch {
-      // Local optimistic update
+    } catch (err) {
+      console.warn('Task server sync notice (stored locally):', err.message);
     }
 
     const assignedGoal = goals.find((g) => g.id === taskData.goal_id);
     const assignedCourse = courses.find((c) => c.id === taskData.course_id);
+    const assignedCat = categories.find((c) => c.id === (resolvedCategoryId || taskData.category_id));
 
     if (taskData.id) {
-      setTasks((prev) =>
-        prev.map((t) =>
+      setTasks((prev) => {
+        const next = prev.map((t) =>
           t.id === taskData.id
             ? {
                 ...t,
                 ...taskData,
+                category_id: resolvedCategoryId || taskData.category_id,
+                category_name: assignedCat?.name || t.category_name || '',
+                category_color: assignedCat?.color || t.category_color || '#0d8a72',
                 goal_title: assignedGoal ? assignedGoal.title : null,
                 goal_icon: assignedGoal ? assignedGoal.icon : null,
                 goal_color: assignedGoal ? assignedGoal.color : null,
                 course_title: assignedCourse ? assignedCourse.title : null
               }
             : t
-        )
-      );
+        );
+        saveStoredTasks(user?.id, next);
+        return next;
+      });
     } else {
       const newTask = serverTask || {
         ...taskData,
         id: `local-task-${Date.now()}`,
         created_at: new Date().toISOString(),
-        category_name: categories.find((c) => c.id === taskData.category_id)?.name || '',
-        category_color: categories.find((c) => c.id === taskData.category_id)?.color || '#0d8a72',
+        category_id: resolvedCategoryId || taskData.category_id,
+        category_name: assignedCat?.name || '',
+        category_color: assignedCat?.color || '#0d8a72',
         goal_title: assignedGoal ? assignedGoal.title : null,
         goal_icon: assignedGoal ? assignedGoal.icon : null,
         goal_color: assignedGoal ? assignedGoal.color : null,
         course_title: assignedCourse ? assignedCourse.title : null
       };
-      setTasks((prev) => [newTask, ...prev]);
+      setTasks((prev) => {
+        const next = [newTask, ...prev];
+        saveStoredTasks(user?.id, next);
+        return next;
+      });
     }
   };
 
   const handleStatusChange = async (taskId, newStatus) => {
     try {
-      await api.updateTaskStatus(taskId, newStatus);
+      if (!String(taskId).startsWith('local-task-')) {
+        await api.updateTaskStatus(taskId, newStatus);
+      }
       api.getStats().then((sRes) => sRes?.stats && setStats(sRes.stats)).catch(() => {});
     } catch {
       // Optimistic update
     }
 
-    setTasks((prev) =>
-      prev.map((t) => {
+    setTasks((prev) => {
+      const next = prev.map((t) => {
         if (t.id === taskId) {
           const completedAt =
             newStatus === 'COMPLETED'
@@ -468,18 +561,26 @@ const AuthenticatedApp = () => {
           return { ...t, status: newStatus, completed_at: completedAt };
         }
         return t;
-      })
-    );
+      });
+      saveStoredTasks(user?.id, next);
+      return next;
+    });
   };
 
   const handleDeleteTask = async (taskId) => {
     try {
-      await api.deleteTask(taskId);
+      if (!String(taskId).startsWith('local-task-')) {
+        await api.deleteTask(taskId);
+      }
       api.getStats().then((sRes) => sRes?.stats && setStats(sRes.stats)).catch(() => {});
     } catch {
       // Local removal
     }
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setTasks((prev) => {
+      const next = prev.filter((t) => t.id !== taskId);
+      saveStoredTasks(user?.id, next);
+      return next;
+    });
   };
 
   // Goal actions

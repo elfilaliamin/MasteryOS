@@ -58,12 +58,16 @@ export const createNewTask = async (req, res) => {
       return res.status(403).json({ error: ownershipCheck.message });
     }
 
+    const effectiveCategoryId = ownershipCheck.resolvedCategoryId !== undefined
+      ? ownershipCheck.resolvedCategoryId
+      : category_id;
+
     const task = await createTask(req.user.id, {
       title: title.trim(),
       description,
       status,
       priority,
-      category_id,
+      category_id: effectiveCategoryId,
       goal_id,
       course_id,
       due_date,
@@ -84,7 +88,14 @@ export const updateTaskDetails = async (req, res) => {
       return res.status(403).json({ error: ownershipCheck.message });
     }
 
-    const updated = await updateTask(req.user.id, req.params.id, req.body);
+    const effectiveData = { ...req.body };
+    if (category_id !== undefined) {
+      effectiveData.category_id = ownershipCheck.resolvedCategoryId !== undefined
+        ? ownershipCheck.resolvedCategoryId
+        : category_id;
+    }
+
+    const updated = await updateTask(req.user.id, req.params.id, effectiveData);
     if (!updated) {
       return res.status(404).json({ error: 'Task not found.' });
     }
