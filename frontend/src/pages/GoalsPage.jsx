@@ -18,8 +18,11 @@ import {
   Search,
   AlertCircle,
   X,
+  ArrowUpDown,
 } from 'lucide-react';
 
+const PRIORITY_WEIGHTS = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+const STATUS_ORDER = { NOT_STARTED: 1, IN_PROGRESS: 2, COMPLETED: 3 };
 const STORAGE_KEY_GOALS = 'mastery_goals_filters';
 
 const getInitialGoalFilters = () => {
@@ -45,7 +48,9 @@ export const GoalsPage = ({
   const [statusFilter, setStatusFilter] = useState(savedFilters.statusFilter || 'ALL');
   const [priorityFilter, setPriorityFilter] = useState(savedFilters.priorityFilter || 'ALL');
   const [searchFilter, setSearchFilter] = useState(savedFilters.searchFilter || '');
+  const [sortBy, setSortBy] = useState(savedFilters.sortBy || 'default');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isMobileSortOpen, setIsMobileSortOpen] = useState(false);
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -60,28 +65,30 @@ export const GoalsPage = ({
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setIsMobileFilterOpen(false);
+        setIsMobileSortOpen(false);
       }
     };
-    if (isMobileFilterOpen) {
+    if (isMobileFilterOpen || isMobileSortOpen) {
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isMobileFilterOpen]);
+  }, [isMobileFilterOpen, isMobileSortOpen]);
 
   useEffect(() => {
-    if (isMobileFilterOpen) {
+    if (isMobileFilterOpen || isMobileSortOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = originalOverflow;
       };
     }
-  }, [isMobileFilterOpen]);
+  }, [isMobileFilterOpen, isMobileSortOpen]);
 
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
         setIsMobileFilterOpen(false);
+        setIsMobileSortOpen(false);
       }
     };
     window.addEventListener('resize', handleResize);
@@ -92,12 +99,12 @@ export const GoalsPage = ({
     try {
       localStorage.setItem(
         STORAGE_KEY_GOALS,
-        JSON.stringify({ statusFilter, priorityFilter, searchFilter })
+        JSON.stringify({ statusFilter, priorityFilter, searchFilter, sortBy })
       );
     } catch {
       // ignore
     }
-  }, [statusFilter, priorityFilter, searchFilter]);
+  }, [statusFilter, priorityFilter, searchFilter, sortBy]);
 
   // Helper to calculate days until due
   const getDaysUntilDue = (dueDate, isCompleted) => {
@@ -190,6 +197,31 @@ export const GoalsPage = ({
     }
     return true;
   });
+
+  // Sort enriched filtered goals
+  const sortedGoals = useMemo(() => {
+    return [...filteredGoals].sort((a, b) => {
+      if (sortBy === 'due_date') {
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return new Date(a.due_date) - new Date(b.due_date);
+      }
+      if (sortBy === 'priority') {
+        return (PRIORITY_WEIGHTS[b.priority] || 0) - (PRIORITY_WEIGHTS[a.priority] || 0);
+      }
+      if (sortBy === 'progress') {
+        return (b.progressPercent || 0) - (a.progressPercent || 0);
+      }
+      if (sortBy === 'title') {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      if (sortBy === 'status') {
+        return (STATUS_ORDER[a.status] || 0) - (STATUS_ORDER[b.status] || 0);
+      }
+      return 0;
+    });
+  }, [filteredGoals, sortBy]);
 
   const toggleExpand = (goalId) => {
     setExpandedGoalId((prev) => (prev === goalId ? null : goalId));
@@ -363,9 +395,51 @@ export const GoalsPage = ({
         </div>
       </div>
 
+      {/* Desktop View: Dedicated Sorting Row */}
+      <div className="hidden md:flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+        <div className="flex items-center gap-3.5 flex-wrap">
+          {/* Sort by */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <ArrowUpDown size={14} className="text-[#0d8a72] dark:text-teal-400 shrink-0" />
+            <span className="font-bold text-slate-600 dark:text-slate-400 shrink-0">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className={`border rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:outline-none transition-all cursor-pointer ${
+                sortBy !== 'default'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
+                  : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:border-[#0d8a72]'
+              }`}
+            >
+              <option value="default">Default</option>
+              <option value="due_date">Due Date</option>
+              <option value="priority">Priority</option>
+              <option value="progress">Progress</option>
+              <option value="title">Title (A-Z)</option>
+              <option value="status">Status</option>
+            </select>
+          </div>
+
+          {sortBy !== 'default' && (
+            <button
+              type="button"
+              onClick={() => setSortBy('default')}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              Reset sorting
+            </button>
+          )}
+        </div>
+
+        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0">
+          Showing {sortedGoals.length} of {totalGoals} goals
+        </div>
+      </div>
+
       {/* Mobile View: Compact Filters Bar */}
       <div className="flex md:hidden items-center justify-between gap-2 p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
         <div className="flex items-center gap-2">
+          {/* Filters Button */}
           <button
             type="button"
             onClick={() => setIsMobileFilterOpen(true)}
@@ -385,6 +459,24 @@ export const GoalsPage = ({
             )}
           </button>
 
+          {/* Sort Button */}
+          <button
+            type="button"
+            onClick={() => setIsMobileSortOpen(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              sortBy !== 'default'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 shadow-2xs'
+                : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+            aria-label="Open sorting popup"
+          >
+            <ArrowUpDown size={15} className={sortBy !== 'default' ? 'text-[#0d8a72] dark:text-emerald-400' : 'text-slate-500'} />
+            <span>Sort</span>
+            {sortBy !== 'default' && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0d8a72]" />
+            )}
+          </button>
+
           {hasActiveFilters && (
             <button
               type="button"
@@ -401,7 +493,7 @@ export const GoalsPage = ({
         </div>
 
         <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 pr-1">
-          {filteredGoals.length} {filteredGoals.length === 1 ? 'goal' : 'goals'}
+          {sortedGoals.length} {sortedGoals.length === 1 ? 'goal' : 'goals'}
         </div>
       </div>
 
@@ -500,8 +592,83 @@ export const GoalsPage = ({
           document.body
         )}
 
+      {/* Mobile Modal: Sorting Popup */}
+      {isMobileSortOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
+            onClick={() => setIsMobileSortOpen(false)}
+          >
+            <div
+              className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#0d8a72] dark:text-emerald-400">
+                    <ArrowUpDown size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Sort Goals</h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Organize goals order</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSortOpen(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Form Fields */}
+              <div className="p-5 space-y-4 overflow-y-auto">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Sort Goals By
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
+                  >
+                    <option value="default">Default</option>
+                    <option value="due_date">Due Date</option>
+                    <option value="priority">Priority</option>
+                    <option value="progress">Progress</option>
+                    <option value="title">Title (A-Z)</option>
+                    <option value="status">Status</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50/80 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSortBy('default')}
+                  disabled={sortBy === 'default'}
+                  className="text-xs font-bold text-rose-600 dark:text-rose-400 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSortOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-[#0d8a72] hover:bg-[#0b735f] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
       {/* Single-Line Goals List View */}
-      {filteredGoals.length === 0 ? (
+      {sortedGoals.length === 0 ? (
         <Card className="p-12 text-center flex flex-col items-center justify-center">
           <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mb-3">
             <Target size={36} />
@@ -523,7 +690,7 @@ export const GoalsPage = ({
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
-          {filteredGoals.map((goal) => {
+          {sortedGoals.map((goal) => {
             const isExpanded = expandedGoalId === goal.id;
 
             return (
