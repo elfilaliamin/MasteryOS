@@ -94,31 +94,28 @@ export const TasksPage = ({
     }
   }, [viewMode, statusFilter, priorityFilter, categoryFilter, goalFilter, courseFilter, sortBy, groupBy, hideCompleted]);
 
-  // Validate and auto-clear orphaned saved filters
-  useEffect(() => {
-    if (categoryFilter !== 'ALL' && categories.length > 0 && !categories.some((c) => String(c.id) === String(categoryFilter))) {
-      setCategoryFilter('ALL');
-    }
-  }, [categories, categoryFilter]);
+  // Derive effective filter values during render to avoid cascading renders and orphaned states
+  const effectiveCategoryFilter =
+    categoryFilter !== 'ALL' && categories.length > 0 && !categories.some((c) => String(c.id) === String(categoryFilter))
+      ? 'ALL'
+      : categoryFilter;
 
-  useEffect(() => {
-    if (goalFilter !== 'ALL' && goals.length > 0 && !goals.some((g) => String(g.id) === String(goalFilter))) {
-      setGoalFilter('ALL');
-    }
-  }, [goals, goalFilter]);
+  const effectiveGoalFilter =
+    goalFilter !== 'ALL' && goals.length > 0 && !goals.some((g) => String(g.id) === String(goalFilter))
+      ? 'ALL'
+      : goalFilter;
 
-  useEffect(() => {
-    if (courseFilter !== 'ALL' && courses.length > 0 && !courses.some((cr) => String(cr.id) === String(courseFilter))) {
-      setCourseFilter('ALL');
-    }
-  }, [courses, courseFilter]);
+  const effectiveCourseFilter =
+    courseFilter !== 'ALL' && courses.length > 0 && !courses.some((cr) => String(cr.id) === String(courseFilter))
+      ? 'ALL'
+      : courseFilter;
 
   const hasActiveFilters =
     statusFilter !== 'ALL' ||
     priorityFilter !== 'ALL' ||
-    categoryFilter !== 'ALL' ||
-    goalFilter !== 'ALL' ||
-    courseFilter !== 'ALL';
+    effectiveCategoryFilter !== 'ALL' ||
+    effectiveGoalFilter !== 'ALL' ||
+    effectiveCourseFilter !== 'ALL';
 
   const handleClearFilters = () => {
     setStatusFilter('ALL');
@@ -130,7 +127,7 @@ export const TasksPage = ({
 
   // Reset pagination when any filter changes
   const [prevFilterKey, setPrevFilterKey] = useState('');
-  const currentFilterKey = `${statusFilter}_${priorityFilter}_${categoryFilter}_${goalFilter}_${courseFilter}_${searchQuery || ''}_${hideCompleted}`;
+  const currentFilterKey = `${statusFilter}_${priorityFilter}_${effectiveCategoryFilter}_${effectiveGoalFilter}_${effectiveCourseFilter}_${searchQuery || ''}_${hideCompleted}`;
   if (currentFilterKey !== prevFilterKey) {
     setPrevFilterKey(currentFilterKey);
     setVisibleCount(PAGE_SIZE);
@@ -144,9 +141,9 @@ export const TasksPage = ({
     if (isHidingCompleted && t.status === 'COMPLETED') return false;
     if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
     if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
-    if (categoryFilter !== 'ALL' && String(t.category_id) !== String(categoryFilter)) return false;
-    if (goalFilter !== 'ALL' && String(t.goal_id) !== String(goalFilter)) return false;
-    if (courseFilter !== 'ALL' && String(t.course_id) !== String(courseFilter)) return false;
+    if (effectiveCategoryFilter !== 'ALL' && String(t.category_id) !== String(effectiveCategoryFilter)) return false;
+    if (effectiveGoalFilter !== 'ALL' && String(t.goal_id) !== String(effectiveGoalFilter)) return false;
+    if (effectiveCourseFilter !== 'ALL' && String(t.course_id) !== String(effectiveCourseFilter)) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const inTitle = (t.title || '').toLowerCase().includes(q);
@@ -346,10 +343,10 @@ export const TasksPage = ({
 
           {/* Category Filter */}
           <select
-            value={categoryFilter}
+            value={effectiveCategoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[120px] max-w-[165px] truncate ${
-              categoryFilter !== 'ALL'
+              effectiveCategoryFilter !== 'ALL'
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
             }`}
@@ -365,10 +362,10 @@ export const TasksPage = ({
           {/* Goal Filter */}
           {goals.length > 0 && (
             <select
-              value={goalFilter}
+              value={effectiveGoalFilter}
               onChange={(e) => setGoalFilter(e.target.value)}
               className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[120px] max-w-[165px] truncate ${
-                goalFilter !== 'ALL'
+                effectiveGoalFilter !== 'ALL'
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
                   : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
               }`}
@@ -385,10 +382,10 @@ export const TasksPage = ({
           {/* Course Filter */}
           {courses.length > 0 && (
             <select
-              value={courseFilter}
+              value={effectiveCourseFilter}
               onChange={(e) => setCourseFilter(e.target.value)}
               className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[120px] max-w-[165px] truncate ${
-                courseFilter !== 'ALL'
+                effectiveCourseFilter !== 'ALL'
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
                   : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
               }`}
