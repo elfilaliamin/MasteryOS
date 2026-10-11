@@ -268,8 +268,8 @@ export const TasksPage = ({
       </div>
 
       {/* Filter Row matching Khademni card styling */}
-      <div className="flex items-center gap-3 flex-wrap p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400">
+      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 sm:gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+        <div className="col-span-2 sm:col-auto flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-400">
           <Filter size={15} className="text-[#0d8a72]" />
           <span>Filters:</span>
         </div>
@@ -278,7 +278,7 @@ export const TasksPage = ({
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
+          className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
         >
           <option value="ALL">All Statuses</option>
           <option value="TODO">To Do</option>
@@ -291,7 +291,7 @@ export const TasksPage = ({
         <select
           value={priorityFilter}
           onChange={(e) => setPriorityFilter(e.target.value)}
-          className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
+          className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
         >
           <option value="ALL">All Priorities</option>
           <option value="LOW">Low</option>
@@ -304,7 +304,7 @@ export const TasksPage = ({
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
+          className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
         >
           <option value="ALL">All Categories</option>
           {categories.map((c) => (
@@ -319,7 +319,7 @@ export const TasksPage = ({
           <select
             value={goalFilter}
             onChange={(e) => setGoalFilter(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
+            className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
           >
             <option value="ALL">All Goals</option>
             {goals.map((g) => (
@@ -335,7 +335,7 @@ export const TasksPage = ({
           <select
             value={courseFilter}
             onChange={(e) => setCourseFilter(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
+            className="w-full sm:w-auto truncate bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-[#0d8a72]"
           >
             <option value="ALL">All Courses</option>
             {courses.map((cr) => (
@@ -351,7 +351,7 @@ export const TasksPage = ({
           <button
             type="button"
             onClick={() => setHideCompleted((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            className={`col-span-2 sm:col-auto flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
               isHidingCompleted
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 shadow-2xs'
                 : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
@@ -381,7 +381,7 @@ export const TasksPage = ({
               setGoalFilter('ALL');
               setCourseFilter('ALL');
             }}
-            className="text-xs text-[#0d8a72] dark:text-teal-400 hover:underline font-bold ml-auto cursor-pointer"
+            className="col-span-2 sm:col-auto text-xs text-[#0d8a72] dark:text-teal-400 hover:underline font-bold sm:ml-auto cursor-pointer text-center sm:text-right"
           >
             Clear filters
           </button>
@@ -389,7 +389,7 @@ export const TasksPage = ({
 
         {/* List View Controls: Sort by and Group by */}
         {viewMode === 'list' && (
-          <div className="flex items-center gap-3 flex-wrap border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-3">
+          <div className="col-span-2 sm:col-auto flex items-center gap-3 flex-wrap border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-3">
             {/* Sort by */}
             <div className="flex items-center gap-1.5 text-xs">
               <ArrowUpDown size={13} className="text-[#0d8a72] dark:text-teal-400" />
@@ -460,7 +460,7 @@ export const TasksPage = ({
                 onDragOver={(e) => handleDragOver(e, column.id)}
                 onDragLeave={(e) => handleDragLeave(e, column.id)}
                 onDrop={(e) => handleDrop(e, column.id)}
-                className={`rounded-3xl p-4 flex flex-col gap-3.5 min-h-[500px] transition-all duration-200 ${
+                className={`rounded-3xl p-4 flex flex-col gap-3.5 min-h-[160px] md:min-h-[500px] transition-all duration-200 ${
                   isColumnHovered
                     ? 'border-2 border-dashed border-[#0d8a72] dark:border-teal-400 bg-teal-500/10 dark:bg-teal-950/30 scale-[1.01] shadow-md shadow-teal-700/10'
                     : 'bg-slate-100/70 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800'
@@ -540,7 +540,7 @@ export const TasksPage = ({
         /* List Table View with Sorting and Grouping */
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+            <table className="w-full min-w-[620px] text-left text-sm text-slate-700 dark:text-slate-300">
               <thead className="bg-slate-50 dark:bg-slate-950/60 text-xs uppercase text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-5 py-4">Task</th>

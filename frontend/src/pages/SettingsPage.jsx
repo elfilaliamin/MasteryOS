@@ -499,8 +499,8 @@ export const SettingsPage = ({
                 />
               </div>
 
-              <div className="flex justify-end pt-2">
-                <Button type="submit" variant="primary" className="gap-2">
+              <div className="flex sm:justify-end pt-2">
+                <Button type="submit" variant="primary" className="w-full sm:w-auto gap-2 justify-center">
                   <Save size={16} />
                   <span>Save Profile</span>
                 </Button>
@@ -700,12 +700,12 @@ export const SettingsPage = ({
                 />
               </div>
 
-              <div className="flex justify-end pt-2">
+              <div className="flex sm:justify-end pt-2">
                 <Button
                   type="submit"
                   variant="primary"
                   isLoading={isChangingPassword}
-                  className="gap-2"
+                  className="w-full sm:w-auto gap-2 justify-center"
                 >
                   <KeyRound size={16} />
                   <span>Update Password</span>
@@ -750,7 +750,7 @@ export const SettingsPage = ({
                 variant="outline"
                 size="sm"
                 onClick={handleExportData}
-                className="gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
+                className="w-full sm:w-auto gap-2 shrink-0 cursor-pointer justify-center"
               >
                 <Download size={14} />
                 <span>Export JSON</span>
@@ -779,13 +779,13 @@ export const SettingsPage = ({
               />
 
               {!importPreview ? (
-                <div className="flex items-center gap-3 pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
                   <Button
                     type="button"
                     variant="secondary"
                     size="sm"
                     onClick={() => importFileInputRef.current?.click()}
-                    className="gap-2 cursor-pointer"
+                    className="w-full sm:w-auto gap-2 cursor-pointer justify-center"
                   >
                     <FileJson size={14} className="text-[#0d8a72]" />
                     <span>Select Backup File (.json)</span>
@@ -835,7 +835,7 @@ export const SettingsPage = ({
                     <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                       Import Mode:
                     </span>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <label className={`flex items-center gap-2 p-2 rounded-xl border text-xs cursor-pointer transition-colors ${
                         importMode === 'merge'
                           ? 'border-[#0d8a72] bg-teal-50/50 dark:bg-teal-950/30 text-slate-900 dark:text-slate-100 font-semibold'
@@ -870,14 +870,14 @@ export const SettingsPage = ({
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-1">
+                  <div className="flex sm:justify-end pt-1">
                     <Button
                       type="button"
                       variant="primary"
                       size="sm"
                       isLoading={isImporting}
                       onClick={handleExecuteImport}
-                      className="gap-2 cursor-pointer"
+                      className="w-full sm:w-auto gap-2 cursor-pointer justify-center"
                     >
                       <Upload size={14} />
                       <span>{importMode === 'replace' ? 'Replace & Restore Data' : 'Merge & Import Data'}</span>
@@ -936,7 +936,7 @@ export const SettingsPage = ({
                 variant="danger"
                 size="sm"
                 onClick={() => setIsResetModalOpen(true)}
-                className="gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
+                className="w-full sm:w-auto gap-2 shrink-0 cursor-pointer justify-center"
               >
                 <Trash2 size={14} />
                 <span>Reset Everything</span>
@@ -1192,34 +1192,42 @@ export const SettingsPage = ({
               <h5 className="text-xs font-bold text-slate-700 dark:text-slate-300">
                 Equipped Title
               </h5>
-              <div className="grid grid-cols-1 gap-2">
-                {playerStats.unlockedTitles.map((t) => {
-                  const isEquipped = equippedTitleId === t.id;
-                  return (
-                    <div
-                      key={t.id}
-                      onClick={() => equipTitle(t.id)}
-                      className={`p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-colors ${
-                        isEquipped
-                          ? 'bg-teal-50 dark:bg-teal-950/40 border-[#0d8a72] text-slate-900 dark:text-slate-100 font-bold'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-600 dark:text-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{t.icon}</span>
-                        <span>{t.name}</span>
+              {playerStats.unlockedTitles.length === 0 ? (
+                <div className="p-3.5 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-center">
+                  <p className="text-[11px] text-slate-400 font-medium">
+                    No custom titles unlocked yet. Reach milestones in Tasks, Goals, or Courses to unlock and equip executive titles.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-2">
+                  {playerStats.unlockedTitles.map((t) => {
+                    const isEquipped = equippedTitleId === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => equipTitle(t.id)}
+                        className={`p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-colors ${
+                          isEquipped
+                            ? 'bg-teal-50 dark:bg-teal-950/40 border-[#0d8a72] text-slate-900 dark:text-slate-100 font-bold'
+                            : 'border-slate-200 dark:border-slate-800 hover:border-slate-400 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{t.icon}</span>
+                          <span>{t.name}</span>
+                        </div>
+                        {isEquipped ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#0d8a72] text-white">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">Equip</span>
+                        )}
                       </div>
-                      {isEquipped ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#0d8a72] text-white">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-slate-400">Equip</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </Card>
         </div>

@@ -158,58 +158,58 @@ export const DashboardPage = ({
       case 'stats':
         if (!dashboardConfig.showStats) return null;
         return (
-          <div key="stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-            <Card className="p-5 flex items-center justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+          <div key="stats" className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            <Card className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">
                   Total Tasks
                 </p>
-                <h3 className="text-3xl font-black text-slate-900 dark:text-slate-100 mt-1 tracking-tight">{total}</h3>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Active workspace items</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 mt-0.5 sm:mt-1 tracking-tight">{total}</h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Active items</p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                <ListTodo size={24} />
+              <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 self-end sm:self-auto shrink-0">
+                <ListTodo size={20} className="sm:w-6 sm:h-6" />
               </div>
             </Card>
 
-            <Card className="p-5 flex items-center justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <Card className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">
                   In Progress
                 </p>
-                <h3 className="text-3xl font-black text-amber-500 mt-1 tracking-tight">{inProgress}</h3>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Under active execution</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-amber-500 mt-0.5 sm:mt-1 tracking-tight">{inProgress}</h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Active execution</p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-500">
-                <Clock size={24} />
+              <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-500 self-end sm:self-auto shrink-0">
+                <Clock size={20} className="sm:w-6 sm:h-6" />
               </div>
             </Card>
 
-            <Card className="p-5 flex items-center justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <Card className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">
                   Urgent Priority
                 </p>
-                <h3 className="text-3xl font-black text-rose-500 mt-1 tracking-tight">{urgent}</h3>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">High-impact bottlenecks</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-rose-500 mt-0.5 sm:mt-1 tracking-tight">{urgent}</h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Bottlenecks</p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-500">
-                <AlertTriangle size={24} />
+              <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-500 self-end sm:self-auto shrink-0">
+                <AlertTriangle size={20} className="sm:w-6 sm:h-6" />
               </div>
             </Card>
 
-            <Card className="p-5 flex items-center justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <Card className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">
                   Completion Rate
                 </p>
-                <h3 className="text-3xl font-black text-[#0d8a72] dark:text-teal-400 mt-1 tracking-tight">
+                <h3 className="text-2xl sm:text-3xl font-black text-[#0d8a72] dark:text-teal-400 mt-0.5 sm:mt-1 tracking-tight">
                   {completionRate}%
                 </h3>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{completed} of {total} finished</p>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{completed}/{total} finished</p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300">
-                <TrendingUp size={24} />
+              <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300 self-end sm:self-auto shrink-0">
+                <TrendingUp size={20} className="sm:w-6 sm:h-6" />
               </div>
             </Card>
           </div>
@@ -1008,27 +1008,27 @@ export const DashboardPage = ({
   return (
     <div className="flex flex-col gap-6 text-left">
       {/* Gamification Welcome Banner */}
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-teal-700 via-[#0d8a72] to-emerald-600 text-white shadow-md shadow-teal-900/10 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+      <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-teal-700 via-[#0d8a72] to-emerald-600 text-white shadow-md shadow-teal-900/10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 relative overflow-hidden">
         <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="flex items-center gap-4 relative z-10">
-          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shadow-inner">
+        <div className="flex items-center gap-3 sm:gap-4 relative z-10">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl sm:text-3xl shadow-inner shrink-0">
             {playerStats.levelIcon || '🏆'}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-400 text-amber-950">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-full bg-amber-400 text-amber-950">
                 Level {playerStats.level} • {playerStats.levelTitle}
               </span>
-              <span className="text-xs font-semibold text-teal-100 flex items-center gap-1">
-                <Trophy size={13} />
-                <span>Title: {playerStats.activeTitle?.name}</span>
+              <span className="text-[11px] sm:text-xs font-semibold text-teal-100 flex items-center gap-1">
+                <Trophy size={12} className="sm:w-3.5 sm:h-3.5" />
+                <span className="truncate">Title: {playerStats.activeTitle?.name}</span>
               </span>
             </div>
-            <h3 className="text-xl sm:text-2xl font-black tracking-tight mt-1">
+            <h3 className="text-lg sm:text-2xl font-black tracking-tight mt-1 truncate">
               Mastery Execution Dashboard
             </h3>
-            <p className="text-xs text-teal-100/90 mt-0.5">
+            <p className="text-xs text-teal-100/90 mt-0.5 line-clamp-2 sm:line-clamp-none">
               Execute tasks, advance goals, and finish course lessons to build lasting momentum.
             </p>
           </div>
