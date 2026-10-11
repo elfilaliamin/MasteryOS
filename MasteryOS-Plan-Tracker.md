@@ -430,3 +430,43 @@ The frontend is built using **React 19**, **Vite**, **Tailwind CSS v4**, and **L
   - Sanitize all error responses in production (`NODE_ENV === 'production'`) to suppress stack traces and database internal details.
   - Configure server logger sanitization to permanently redact passwords, JWT tokens, and sensitive request bodies from application logs.
 
+### 📍 Phase 17: Gamified Onboarding Experience & First-Run Guided Flow
+- [x] **Task 17.1**: **Onboarding State Architecture & First-Run Detection**
+  - Implement intelligent detection of new accounts based on entity emptiness (`tasks.length === 0 && goals.length === 0 && courses.length === 0 && habits.length === 0`) and user-scoped dismissal/progress state (`mastery_onboarding_dismissed_${userId}`).
+  - Define the 4 Foundation Quests:
+    1. 🎯 **First Goal Quest** ("Chart Your Vision"): Create your first strategic goal (+50 XP).
+    2. 📚 **First Course Quest** ("Expand Your Knowledge"): Track your first skill course (+50 XP).
+    3. ✅ **First Task Quest** ("Take Immediate Action"): Create your first actionable task (+50 XP).
+    4. 🔥 **First Habit Quest** ("Build Daily Discipline"): Set up your first recurring daily habit (+50 XP).
+  - Dynamically track quest completion status based on real application state (`goals.length > 0`, `courses.length > 0`, `tasks.length > 0`, `habits.length > 0`).
+- [x] **Task 17.2**: **MasteryOS Core Philosophy & App Introduction UI**
+  - Design a welcoming, modern hero section for the dashboard that clearly explains what MasteryOS is:
+    - How the 4 pillars connect: **Strategic Goals** 🎯 define destination -> **Skill Courses** 📚 provide knowledge -> **Actionable Tasks** ✅ drive daily execution -> **Habits & Streaks** 🔥 build consistency.
+    - How the **Gamification Engine** 🏆 rewards continuous progress with XP, ranks, achievements, and unlockable executive titles.
+  - Add interactive "How MasteryOS Works" value-prop visual guide optimized for mobile and desktop.
+- [x] **Task 17.3**: **Interactive Gamified Quest Hub Component (`OnboardingGuide.jsx`)**
+  - Build responsive quest progress tracker with percentage completion (0% -> 25% -> 50% -> 75% -> 100%) and starter XP rewards counter.
+  - Render 4 quest cards with:
+    - Distinct icon, title, description, and XP bounty badge (+50 XP).
+    - Status indicators: In-progress pulse vs. Completed badge with emerald checkmark.
+    - One-click trigger buttons to immediately launch the creation modal for that specific entity (`onOpenNewGoal`, `onOpenNewCourse`, `onOpenNewTask`, `onOpenNewHabit`) without leaving the dashboard.
+    - Direct route navigation fallback (`/goals`, `/courses`, `/tasks`, `/habits`).
+  - Add celebratory completion state when all 4 quests are achieved:
+    - Celebration banner with unlocked badge ("Mastery Pathfinder") and XP bonus.
+    - Button to "Unlock Full Dashboard Workspace" or keep guide minimized.
+- [x] **Task 17.4**: **Mobile-First UX & Responsive Optimization**
+  - Ensure all cards stack seamlessly on mobile viewports (< 768px):
+    - Generous touch targets (>= 44px) for all modal openers and navigation buttons.
+    - Responsive flex/grid layouts (1 column on mobile, 2 or 4 columns on tablet/desktop).
+    - Fluid typography with no horizontal scrolling or cramped text.
+    - Dark mode and light mode glassmorphic styling tailored to the MasteryOS design system.
+- [x] **Task 17.5**: **DashboardPage & Global App Modal Integration**
+  - Update `App.jsx` to pass `onOpenNewGoal`, `onOpenNewCourse`, and `onOpenNewHabit` to `DashboardPage`.
+  - In `DashboardPage.jsx`, if the user has 0 items across all entities, replace the empty, confusing zero-data tables and empty cards with the dedicated `OnboardingGuide`.
+  - When the user starts creating items (1 to 3 items created), show a compact, progress-aware version of the Onboarding Quests at the top of the dashboard until all 4 are completed.
+  - Provide an option to toggle between the Onboarding Quest view and the Standard Dashboard view so the user has full control.
+- [x] **Task 17.6**: **Testing, Linting & Production Verification**
+  - Run frontend ESLint and Vite production build to guarantee zero errors or warnings.
+  - Verify mobile responsiveness and interaction states in both light and dark modes.
+  - Commit and push changes to GitHub.
+

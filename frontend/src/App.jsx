@@ -593,7 +593,7 @@ const AuthenticatedApp = () => {
   };
 
   return (
-    <GamificationProvider tasks={tasks} goals={goals} courses={courses}>
+    <GamificationProvider tasks={tasks} goals={goals} courses={courses} habits={habits}>
       <Routes>
         {/* Public only routes */}
         <Route element={<PublicOnlyRoute />}>
@@ -625,6 +625,18 @@ const AuthenticatedApp = () => {
                   onOpenNewTask={() => {
                     setEditingTask(null);
                     setIsModalOpen(true);
+                  }}
+                  onOpenNewGoal={() => {
+                    setEditingGoal(null);
+                    setIsGoalModalOpen(true);
+                  }}
+                  onOpenNewCourse={() => {
+                    setEditingCourse(null);
+                    setIsCourseModalOpen(true);
+                  }}
+                  onOpenNewHabit={() => {
+                    setEditingHabit(null);
+                    setIsHabitModalOpen(true);
                   }}
                   onStatusChange={handleStatusChange}
                   onIncrementLesson={handleIncrementLesson}

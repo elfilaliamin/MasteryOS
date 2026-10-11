@@ -3,7 +3,7 @@ import { GamificationContext } from './gamificationContextInstance';
 import { calculateGamification } from '../services/gamification';
 import { useAuth } from './useAuth';
 
-export const GamificationProvider = ({ children, tasks = [], goals = [], courses = [] }) => {
+export const GamificationProvider = ({ children, tasks = [], goals = [], courses = [], habits = [] }) => {
   const { user } = useAuth();
   const userId = user?.id || 'guest';
   const ackLevelKey = `mastery_acknowledged_level_${userId}`;
@@ -18,7 +18,7 @@ export const GamificationProvider = ({ children, tasks = [], goals = [], courses
   const previousLevelRef = useRef(null);
   const lastUserIdRef = useRef(userId);
 
-  const playerStats = calculateGamification(tasks, goals, courses, equippedTitleId);
+  const playerStats = calculateGamification(tasks, goals, courses, equippedTitleId, habits);
 
   useEffect(() => {
     // If user changed, reset initialization

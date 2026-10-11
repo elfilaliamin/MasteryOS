@@ -18,11 +18,13 @@ import {
   Check,
   BookOpen,
   FileCheck,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGamification } from '../context/useGamification';
 import { DEFAULT_DASHBOARD_CONFIG, normalizeDashboardConfig } from '../utils/dashboardConfig';
+import { OnboardingGuide } from '../components/gamification/OnboardingGuide';
 
 const DASHBOARD_LIMITS = {
   HABITS: 6,            // Max 6 habits in today's shortcut widget
@@ -39,6 +41,9 @@ export const DashboardPage = ({
   habits = [],
   stats = {},
   onOpenNewTask,
+  onOpenNewGoal,
+  onOpenNewCourse,
+  onOpenNewHabit,
   onStatusChange,
   onIncrementLesson,
   onToggleHabit
@@ -76,6 +81,46 @@ export const DashboardPage = ({
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  const isBrandNewAccount = tasks.length === 0 && goals.length === 0 && courses.length === 0 && habits.length === 0;
+  const hasCompletedAllQuests = tasks.length > 0 && goals.length > 0 && courses.length > 0 && habits.length > 0;
+  const completedQuestsCount = (tasks.length > 0 ? 1 : 0) + (goals.length > 0 ? 1 : 0) + (courses.length > 0 ? 1 : 0) + (habits.length > 0 ? 1 : 0);
+
+  const [userPrefersWorkspace, setUserPrefersWorkspace] = useState(() => {
+    try {
+      return localStorage.getItem('mastery_user_prefers_workspace') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleWorkspacePreference = (pref) => {
+    setUserPrefersWorkspace(pref);
+    try {
+      localStorage.setItem('mastery_user_prefers_workspace', pref ? 'true' : 'false');
+    } catch {
+      // ignore
+    }
+  };
+
+  // If brand new account (0 tasks, 0 goals, 0 courses, 0 habits) or user is still onboarding and hasn't toggled to workspace:
+  if (isBrandNewAccount || (!hasCompletedAllQuests && !userPrefersWorkspace)) {
+    return (
+      <div className="flex flex-col gap-6 text-left">
+        <OnboardingGuide
+          tasks={tasks}
+          goals={goals}
+          courses={courses}
+          habits={habits}
+          onOpenNewGoal={onOpenNewGoal}
+          onOpenNewCourse={onOpenNewCourse}
+          onOpenNewTask={onOpenNewTask}
+          onOpenNewHabit={onOpenNewHabit}
+          onSwitchToDashboard={!isBrandNewAccount ? () => toggleWorkspacePreference(true) : null}
+        />
+      </div>
+    );
+  }
 
   const total = stats.total ?? tasks.length;
   const completed = stats.completed_count ?? tasks.filter((t) => t.status === 'COMPLETED').length;
@@ -1007,6 +1052,38 @@ export const DashboardPage = ({
 
   return (
     <div className="flex flex-col gap-6 text-left">
+      {/* Mini Onboarding Quest Progress Banner (when viewing workspace before completing all 4 quests) */}
+      {!hasCompletedAllQuests && (
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-teal-950 via-slate-900 to-emerald-950 text-white border border-teal-500/30 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-amber-950 flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20 font-black">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-amber-400 uppercase tracking-wider">
+                  Starter Quests In Progress
+                </span>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                  {completedQuestsCount}/4 Completed
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Set up your first {!tasks.length && 'Task, '} {!goals.length && 'Goal, '} {!courses.length && 'Course, '} {!habits.length && 'Habit'} to complete onboarding (+50 XP each).
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => toggleWorkspacePreference(false)}
+            className="text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl bg-[#0d8a72] hover:bg-[#0b7460] text-white shadow-xs transition-colors self-start sm:self-auto cursor-pointer flex items-center gap-1.5"
+          >
+            <span>View Starter Guide</span>
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      )}
+
       {/* Gamification Welcome Banner */}
       <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-teal-700 via-[#0d8a72] to-emerald-600 text-white shadow-md shadow-teal-900/10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 relative overflow-hidden">
         <div className="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none" />

@@ -231,7 +231,8 @@ export const calculateGamification = (
   tasks = [],
   goals = [],
   courses = [],
-  equippedTitleId = null
+  equippedTitleId = null,
+  habits = []
 ) => {
   const completedTasks = tasks.filter((t) => t.status === 'COMPLETED');
   const urgentCompleted = completedTasks.filter(
@@ -254,6 +255,15 @@ export const calculateGamification = (
 
   // Stable XP Progression (50 XP per completed task, +30 priority, +150 per goal, +15 per lesson, +200 per finished course)
   let totalXp = 0;
+
+  // Foundation Starter Quests XP Bonuses (+25 XP each for setting up first entity, +50 XP bonus for completing all 4)
+  if (tasks.length > 0) totalXp += 25;
+  if (goals.length > 0) totalXp += 25;
+  if (courses.length > 0) totalXp += 25;
+  if (habits.length > 0) totalXp += 25;
+  if (tasks.length > 0 && goals.length > 0 && courses.length > 0 && habits.length > 0) {
+    totalXp += 50;
+  }
 
   completedTasks.forEach((t) => {
     totalXp += 50;
