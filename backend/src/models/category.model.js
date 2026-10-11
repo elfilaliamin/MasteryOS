@@ -46,6 +46,7 @@ export const getCategoriesByUser = async (userId) => {
       return res.rows;
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Getting categories from memory:', err.message);
   }
 
@@ -76,6 +77,7 @@ export const createCategory = async (userId, name, color = '#6366f1') => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Storing category in memory:', err.message);
   }
 
@@ -104,6 +106,7 @@ export const deleteCategory = async (userId, categoryId) => {
     await query('DELETE FROM categories WHERE id = $1 AND user_id = $2', [categoryId, userId]);
     return true;
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Deleting category in memory:', err.message);
   }
 
@@ -121,6 +124,7 @@ export const isCategoryOwnedByUser = async (userId, categoryId) => {
       return res.rows.length > 0;
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     // Fallback to memory
   }
 

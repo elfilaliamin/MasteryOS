@@ -23,24 +23,65 @@ pool.on('error', (err) => {
   console.error('Unexpected database client error:', err);
 });
 
-// Run initialization SQL migration on startup
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Run initialization SQL migration on startup with retry logic
 export const initDb = async () => {
+  const isProd = process.env.NODE_ENV === 'production';
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbName = process.env.DB_NAME || 'tasktracker_db';
+  const maxRetries = 10;
+  const retryIntervalMs = 3000;
+
+  let client = null;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    attempt++;
+    try {
+      client = await pool.connect();
+      break;
+    } catch (err) {
+      if (isProd) {
+        console.warn(`[DB Connection] Attempt ${attempt}/${maxRetries} failed: ${err.message}`);
+        if (attempt < maxRetries) {
+          await sleep(retryIntervalMs);
+        }
+      } else {
+        console.warn(`[DB Connection] Attempt ${attempt}/${maxRetries} failed (dev fallback active): ${err.message}`);
+        break;
+      }
+    }
+  }
+
+  if (!client) {
+    if (isProd) {
+      console.error(`[DB Fatal] Could not connect to PostgreSQL after ${maxRetries} attempts. Exiting...`);
+      process.exit(1);
+    }
+    console.warn('[DB Dev] PostgreSQL unavailable; running with local in-memory fallback.');
+    return;
+  }
+
   try {
-    const client = await pool.connect();
-    console.log(' Connected to PostgreSQL database successfully.');
-    
+    console.log(`Connected to PostgreSQL db=${dbName} host=${dbHost}`);
+
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const initSqlPath = path.join(__dirname, '../db/init.sql');
-    
+
     if (fs.existsSync(initSqlPath)) {
       const sql = fs.readFileSync(initSqlPath, 'utf8');
       await client.query(sql);
-      console.log(' Database schema verified and initialized.');
+      console.log('Database schema verified and initialized.');
     }
-    client.release();
   } catch (err) {
-    console.warn(' Database connection warning (if database is not running yet, backend will retry upon requests):', err.message);
+    console.error('Error running init.sql migration:', err.message);
+    if (isProd) {
+      process.exit(1);
+    }
+  } finally {
+    client.release();
   }
 };
 

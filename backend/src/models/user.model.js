@@ -11,6 +11,7 @@ export const findUserByEmail = async (email) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Querying local user store:', err.message);
   }
   return fallbackUsers.get(email.toLowerCase().trim()) || null;
@@ -23,6 +24,7 @@ export const findUserById = async (id) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Querying local user store by ID:', err.message);
   }
   for (const user of fallbackUsers.values()) {
@@ -46,6 +48,7 @@ export const createUser = async ({ email, password_hash, full_name }) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Storing user in fallback store:', err.message);
   }
 
@@ -80,6 +83,7 @@ export const updateUserPassword = async (userId, newPasswordHash) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Updating password in memory store:', err.message);
   }
 
@@ -109,6 +113,7 @@ export const revokeUserSessions = async (userId) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     // Fallback to memory
   }
 
@@ -136,6 +141,7 @@ export const updateUserProfile = async (userId, { full_name, avatar_url }) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Updating profile in memory store:', err.message);
   }
 

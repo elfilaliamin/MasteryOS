@@ -11,6 +11,7 @@ import goalRoutes from './routes/goal.routes.js';
 import courseRoutes from './routes/course.routes.js';
 import habitRoutes from './routes/habit.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import { query } from './config/db.js';
 
 const app = express();
 
@@ -136,12 +137,23 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Container & API Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    service: 'master-tasks-tracker-api',
-    timestamp: new Date().toISOString()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    await query('SELECT 1');
+    res.status(200).json({
+      status: 'ok',
+      db: 'up',
+      service: 'master-tasks-tracker-api',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(503).json({
+      status: 'error',
+      db: 'down',
+      service: 'master-tasks-tracker-api',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Mount modular API routes

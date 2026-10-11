@@ -11,6 +11,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${DB_PORT:-5432}:5432"
     networks:
       - tasks_network
     healthcheck:
@@ -69,6 +71,7 @@ services:
 
 networks:
   tasks_network:
+    name: mastery_os_network
     driver: bridge
 
 volumes:

@@ -13,6 +13,7 @@ export const logActivity = async (taskId, userId, actionType, details = {}) => {
       [taskId, userId, actionType, JSON.stringify(details)]
     );
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     const list = fallbackActivities.get(taskId) || [];
     list.unshift({
       id: crypto.randomUUID(),
@@ -104,6 +105,7 @@ export const getTasksByUser = async (userId, filters = {}) => {
       return res.rows;
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Fetching tasks from memory:', err.message);
   }
 
@@ -148,6 +150,7 @@ export const getTaskById = async (userId, taskId) => {
       };
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Finding task in memory:', err.message);
   }
 
@@ -215,6 +218,7 @@ export const createTask = async (userId, data) => {
       return newTask;
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Storing task in memory:', err.message);
   }
 
@@ -276,6 +280,7 @@ export const updateTask = async (userId, taskId, data) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Updating task in memory:', err.message);
   }
 
@@ -315,6 +320,7 @@ export const updateTaskStatus = async (userId, taskId, newStatus) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Updating task status in memory:', err.message);
   }
 
@@ -334,6 +340,7 @@ export const deleteTask = async (userId, taskId) => {
     await query('DELETE FROM tasks WHERE id = $1 AND user_id = $2', [taskId, userId]);
     return true;
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Deleting task in memory:', err.message);
   }
 
@@ -361,6 +368,7 @@ export const getAnalytics = async (userId) => {
       return countRes.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Analytics in memory:', err.message);
   }
 
@@ -386,6 +394,7 @@ export const areTasksOwnedByUser = async (userId, taskIds = []) => {
       return taskIds.every(id => foundSet.has(id));
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     // Fallback to memory
   }
 

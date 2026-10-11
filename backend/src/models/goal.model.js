@@ -68,6 +68,7 @@ export const getGoalsByUser = async (userId) => {
       }));
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Fetching goals from memory:', err.message);
   }
 
@@ -107,6 +108,7 @@ export const createGoal = async (userId, data) => {
       };
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Creating goal in memory:', err.message);
   }
 
@@ -160,6 +162,7 @@ export const updateGoal = async (userId, goalId, data) => {
       };
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Updating goal in memory:', err.message);
   }
 
@@ -183,6 +186,7 @@ export const deleteGoal = async (userId, goalId) => {
     await query('DELETE FROM goals WHERE id = $1 AND user_id = $2', [goalId, userId]);
     return true;
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Deleting goal in memory:', err.message);
   }
 
@@ -199,6 +203,7 @@ export const isGoalOwnedByUser = async (userId, goalId) => {
       return res.rows.length > 0;
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     // Fallback to memory
   }
 

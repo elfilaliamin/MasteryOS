@@ -188,6 +188,7 @@ export const getHabitsByUser = async (userId) => {
       });
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Fetching habits from memory:', err.message);
   }
 
@@ -242,6 +243,7 @@ export const createHabit = async (userId, data) => {
       };
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Creating habit in memory:', err.message);
   }
 
@@ -291,6 +293,7 @@ export const updateHabit = async (userId, habitId, data) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Updating habit in memory:', err.message);
   }
 
@@ -314,6 +317,7 @@ export const getHabitById = async (userId, habitId) => {
       return res.rows[0];
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     // Fallback to memory
   }
 
@@ -361,6 +365,7 @@ export const toggleHabitLog = async (userId, habitId, targetDate = null) => {
       return { completed: true, date: dateKey };
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Toggling habit log in memory:', err.message);
   }
 
@@ -388,6 +393,7 @@ export const deleteHabit = async (userId, habitId) => {
     await query('DELETE FROM habits WHERE id = $1 AND user_id = $2', [habitId, userId]);
     return true;
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Deleting habit in memory:', err.message);
   }
 

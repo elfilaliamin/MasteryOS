@@ -54,6 +54,7 @@ export const getCoursesByUser = async (userId) => {
       }));
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Fetching courses from memory:', err.message);
   }
 
@@ -100,6 +101,7 @@ export const createCourse = async (userId, data) => {
       };
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Creating course in memory:', err.message);
   }
 
@@ -171,6 +173,7 @@ export const updateCourse = async (userId, courseId, data) => {
       };
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Updating course in memory:', err.message);
   }
 
@@ -213,6 +216,7 @@ export const incrementCourseLesson = async (userId, courseId) => {
       };
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Incrementing lesson in memory:', err.message);
   }
 
@@ -236,6 +240,7 @@ export const deleteCourse = async (userId, courseId) => {
     await query('DELETE FROM courses WHERE id = $1 AND user_id = $2', [courseId, userId]);
     return true;
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     console.warn('[DB Fallback] Deleting course in memory:', err.message);
   }
 
@@ -252,6 +257,7 @@ export const isCourseOwnedByUser = async (userId, courseId) => {
       return res.rows.length > 0;
     }
   } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
     // Fallback to memory
   }
 
