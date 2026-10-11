@@ -794,7 +794,7 @@ export const DashboardPage = ({
                         )}
 
                         {/* Progress Bar & Lessons Count */}
-                        <div className="flex flex-col gap-1.5 bg-slate-50 dark:bg-slate-950/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <div className="flex flex-col gap-2 py-0.5">
                           <div className="flex items-center justify-between text-xs font-bold">
                             <span className="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                               <BookOpen size={13} className="text-[#0d8a72] dark:text-teal-400" />

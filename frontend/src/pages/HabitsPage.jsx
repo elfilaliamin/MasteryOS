@@ -13,7 +13,8 @@ import {
   Calendar,
   List,
   TrendingUp,
-  MoreVertical
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 
 // Format date as YYYY-MM-DD
@@ -29,6 +30,7 @@ export const HabitsPage = ({
   habits = [],
   onOpenNewHabit,
   onEditHabit,
+  onDeleteHabit,
   onToggleHabit,
 }) => {
   const { user } = useAuth();
@@ -42,6 +44,13 @@ export const HabitsPage = ({
   const [mobileTab, setMobileTab] = useState('ACTIONS'); // 'ACTIONS' (Today Checklist) | 'MATRIX' (Weekly Heatmap)
 
   const todayKey = formatDateKey(new Date());
+
+  const handleDelete = (habitId, habitTitle) => {
+    if (!onDeleteHabit) return;
+    if (window.confirm(`Are you sure you want to delete "${habitTitle}"? This will permanently remove its streak history.`)) {
+      onDeleteHabit(habitId);
+    }
+  };
 
   // Greeting based on current time
   const { greeting, timeSub } = useMemo(() => {
@@ -520,8 +529,8 @@ export const HabitsPage = ({
                           key={habit.id}
                           className="grid grid-cols-12 gap-1.5 sm:gap-2 items-center py-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 rounded-2xl transition-colors px-1 sm:px-2 group"
                         >
-                          {/* Sticky Left: Indicator dot + Icon + Title + Streak Badge */}
-                          <div className="col-span-5 sm:col-span-4 sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-850 z-10 flex items-center justify-between gap-1.5 sm:gap-2 min-w-0 pr-2 pl-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.4)]">
+                          {/* Sticky Left: Indicator dot + Icon + Title + Streak Badge + Quick Actions */}
+                          <div className="col-span-5 sm:col-span-4 sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-800/80 z-10 flex items-center justify-between gap-1.5 sm:gap-2 min-w-0 pr-2 pl-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.4)] transition-colors">
                             <div className="flex items-center gap-2 min-w-0 truncate">
                               <span
                                 className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
@@ -533,15 +542,45 @@ export const HabitsPage = ({
                               </span>
                             </div>
 
-                            {(habit.current_streak || 0) > 0 && (
-                              <div
-                                className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-black text-xs"
-                                title={`Current streak: ${habit.current_streak} days`}
-                              >
-                                <Flame size={14} className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_1px_4px_rgba(245,158,11,0.4)]" />
-                                <span>{habit.current_streak}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {(habit.current_streak || 0) > 0 && (
+                                <div
+                                  className="flex items-center gap-1 shrink-0 px-1.5 sm:px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-black text-xs"
+                                  title={`Current streak: ${habit.current_streak} days`}
+                                >
+                                  <Flame size={13} className="fill-amber-500 text-amber-500 shrink-0 drop-shadow-[0_1px_4px_rgba(245,158,11,0.4)]" />
+                                  <span>{habit.current_streak}</span>
+                                </div>
+                              )}
+
+                              {/* Quick Edit & Delete Buttons */}
+                              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditHabit(habit);
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                                  title="Edit Habit"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                {onDeleteHabit && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDelete(habit.id, habit.title);
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                                    title="Delete Habit"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </div>
 
                           {/* Middle: Days Heatmap Blocks with touch target */}
@@ -677,13 +716,24 @@ export const HabitsPage = ({
                       >
                         {isDoneToday ? '✓ Done Today' : 'Check Today'}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => onEditHabit(habit)}
-                        className="text-xs text-slate-400 hover:text-slate-600"
-                      >
-                        Edit
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => onEditHabit(habit)}
+                          className="text-xs text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        {onDeleteHabit && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(habit.id, habit.title)}
+                            className="text-xs text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 );
@@ -756,21 +806,33 @@ export const HabitsPage = ({
                         className="p-3.5 rounded-2xl text-white transition-all shadow-sm flex flex-col justify-between gap-3"
                         style={{ backgroundColor: habitColor }}
                       >
-                        {/* Card Header: Icon + Title + 3-dots */}
+                        {/* Card Header: Icon + Title + Edit & Delete actions */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
                             <span className="text-xs font-black truncate">{habit.title}</span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => onEditHabit(habit)}
-                            className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-black/15 cursor-pointer transition-colors shrink-0"
-                            title="Edit Habit"
-                          >
-                            <MoreVertical size={15} />
-                          </button>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => onEditHabit(habit)}
+                              className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-black/15 cursor-pointer transition-colors"
+                              title="Edit Habit"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            {onDeleteHabit && (
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(habit.id, habit.title)}
+                                className="p-1.5 rounded-lg text-white/80 hover:text-rose-200 hover:bg-black/20 cursor-pointer transition-colors"
+                                title="Delete Habit"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Card Footer: ✓ Completed text + Undo button */}
@@ -792,7 +854,7 @@ export const HabitsPage = ({
                     ) : (
                       /* PENDING STATE: Clean Card with Mark Complete outline button */
                       <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 transition-all hover:border-slate-300 flex flex-col justify-between gap-3 text-left">
-                        {/* Header: Icon + Title + 3-dots */}
+                        {/* Header: Icon + Title + Edit & Delete actions */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
@@ -801,14 +863,26 @@ export const HabitsPage = ({
                             </span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => onEditHabit(habit)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors shrink-0"
-                            title="Edit Habit"
-                          >
-                            <MoreVertical size={15} />
-                          </button>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => onEditHabit(habit)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                              title="Edit Habit"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            {onDeleteHabit && (
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(habit.id, habit.title)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
+                                title="Delete Habit"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Action: Mark Complete outline button with mobile touch height */}

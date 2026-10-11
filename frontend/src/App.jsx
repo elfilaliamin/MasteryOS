@@ -779,6 +779,7 @@ const AuthenticatedApp = () => {
         isOpen={isHabitModalOpen}
         onClose={() => setIsHabitModalOpen(false)}
         onSubmit={handleCreateOrUpdateHabit}
+        onDelete={handleDeleteHabit}
         habit={editingHabit}
       />
 

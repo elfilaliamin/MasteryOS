@@ -1,22 +1,31 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Award, Sparkles, ArrowRight, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 export const LevelUpModal = ({ isOpen, onClose, levelData }) => {
   useEffect(() => {
     if (!isOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen || !levelData) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md" onClick={onClose} />
 
@@ -81,6 +90,7 @@ export const LevelUpModal = ({ isOpen, onClose, levelData }) => {
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

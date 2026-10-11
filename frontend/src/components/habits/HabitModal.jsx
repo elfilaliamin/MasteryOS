@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { AlertCircle, Check, Clock } from 'lucide-react';
+import { AlertCircle, Check, Clock, Trash2 } from 'lucide-react';
 
 const colorPresets = [
   '#0d8a72', // Khademni Teal
@@ -49,7 +49,7 @@ const FREQUENCY_OPTIONS = [
   { value: 'WEEKENDS', label: 'Weekends (Sat-Sun)' },
 ];
 
-const HabitFormContent = ({ habit, onSubmit, onClose }) => {
+const HabitFormContent = ({ habit, onSubmit, onDelete, onClose }) => {
   const [title, setTitle] = useState(habit?.title || '');
   const [description, setDescription] = useState(habit?.description || '');
   const [icon, setIcon] = useState(habit?.icon || '💧');
@@ -58,6 +58,14 @@ const HabitFormContent = ({ habit, onSubmit, onClose }) => {
   const [frequency, setFrequency] = useState(habit?.frequency || 'DAILY');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleDelete = () => {
+    if (!habit?.id || !onDelete) return;
+    if (window.confirm(`Are you sure you want to delete "${habit.title}"? This will permanently remove its streak logs.`)) {
+      onDelete(habit.id);
+      onClose();
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -213,19 +221,32 @@ const HabitFormContent = ({ habit, onSubmit, onClose }) => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
-        <Button variant="ghost" type="button" onClick={onClose} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button variant="primary" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : habit ? 'Update Habit' : 'Create Habit'}
-        </Button>
+      <div className="flex items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+        {habit?.id && onDelete ? (
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+          >
+            <Trash2 size={14} />
+            <span>Delete Habit</span>
+          </button>
+        ) : <div />}
+
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" type="button" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : habit ? 'Update Habit' : 'Create Habit'}
+          </Button>
+        </div>
       </div>
     </form>
   );
 };
 
-export const HabitModal = ({ isOpen, onClose, onSubmit, habit }) => {
+export const HabitModal = ({ isOpen, onClose, onSubmit, onDelete, habit }) => {
   if (!isOpen) return null;
 
   return (
@@ -235,7 +256,13 @@ export const HabitModal = ({ isOpen, onClose, onSubmit, habit }) => {
       title={habit ? 'Edit Habit' : 'Create New Habit'}
       maxWidth="max-w-md"
     >
-      <HabitFormContent key={habit?.id || 'new'} habit={habit} onSubmit={onSubmit} onClose={onClose} />
+      <HabitFormContent
+        key={habit?.id || 'new'}
+        habit={habit}
+        onSubmit={onSubmit}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
     </Modal>
   );
 };

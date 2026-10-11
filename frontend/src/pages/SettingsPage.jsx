@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -225,6 +226,24 @@ export const SettingsPage = ({
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!isResetModalOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !isResetting) {
+        setIsResetModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isResetModalOpen, isResetting]);
 
   // Export state
   const [exportSuccess, setExportSuccess] = useState(false);
@@ -1207,57 +1226,67 @@ export const SettingsPage = ({
       </div>
 
       {/* Reset Everything Confirmation Modal */}
-      {isResetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl flex flex-col gap-4 text-left">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
-                <AlertTriangle size={24} />
+      {isResetModalOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in"
+            onClick={() => {
+              if (!isResetting) setIsResetModalOpen(false);
+            }}
+          >
+            <div
+              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-2xl flex flex-col gap-4 text-left"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                  <AlertTriangle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
+                    Reset All Application Data?
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    This action is permanent and cannot be reversed.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
-                  Reset All Application Data?
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  This action is permanent and cannot be reversed.
-                </p>
+
+              <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 text-xs text-rose-800 dark:text-rose-300 leading-relaxed">
+                You are about to delete <strong>{tasks.length} tasks</strong>, <strong>{goals.length} goals</strong>, <strong>{courses.length} courses</strong>, and <strong>{habits.length} habits</strong>. All completion history, streaks, and XP will be reset back to Level 1.
+              </div>
+
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                We recommend clicking <strong>Export JSON</strong> first if you wish to retain a backup file.
+              </p>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsResetModalOpen(false)}
+                  disabled={isResetting}
+                  className="w-full sm:w-auto cursor-pointer justify-center"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  isLoading={isResetting}
+                  onClick={handleExecuteReset}
+                  className="w-full sm:w-auto gap-2 cursor-pointer justify-center"
+                >
+                  <Trash2 size={14} />
+                  <span>Yes, Reset Everything</span>
+                </Button>
               </div>
             </div>
-
-            <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 text-xs text-rose-800 dark:text-rose-300 leading-relaxed">
-              You are about to delete <strong>{tasks.length} tasks</strong>, <strong>{goals.length} goals</strong>, <strong>{courses.length} courses</strong>, and <strong>{habits.length} habits</strong>. All completion history, streaks, and XP will be reset back to Level 1.
-            </div>
-
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              We recommend clicking <strong>Export JSON</strong> first if you wish to retain a backup file.
-            </p>
-
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsResetModalOpen(false)}
-                disabled={isResetting}
-                className="cursor-pointer"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="danger"
-                size="sm"
-                isLoading={isResetting}
-                onClick={handleExecuteReset}
-                className="gap-2 cursor-pointer"
-              >
-                <Trash2 size={14} />
-                <span>Yes, Reset Everything</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
