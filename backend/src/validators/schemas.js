@@ -164,9 +164,12 @@ export const batchReorderSchema = z.object({
 export const createGoalSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   description: z.string().max(5000).optional().nullable(),
-  target_date: z.string().optional().nullable(),
+  target_date: z.preprocess((val) => (val === '' ? null : val), z.string().optional().nullable()),
+  due_date: z.preprocess((val) => (val === '' ? null : val), z.string().optional().nullable()),
   priority: normalizedPriority.optional(),
   status: normalizedGoalStatus.optional(),
+  color: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/).optional().nullable(),
+  icon: z.string().max(50).optional().nullable(),
   task_ids: z.array(uuidSchema).optional()
 });
 

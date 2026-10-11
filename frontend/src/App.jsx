@@ -210,20 +210,46 @@ const AuthenticatedApp = () => {
       }
     }
 
+    let currentGoals = goals || [];
+    try {
+      const goalsRes = await api.getGoals();
+      if (goalsRes?.goals && Array.isArray(goalsRes.goals)) {
+        currentGoals = goalsRes.goals;
+      }
+    } catch {
+      // Use goals from state
+    }
+
     const goalMap = new Map();
+    currentGoals.forEach((g) => {
+      if (g.id) goalMap.set(g.id, g.id);
+      if (g.title) goalMap.set(g.title.trim().toLowerCase(), g.id);
+    });
+
     if (Array.isArray(importPayload.goals)) {
       for (const g of importPayload.goals) {
+        const goalTitleLower = g.title ? g.title.trim().toLowerCase() : '';
+        const existingGoal = currentGoals.find((ex) => ex.title?.trim().toLowerCase() === goalTitleLower);
+        if (existingGoal?.id) {
+          goalMap.set(g.id, existingGoal.id);
+          if (goalTitleLower) goalMap.set(goalTitleLower, existingGoal.id);
+          continue;
+        }
+
         try {
           const res = await api.createGoal({
             title: g.title,
             description: g.description,
             due_date: (g.due_date && String(g.due_date).trim()) || (g.target_date && String(g.target_date).trim()) || null,
+            target_date: (g.target_date && String(g.target_date).trim()) || (g.due_date && String(g.due_date).trim()) || null,
             priority: g.priority ? String(g.priority).toUpperCase() : 'MEDIUM',
             color: g.color || '#0d8a72',
             icon: g.icon || '🎯',
           });
           if (res?.goal?.id) {
             goalMap.set(g.id, res.goal.id);
+            if (goalTitleLower) goalMap.set(goalTitleLower, res.goal.id);
+            currentGoals.push(res.goal);
           }
         } catch (err) {
           console.warn('Import goal notice:', err.message);
@@ -231,9 +257,32 @@ const AuthenticatedApp = () => {
       }
     }
 
+    let currentCourses = courses || [];
+    try {
+      const coursesRes = await api.getCourses();
+      if (coursesRes?.courses && Array.isArray(coursesRes.courses)) {
+        currentCourses = coursesRes.courses;
+      }
+    } catch {
+      // Use courses from state
+    }
+
     const courseMap = new Map();
+    currentCourses.forEach((c) => {
+      if (c.id) courseMap.set(c.id, c.id);
+      if (c.title) courseMap.set(c.title.trim().toLowerCase(), c.id);
+    });
+
     if (Array.isArray(importPayload.courses)) {
       for (const c of importPayload.courses) {
+        const courseTitleLower = c.title ? c.title.trim().toLowerCase() : '';
+        const existingCourse = currentCourses.find((ex) => ex.title?.trim().toLowerCase() === courseTitleLower);
+        if (existingCourse?.id) {
+          courseMap.set(c.id, existingCourse.id);
+          if (courseTitleLower) courseMap.set(courseTitleLower, existingCourse.id);
+          continue;
+        }
+
         try {
           const res = await api.createCourse({
             title: c.title,
@@ -246,6 +295,8 @@ const AuthenticatedApp = () => {
           });
           if (res?.course?.id) {
             courseMap.set(c.id, res.course.id);
+            if (courseTitleLower) courseMap.set(courseTitleLower, res.course.id);
+            currentCourses.push(res.course);
           }
         } catch (err) {
           console.warn('Import course notice:', err.message);
@@ -253,57 +304,79 @@ const AuthenticatedApp = () => {
       }
     }
 
+    const restoredTasks = [];
     if (Array.isArray(importPayload.tasks)) {
       for (const t of importPayload.tasks) {
+        const rawCatId = t.category_id;
+        const mappedCatId = categoryMap.get(rawCatId) ||
+          categoryMap.get(defaultNameMap[rawCatId]) ||
+          (currentCats.find((c) => c.id === rawCatId)?.id || null);
+
+        const rawGoalId = t.goal_id;
+        const mappedGoalId = goalMap.get(rawGoalId) ||
+          (currentGoals.find((g) => g.id === rawGoalId)?.id || null);
+
+        const rawCourseId = t.course_id;
+        const mappedCourseId = courseMap.get(rawCourseId) ||
+          (currentCourses.find((c) => c.id === rawCourseId)?.id || null);
+
+        const cleanDueDate = t.due_date && String(t.due_date).trim() ? t.due_date : null;
+
+        let normalizedStatus = 'TODO';
+        if (t.status) {
+          const s = String(t.status).toUpperCase();
+          if (s === 'COMPLETED' || s === 'DONE') normalizedStatus = 'COMPLETED';
+          else if (s === 'IN_PROGRESS') normalizedStatus = 'IN_PROGRESS';
+          else if (s === 'IN_REVIEW') normalizedStatus = 'IN_REVIEW';
+        }
+
+        let normalizedPriority = 'MEDIUM';
+        if (t.priority) {
+          const p = String(t.priority).toUpperCase();
+          if (['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(p)) {
+            normalizedPriority = p;
+          }
+        }
+
+        const taskPayload = {
+          title: t.title?.trim() || 'Untitled Task',
+          description: t.description || '',
+          status: normalizedStatus,
+          priority: normalizedPriority,
+          category_id: mappedCatId,
+          goal_id: mappedGoalId,
+          course_id: mappedCourseId,
+          due_date: cleanDueDate,
+          estimated_minutes: t.estimated_minutes != null ? Math.max(0, parseInt(t.estimated_minutes, 10) || 0) : 0,
+        };
+
         try {
-          const rawCatId = t.category_id;
-          const mappedCatId = categoryMap.get(rawCatId) ||
-            categoryMap.get(defaultNameMap[rawCatId]) ||
-            (rawCatId && UUID_REGEX.test(rawCatId) ? rawCatId : null) ||
-            null;
-
-          const rawGoalId = t.goal_id;
-          const mappedGoalId = goalMap.get(rawGoalId) ||
-            (rawGoalId && UUID_REGEX.test(rawGoalId) ? rawGoalId : null) ||
-            null;
-
-          const rawCourseId = t.course_id;
-          const mappedCourseId = courseMap.get(rawCourseId) ||
-            (rawCourseId && UUID_REGEX.test(rawCourseId) ? rawCourseId : null) ||
-            null;
-
-          const cleanDueDate = t.due_date && String(t.due_date).trim() ? t.due_date : null;
-
-          let normalizedStatus = 'TODO';
-          if (t.status) {
-            const s = String(t.status).toUpperCase();
-            if (s === 'COMPLETED' || s === 'DONE') normalizedStatus = 'COMPLETED';
-            else if (s === 'IN_PROGRESS') normalizedStatus = 'IN_PROGRESS';
-            else if (s === 'IN_REVIEW') normalizedStatus = 'IN_REVIEW';
+          const res = await api.createTask(taskPayload);
+          if (res?.task) {
+            restoredTasks.push(res.task);
+          } else {
+            restoredTasks.push({
+              ...taskPayload,
+              id: t.id || `local-task-${Date.now()}-${Math.random()}`,
+              created_at: t.created_at || new Date().toISOString()
+            });
           }
-
-          let normalizedPriority = 'MEDIUM';
-          if (t.priority) {
-            const p = String(t.priority).toUpperCase();
-            if (['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(p)) {
-              normalizedPriority = p;
-            }
-          }
-
-          await api.createTask({
-            title: t.title?.trim() || 'Untitled Task',
-            description: t.description || '',
-            status: normalizedStatus,
-            priority: normalizedPriority,
-            category_id: mappedCatId,
-            goal_id: mappedGoalId,
-            course_id: mappedCourseId,
-            due_date: cleanDueDate,
-            estimated_minutes: t.estimated_minutes != null ? Math.max(0, parseInt(t.estimated_minutes, 10) || 0) : 0,
-          });
         } catch (err) {
           console.warn('Import task notice:', err.message);
+          restoredTasks.push({
+            ...taskPayload,
+            id: t.id || `local-task-${Date.now()}-${Math.random()}`,
+            created_at: t.created_at || new Date().toISOString()
+          });
         }
+      }
+    }
+
+    if (restoredTasks.length > 0) {
+      if (mode === 'replace') {
+        setTasks(restoredTasks);
+      } else {
+        setTasks((prev) => [...restoredTasks, ...prev]);
       }
     }
 
@@ -329,12 +402,16 @@ const AuthenticatedApp = () => {
 
   // Task actions
   const handleCreateOrUpdateTask = async (taskData) => {
+    let serverTask = null;
     try {
       if (taskData.id) {
-        await api.updateTask(taskData.id, taskData);
+        const res = await api.updateTask(taskData.id, taskData);
+        serverTask = res?.task;
       } else {
-        await api.createTask(taskData);
+        const res = await api.createTask(taskData);
+        serverTask = res?.task;
       }
+      api.getStats().then((sRes) => sRes?.stats && setStats(sRes.stats)).catch(() => {});
     } catch {
       // Local optimistic update
     }
@@ -358,7 +435,7 @@ const AuthenticatedApp = () => {
         )
       );
     } else {
-      const newTask = {
+      const newTask = serverTask || {
         ...taskData,
         id: `local-task-${Date.now()}`,
         created_at: new Date().toISOString(),
@@ -376,6 +453,7 @@ const AuthenticatedApp = () => {
   const handleStatusChange = async (taskId, newStatus) => {
     try {
       await api.updateTaskStatus(taskId, newStatus);
+      api.getStats().then((sRes) => sRes?.stats && setStats(sRes.stats)).catch(() => {});
     } catch {
       // Optimistic update
     }
@@ -397,6 +475,7 @@ const AuthenticatedApp = () => {
   const handleDeleteTask = async (taskId) => {
     try {
       await api.deleteTask(taskId);
+      api.getStats().then((sRes) => sRes?.stats && setStats(sRes.stats)).catch(() => {});
     } catch {
       // Local removal
     }

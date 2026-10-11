@@ -122,10 +122,16 @@ export const DashboardPage = ({
     );
   }
 
-  const total = stats.total ?? tasks.length;
-  const completed = stats.completed_count ?? tasks.filter((t) => t.status === 'COMPLETED').length;
-  const inProgress = stats.in_progress_count ?? tasks.filter((t) => t.status === 'IN_PROGRESS').length;
-  const urgent = stats.urgent_count ?? tasks.filter((t) => t.priority === 'URGENT' && t.status !== 'COMPLETED').length;
+  const total = tasks.length > 0 ? tasks.length : (stats.total || 0);
+  const completed = tasks.length > 0
+    ? tasks.filter((t) => t.status === 'COMPLETED').length
+    : (stats.completed_count || 0);
+  const inProgress = tasks.length > 0
+    ? tasks.filter((t) => t.status === 'IN_PROGRESS').length
+    : (stats.in_progress_count || 0);
+  const urgent = tasks.length > 0
+    ? tasks.filter((t) => t.priority === 'URGENT' && t.status !== 'COMPLETED').length
+    : (stats.urgent_count || 0);
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   // Priority rank for ordering tasks without due dates

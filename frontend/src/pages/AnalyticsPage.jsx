@@ -15,14 +15,26 @@ import { useGamification } from '../context/useGamification';
 export const AnalyticsPage = ({ tasks = [], goals = [], courses = [], stats = {} }) => {
   const { playerStats } = useGamification();
 
-  // Task metrics
-  const total = stats.total ?? tasks.length;
-  const completed = stats.completed_count ?? tasks.filter((t) => t.status === 'COMPLETED').length;
-  const inProgress = stats.in_progress_count ?? tasks.filter((t) => t.status === 'IN_PROGRESS').length;
-  const inReview = stats.in_review_count ?? tasks.filter((t) => t.status === 'IN_REVIEW').length;
-  const todo = stats.todo_count ?? tasks.filter((t) => t.status === 'TODO').length;
-  const urgent = stats.urgent_count ?? tasks.filter((t) => t.priority === 'URGENT' && t.status !== 'COMPLETED').length;
-  const overdue = stats.overdue_count ?? tasks.filter((t) => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'COMPLETED').length;
+  // Task metrics - computed dynamically from live tasks array
+  const total = tasks.length > 0 ? tasks.length : (stats.total || 0);
+  const completed = tasks.length > 0
+    ? tasks.filter((t) => t.status === 'COMPLETED').length
+    : (stats.completed_count || 0);
+  const inProgress = tasks.length > 0
+    ? tasks.filter((t) => t.status === 'IN_PROGRESS').length
+    : (stats.in_progress_count || 0);
+  const inReview = tasks.length > 0
+    ? tasks.filter((t) => t.status === 'IN_REVIEW').length
+    : (stats.in_review_count || 0);
+  const todo = tasks.length > 0
+    ? tasks.filter((t) => t.status === 'TODO').length
+    : (stats.todo_count || 0);
+  const urgent = tasks.length > 0
+    ? tasks.filter((t) => t.priority === 'URGENT' && t.status !== 'COMPLETED').length
+    : (stats.urgent_count || 0);
+  const overdue = tasks.length > 0
+    ? tasks.filter((t) => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'COMPLETED').length
+    : (stats.overdue_count || 0);
 
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
