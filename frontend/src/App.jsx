@@ -14,7 +14,7 @@ import { TasksPage } from './pages/TasksPage';
 import { GoalsPage } from './pages/GoalsPage';
 import { CoursesPage } from './pages/CoursesPage';
 import { HabitsPage } from './pages/HabitsPage';
-import { computeHabitStreak } from './utils/habitUtils';
+import { calculateHabitStats, formatDateKey } from './utils/habitUtils';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -57,15 +57,6 @@ const saveStoredTasks = (userId, tasksList) => {
   }
 };
 
-const formatDateKey = (d) => {
-  if (!d) return null;
-  const date = new Date(d);
-  if (isNaN(date.getTime())) return null;
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 // Inner Level Up Pop-up Listener Component
 const LevelUpListener = () => {
@@ -951,21 +942,13 @@ const AuthenticatedApp = () => {
   };
 
   const handleToggleHabit = async (habitId, targetDate = null) => {
-    const dateKey = targetDate || (() => {
-      const d = new Date();
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    })();
+    const dateKey = targetDate ? formatDateKey(targetDate) : formatDateKey(new Date());
 
     // 1. Instant optimistic update so UI, badges, and streaks respond with ZERO latency
     setHabits((prev) =>
       prev.map((h) => {
         if (h.id === habitId) {
-          const normalizedDates = (h.completed_dates || []).map((d) =>
-            typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
-          );
+          const normalizedDates = (h.completed_dates || []).map((d) => formatDateKey(d)).filter(Boolean);
           const currentDates = new Set(normalizedDates);
           if (currentDates.has(dateKey)) {
             currentDates.delete(dateKey);
@@ -974,16 +957,13 @@ const AuthenticatedApp = () => {
           }
 
           const newDatesArray = Array.from(currentDates);
-          const tempHabit = {
-            ...h,
-            completed_dates: newDatesArray
-          };
-          const streak = computeHabitStreak(tempHabit);
+          const stats = calculateHabitStats(newDatesArray);
 
           return {
-            ...tempHabit,
-            current_streak: streak,
-            longest_streak: Math.max(h.longest_streak || 0, streak)
+            ...h,
+            completed_dates: newDatesArray,
+            current_streak: stats.currentStreak,
+            longest_streak: Math.max(h.longest_streak || 0, stats.longestStreak)
           };
         }
         return h;

@@ -6,35 +6,68 @@ const fallbackHabits = new Map();
 const fallbackHabitLogs = new Map(); // key: userId, value: array of { id, habit_id, user_id, completed_date }
 
 // Helper to format date as YYYY-MM-DD
+// Edge case protection: handles 'YYYY-MM-DD', ISO strings, Date objects, nulls, and negative timezone shifts
 export const formatDateKey = (date = new Date()) => {
-  const d = new Date(date);
+  if (!date) return '';
+  if (typeof date === 'string') {
+    const match = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+  }
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '';
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
-// Calculate streak statistics from an array of 'YYYY-MM-DD' strings
+// Calendar day difference between two YYYY-MM-DD strings (DST and timezone safe via UTC)
+export const daysBetween = (dateStr1, dateStr2) => {
+  if (!dateStr1 || !dateStr2) return 0;
+  const [y1, m1, d1] = dateStr1.split('-').map(Number);
+  const [y2, m2, d2] = dateStr2.split('-').map(Number);
+  const utc1 = Date.UTC(y1, m1 - 1, d1);
+  const utc2 = Date.UTC(y2, m2 - 1, d2);
+  return Math.round((utc2 - utc1) / (1000 * 60 * 60 * 24));
+};
+
+// Calculate streak statistics from an array or Set of 'YYYY-MM-DD' strings
 export const calculateStreaks = (completionDateSet) => {
   if (!completionDateSet || completionDateSet.size === 0) {
     return { currentStreak: 0, longestStreak: 0, isCompletedToday: false };
   }
 
   const todayStr = formatDateKey(new Date());
-  const isCompletedToday = completionDateSet.has(todayStr);
 
-  // Check current streak
+  // Filter out any invalid or future dates
+  const dateSet = new Set(
+    Array.from(completionDateSet)
+      .map(formatDateKey)
+      .filter((d) => Boolean(d) && d <= todayStr)
+  );
+
+  if (dateSet.size === 0) {
+    return { currentStreak: 0, longestStreak: 0, isCompletedToday: false };
+  }
+
+  const isCompletedToday = dateSet.has(todayStr);
+
+  // 1. Current continuous streak calculation
   let currentStreak = 0;
-  let checkDate = new Date();
+  const checkDate = new Date();
+  checkDate.setHours(12, 0, 0, 0); // Noon protects against daylight saving 23h/25h hour drift
   
   // If not completed today, start checking from yesterday
   if (!isCompletedToday) {
     checkDate.setDate(checkDate.getDate() - 1);
   }
 
-  while (true) {
+  let safetyLimit = 3650; // 10 years safety bound
+  while (safetyLimit-- > 0) {
     const key = formatDateKey(checkDate);
-    if (completionDateSet.has(key)) {
+    if (dateSet.has(key)) {
       currentStreak++;
       checkDate.setDate(checkDate.getDate() - 1);
     } else {
@@ -42,17 +75,15 @@ export const calculateStreaks = (completionDateSet) => {
     }
   }
 
-  // Calculate longest streak across all recorded dates
-  const sortedDates = Array.from(completionDateSet).sort();
+  // 2. Calculate longest streak across all recorded dates using calendar day difference
+  const sortedDates = Array.from(dateSet).sort();
   let longestStreak = 0;
   let tempStreak = 0;
   let prevDate = null;
 
   for (const dateStr of sortedDates) {
-    const currentDate = new Date(dateStr);
     if (prevDate) {
-      const diffTime = currentDate - prevDate;
-      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      const diffDays = daysBetween(prevDate, dateStr);
       if (diffDays === 1) {
         tempStreak++;
       } else if (diffDays > 1) {
@@ -64,7 +95,7 @@ export const calculateStreaks = (completionDateSet) => {
     if (tempStreak > longestStreak) {
       longestStreak = tempStreak;
     }
-    prevDate = currentDate;
+    prevDate = dateStr;
   }
 
   if (currentStreak > longestStreak) {
