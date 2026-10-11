@@ -128,14 +128,35 @@ export const DashboardPage = ({
   const urgent = stats.urgent_count ?? tasks.filter((t) => t.priority === 'URGENT' && t.status !== 'COMPLETED').length;
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // 1. Nearest Due Dates Component (Tasks ONLY sorted by earliest deadline)
+  // Priority rank for ordering tasks without due dates
+  const priorityRank = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
+  // 1. Upcoming & Nearest Deadlines Component (Tasks with deadlines sorted chronologically first, followed by unscheduled tasks)
   const allDeadlines = tasks
-    .filter((t) => t.status !== 'COMPLETED' && t.due_date)
-    .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+    .filter((t) => t.status !== 'COMPLETED')
+    .sort((a, b) => {
+      // Both have due dates: sort chronologically by earliest deadline
+      if (a.due_date && b.due_date) {
+        return new Date(a.due_date) - new Date(b.due_date);
+      }
+      // If one has a due date: show it first
+      if (a.due_date && !b.due_date) return -1;
+      if (!a.due_date && b.due_date) return 1;
+
+      // Both have no due date: sort by priority (Urgent -> High -> Med -> Low), then newest created
+      const rankA = priorityRank[a.priority] ?? 4;
+      const rankB = priorityRank[b.priority] ?? 4;
+      if (rankA !== rankB) return rankA - rankB;
+
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
 
   const nearestDeadlines = allDeadlines.slice(0, DASHBOARD_LIMITS.DEADLINES);
 
   const getDeadlineDiff = (dateStr) => {
+    if (!dateStr) {
+      return { text: 'No deadline', isNone: true };
+    }
     const target = new Date(dateStr);
     const now = new Date();
     const targetDate = new Date(target.getFullYear(), target.getMonth(), target.getDate());
@@ -590,7 +611,7 @@ export const DashboardPage = ({
                     Upcoming & Nearest Deadlines
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                    Tasks sorted chronologically by earliest due date
+                    Tasks sorted by earliest due date, including tasks without a set deadline
                   </p>
                 </div>
               </div>
@@ -706,22 +727,31 @@ export const DashboardPage = ({
                             )}
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                                {new Date(item.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                              </span>
-                              <span
-                                className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                                  diff.isOverdue
-                                    ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
-                                    : diff.isToday
-                                    ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
-                                    : 'bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300 border-teal-200 dark:border-teal-800'
-                                }`}
-                              >
-                                {diff.text}
-                              </span>
-                            </div>
+                            {item.due_date ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                  {new Date(item.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                </span>
+                                <span
+                                  className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                                    diff.isOverdue
+                                      ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                      : diff.isToday
+                                      ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                      : 'bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300 border-teal-200 dark:border-teal-800'
+                                  }`}
+                                >
+                                  {diff.text}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">—</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700">
+                                  No due date
+                                </span>
+                              </div>
+                            )}
                           </td>
                           <td className="px-5 py-3.5 text-right whitespace-nowrap">
                             <button
