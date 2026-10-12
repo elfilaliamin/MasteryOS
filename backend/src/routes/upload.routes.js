@@ -115,8 +115,7 @@ router.get('/file/:filename', async (req, res) => {
       res.setHeader('Content-Disposition', 'inline');
     }
 
-    const stream = fs.createReadStream(filePath);
-    stream.pipe(res);
+    return res.sendFile(path.resolve(filePath));
   } catch (err) {
     console.error('File retrieval error:', err);
     res.status(500).json({ error: 'Error retrieving file.' });

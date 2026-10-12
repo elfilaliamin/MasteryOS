@@ -149,6 +149,10 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
               src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.full_name || 'Alex')}`}
               alt="User avatar"
               className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 object-cover"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.full_name || 'Alex')}`;
+              }}
             />
             <span className="absolute -bottom-1 -right-1 text-[10px] font-bold px-1 rounded-full bg-teal-600 text-white">
               {playerStats.level}
