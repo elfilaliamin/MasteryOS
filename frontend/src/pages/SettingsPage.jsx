@@ -125,6 +125,14 @@ export const SettingsPage = ({
       const res = await api.uploadFile(file);
       if (res?.url) {
         setAvatarUrl(res.url);
+        // Automatically persist uploaded avatar to profile and database
+        if (updateProfile) {
+          await updateProfile(fullName, res.url);
+        } else {
+          await api.updateProfile(fullName, res.url);
+        }
+        setSavedSuccess(true);
+        setTimeout(() => setSavedSuccess(false), 3000);
       }
     } catch (err) {
       alert(err.message || 'Failed to upload photo.');
@@ -141,9 +149,8 @@ export const SettingsPage = ({
       }
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
-    } catch {
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
+    } catch (err) {
+      alert(err.message || 'Failed to save profile.');
     }
   };
 

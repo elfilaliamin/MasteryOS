@@ -186,8 +186,9 @@ export const changePassword = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { full_name, avatar_url } = req.body;
-    const updated = await updateUserProfile(req.user.id, { full_name, avatar_url });
+    const { full_name, avatar_url, avatar } = req.body;
+    const resolvedAvatar = avatar_url !== undefined ? avatar_url : avatar;
+    const updated = await updateUserProfile(req.user.id, { full_name, avatar_url: resolvedAvatar });
     res.status(200).json({
       message: 'Profile updated successfully.',
       user: updated

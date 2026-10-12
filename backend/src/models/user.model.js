@@ -148,8 +148,8 @@ export const updateUserProfile = async (userId, { full_name, avatar_url }) => {
 
   for (const user of fallbackUsers.values()) {
     if (user.id === userId) {
-      if (full_name) user.full_name = full_name;
-      if (avatar_url) user.avatar_url = avatar_url;
+      if (full_name !== undefined) user.full_name = full_name;
+      if (avatar_url !== undefined) user.avatar_url = avatar_url;
       user.updated_at = new Date().toISOString();
       const { password_hash: _, ...safeUser } = user;
       return safeUser;

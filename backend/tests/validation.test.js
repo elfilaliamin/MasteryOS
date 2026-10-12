@@ -91,6 +91,19 @@ describe('Task 16.4: Strict Request Schema Validation (Zod) & Sanitization Tests
     assert.ok(res.data.details.some(d => d.field === 'avatar'));
   });
 
+  it('Accepts authentic /api/upload/file/... avatar_url and updates profile', async () => {
+    const res = await request('/api/auth/profile', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: {
+        avatar_url: '/api/upload/file/test-avatar-uuid.png'
+      }
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.data.user.avatar_url, '/api/upload/file/test-avatar-uuid.png');
+  });
+
   it('Rejects invalid URL protocols on course cover_image and certificate_url', async () => {
     const res = await request('/api/courses', {
       method: 'POST',

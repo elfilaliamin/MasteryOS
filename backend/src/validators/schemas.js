@@ -9,13 +9,19 @@ export const idParamSchema = z.object({
   id: uuidSchema
 });
 
-// HTTP/HTTPS URL schema (strictly prevents javascript: or data: URIs)
+// HTTP/HTTPS URL or uploaded asset schema (strictly prevents javascript: or data: URIs and path traversal)
 export const optionalHttpUrlSchema = z
   .string()
   .trim()
   .refine(
-    (val) => !val || /^https?:\/\//i.test(val),
-    { message: 'URL must start with http:// or https://' }
+    (val) => {
+      if (!val) return true;
+      if (val.startsWith('/api/upload/') || val.startsWith('/uploads/')) {
+        return !val.includes('..');
+      }
+      return /^https?:\/\//i.test(val);
+    },
+    { message: 'URL must start with http://, https://, or /api/upload/' }
   )
   .optional()
   .nullable();
@@ -81,11 +87,19 @@ export const changePasswordSchema = z
     newPassword: data.newPassword || data.new_password
   }));
 
-export const updateProfileSchema = z.object({
-  full_name: z.string().min(1).max(100).optional(),
-  avatar: optionalHttpUrlSchema,
-  bio: z.string().max(500).optional().nullable()
-});
+export const updateProfileSchema = z
+  .object({
+    full_name: z.string().min(1).max(100).optional(),
+    avatar_url: optionalHttpUrlSchema,
+    avatar: optionalHttpUrlSchema,
+    bio: z.string().max(500).optional().nullable()
+  })
+  .transform((data) => ({
+    full_name: data.full_name,
+    avatar_url: data.avatar_url !== undefined ? data.avatar_url : data.avatar,
+    avatar: data.avatar !== undefined ? data.avatar : data.avatar_url,
+    bio: data.bio
+  }));
 
 // Category Schemas
 export const createCategorySchema = z.object({
