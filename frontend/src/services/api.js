@@ -7,15 +7,11 @@ const getCookie = (name) => {
 };
 
 const getHeaders = (extraHeaders = {}) => {
-  const token = localStorage.getItem('master_tasks_token');
   const csrfToken = getCookie('XSRF-TOKEN');
   const headers = {
     'Content-Type': 'application/json',
     ...extraHeaders
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
   if (csrfToken) {
     headers['X-CSRF-Token'] = csrfToken;
   }
@@ -276,6 +272,24 @@ export const api = {
   async deleteHabit(id) {
     const res = await fetchClient(`${API_BASE}/habits/${id}`, {
       method: 'DELETE',
+    });
+    return handleResponse(res);
+  },
+
+  // File upload endpoint (multipart/form-data)
+  async uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const csrfToken = getCookie('XSRF-TOKEN');
+    const headers = {};
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+      headers,
     });
     return handleResponse(res);
   },

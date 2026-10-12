@@ -156,6 +156,16 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Global caching control for API routes (exclude static uploads)
+app.use('/api', (req, res, next) => {
+  if (!req.path.startsWith('/upload/file/')) {
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
+
 // Mount modular API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);

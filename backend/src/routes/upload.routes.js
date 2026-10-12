@@ -104,8 +104,9 @@ router.get('/file/:filename', async (req, res) => {
 
     const mimeType = mimeMap[ext] || 'application/octet-stream';
 
-    // Set security headers
+    // Set security and caching headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.setHeader('Content-Type', mimeType);
 
     if (ext === '.pdf') {

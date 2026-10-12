@@ -72,9 +72,7 @@ export const ThemeProvider = ({ children }) => {
       setTheme(mode);
     }
 
-    if (localStorage.getItem('master_tasks_token')) {
-      api.updateSettings({ themeMode: mode }).catch(() => {});
-    }
+    api.updateSettings({ themeMode: mode }).catch(() => {});
   };
 
   const toggleTheme = () => {

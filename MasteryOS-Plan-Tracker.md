@@ -470,3 +470,61 @@ The frontend is built using **React 19**, **Vite**, **Tailwind CSS v4**, and **L
   - Verify mobile responsiveness and interaction states in both light and dark modes.
   - Commit and push changes to GitHub.
 
+### 📍 Phase 18: Security & LocalStorage Cleansing (Immediate Data-Flow Fixes)
+- [x] **Task 18.1**: **Purge Plaintext Passwords in Offline Fallback (`mastery_registered_users`)**
+  - Remove plaintext password storage from `AuthContext.jsx` (`mastery_registered_users`).
+  - Purge any legacy `mastery_registered_users` keys from client `localStorage` on startup.
+- [x] **Task 18.2**: **Eliminate Redundant JWT in `localStorage` (`master_tasks_token`)**
+  - Stop storing JWT in `localStorage` in `AuthContext.jsx` and `api.js`.
+  - Rely on `httpOnly` secure cookie with `XSRF-TOKEN` CSRF header for all authenticated requests.
+  - Align `verifyJWT` middleware and client request interceptors.
+- [x] **Task 18.3**: **Eliminate Custom Task `localStorage` Sync Layer (`mastery_local_tasks_${userId}`)**
+  - Remove manual `mastery_local_tasks_${userId}` saving and synthetic `local-task-` IDs from `App.jsx`.
+  - Let React Query handle client caching and background synchronization.
+- [x] **Task 18.4**: **Resolve Mock Category IDs (`cat-1` to `cat-4`)**
+  - Remove hardcoded `INITIAL_CATEGORIES` mock IDs and fragile mapping translation functions (`categoryMap`, `defaultNameMap`) from `App.jsx`.
+  - Ensure all category operations utilize valid UUIDs seeded and managed by PostgreSQL.
+
+### 📍 Phase 19: Backend Cache-Control Headers & Upload Delivery Optimization
+- [x] **Task 19.1**: **Global API `Cache-Control` Directives on Node.js Backend**
+  - Implement a dedicated caching middleware in `backend/src/app.js` to set `Cache-Control: private, no-cache, no-store, must-revalidate` on all `/api/*` routes (excluding static assets).
+  - Add `Pragma: no-cache` and `Expires: 0` for complete HTTP/1.0 and reverse-proxy compliance.
+- [x] **Task 19.2**: **Long-Term Immutable Caching for Static Uploads (`/api/upload/file/:filename`)**
+  - In `backend/src/routes/upload.routes.js`, set `Cache-Control: public, max-age=31536000, immutable` for uploaded assets with UUID filenames.
+  - Implement conditional validation with `ETag` and `Last-Modified` checks.
+- [x] **Task 19.3**: **Nginx SPA `index.html` Cache Busting**
+  - In `frontend/nginx.conf`, configure the `location /` SPA fallback to explicitly serve `index.html` with `Cache-Control: no-cache, must-revalidate`.
+  - Preserve long-term immutable caching (`max-age=15552000, immutable`) for hashed bundle assets in `dist/assets/`.
+- [x] **Task 19.4**: **Migrate Client Base64 Uploads to Multipart `/api/upload` Endpoint**
+  - Refactor `CourseModal.jsx` (cover images and certificate PDFs) to upload binary files directly to `/api/upload` instead of Base64 strings.
+  - Refactor `SettingsPage.jsx` avatar upload to call `/api/upload` and save the resulting static URL.
+
+### 📍 Phase 20: React Query Integration & Server State Management (Frontend)
+- [x] **Task 20.1**: **Install & Configure `@tanstack/react-query`**
+  - Add `@tanstack/react-query` to `frontend/package.json`.
+  - Configure global `QueryClient` in `main.jsx` with standard `staleTime: 2m`, `gcTime: 10m`, and `refetchOnWindowFocus: true`.
+- [x] **Task 20.2**: **Create Granular React Query Hooks**
+  - Build `useTasks` and `useTaskMutations` (create, update, delete, change status with optimistic updates).
+  - Build `useGoals` and `useGoalMutations`.
+  - Build `useCourses` and `useCourseMutations` (including lesson increment).
+  - Build `useHabits` and `useHabitMutations` (including optimistic toggle).
+  - Build `useCategories` and `useCategoryMutations`.
+  - Build `useTaskStats` for aggregated KPI metrics.
+  - Build `useUserProfile` for user profile and settings.
+- [x] **Task 20.3**: **Refactor `App.jsx` and Pages to Use Query Hooks**
+  - Eliminate top-level monolithic `useState` arrays, `reloadTrigger` counter, and `Promise.allSettled` fetching from `App.jsx`.
+  - Let individual pages (`TasksPage`, `GoalsPage`, `CoursesPage`, `HabitsPage`, `CategoriesPage`, `DashboardPage`, `AnalyticsPage`) consume their own dedicated hooks.
+- [x] **Task 20.4**: **Consolidate `users.settings` and Analytics Single Source of Truth**
+  - Consolidate fragmented `localStorage` keys into React Query's cached user profile.
+  - Update `AnalyticsPage` to consume `useTaskStats` directly as the authoritative source of truth.
+
+### 📍 Phase 21: Verification, Testing & Production Builds
+- [x] **Task 21.1**: **Run Backend Integration Tests**
+  - Run backend test suite (`npm test`) to ensure all auth, multi-tenant, and CRUD tests pass.
+- [x] **Task 21.2**: **Verify Frontend Build & Linting**
+  - Run `npm run build` and `npm run lint` in `frontend/` to ensure zero compilation or lint errors.
+- [x] **Task 21.3**: **Verify Caching Headers & Performance**
+  - Confirm API responses return `Cache-Control: private, no-cache, no-store`.
+  - Confirm `/api/upload/file/:filename` returns `Cache-Control: public, max-age=31536000, immutable`.
+
+

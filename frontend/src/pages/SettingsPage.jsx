@@ -106,8 +106,8 @@ export const SettingsPage = ({
   // Avatar presets
   const avatarPresets = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley'];
 
-  // Handle local file upload for profile picture
-  const handleFileUpload = (e) => {
+  // Handle file upload for profile picture via /api/upload
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -116,11 +116,19 @@ export const SettingsPage = ({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAvatarUrl(reader.result);
-    };
-    reader.readAsDataURL(file);
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB.');
+      return;
+    }
+
+    try {
+      const res = await api.uploadFile(file);
+      if (res?.url) {
+        setAvatarUrl(res.url);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to upload photo.');
+    }
   };
 
   const handleProfileSubmit = async (e) => {

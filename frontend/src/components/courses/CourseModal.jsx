@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { BookOpen, Upload, Link as LinkIcon, FileText, AlertCircle, X, Sparkles, Search } from 'lucide-react';
+import { api } from '../../services/api';
 
 const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
   const [title, setTitle] = useState(course?.title || '');
@@ -43,8 +44,8 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
   const fileInputRef = useRef(null);
   const certFileInputRef = useRef(null);
 
-  // Cover image file upload handler
-  const handleCoverFileUpload = (e) => {
+  // Cover image file upload handler via /api/upload
+  const handleCoverFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -58,16 +59,22 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCoverImage(reader.result);
-      setError('');
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsSubmitting(true);
+      const res = await api.uploadFile(file);
+      if (res?.url) {
+        setCoverImage(res.url);
+        setError('');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to upload image.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Certificate PDF file upload handler
-  const handleCertFileUpload = (e) => {
+  // Certificate PDF file upload handler via /api/upload
+  const handleCertFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -76,18 +83,24 @@ const CourseFormContent = ({ course, tasks = [], onSubmit, onClose }) => {
       return;
     }
 
-    if (file.size > 8 * 1024 * 1024) {
-      setError('PDF must be under 8MB.');
+    if (file.size > 5 * 1024 * 1024) {
+      setError('PDF must be under 5MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCertUrl(reader.result);
-      setCertFilename(file.name);
-      setError('');
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsSubmitting(true);
+      const res = await api.uploadFile(file);
+      if (res?.url) {
+        setCertUrl(res.url);
+        setCertFilename(file.name);
+        setError('');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to upload certificate.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const assignableTasks = tasks.filter((task) => {
