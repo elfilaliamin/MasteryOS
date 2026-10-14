@@ -174,20 +174,16 @@ export const FocusPage = ({
   // Filtered items
   const displayHabits = useMemo(() => {
     if (filter === 'TASKS') return [];
-    if (filter === 'PENDING') return enrichedHabits.filter((h) => !h.isCompletedToday);
-    if (filter === 'DONE') return enrichedHabits.filter((h) => h.isCompletedToday);
     return enrichedHabits;
   }, [enrichedHabits, filter]);
 
   const displayTasks = useMemo(() => {
     if (filter === 'HABITS') return [];
-    if (filter === 'PENDING') return focusTasks.filter((t) => !t.isCompleted);
-    if (filter === 'DONE') return focusTasks.filter((t) => t.isCompleted);
     return focusTasks;
   }, [focusTasks, filter]);
 
   // Whether desktop layout splits habits and tasks side-by-side
-  const isSplitLayout = (filter === 'ALL' || filter === 'PENDING' || filter === 'DONE') && displayHabits.length > 0 && displayTasks.length > 0;
+  const isSplitLayout = filter === 'ALL' && displayHabits.length > 0 && displayTasks.length > 0;
 
   if (isLoading) {
     return (
@@ -388,8 +384,6 @@ export const FocusPage = ({
             { id: 'ALL', label: 'All Today', count: totalItemsCount },
             { id: 'HABITS', label: 'Habits', count: totalHabitsCount },
             { id: 'TASKS', label: 'Tasks', count: totalTasksCount },
-            { id: 'PENDING', label: 'Pending', count: totalItemsCount - totalCompletedCount },
-            { id: 'DONE', label: 'Done', count: totalCompletedCount },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -645,10 +639,10 @@ export const FocusPage = ({
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              {filter === 'DONE'
-                ? 'No completed items yet today'
-                : filter === 'PENDING'
-                ? 'All pending items cleared!'
+              {filter === 'HABITS'
+                ? 'No habits scheduled for today'
+                : filter === 'TASKS'
+                ? 'No action tasks due today'
                 : 'Your Focus list is clear'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
