@@ -41,6 +41,8 @@ const PRIORITY_BADGES = {
   LOW: { label: 'Low', bg: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' },
 };
 
+const PRIORITY_ORDER = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+
 const POMODORO_DEFAULT_SECONDS = 25 * 60;
 
 export const FocusPage = ({
@@ -122,7 +124,8 @@ export const FocusPage = ({
   }, [habits]);
 
   // Determine tasks for today's focus:
-  // Includes overdue tasks, tasks explicitly due today, in-progress tasks, or high/urgent tasks
+  // Includes overdue tasks, tasks explicitly due today, in-progress tasks, or high/urgent tasks,
+  // and for completed tasks ONLY ones finished today.
   const enrichedTasks = useMemo(() => {
     return tasks.map((t) => {
       const isCompleted = t.status === 'COMPLETED';
@@ -138,6 +141,13 @@ export const FocusPage = ({
         }
       }
 
+      // Check if task was completed today
+      let isFinishedToday = false;
+      if (isCompleted) {
+        const completionDate = t.completed_at || t.updated_at;
+        isFinishedToday = completionDate ? formatDateKey(completionDate) === todayKey : true;
+      }
+
       const assignedGoal = goals.find((g) => g.id === t.goal_id);
       const assignedCourse = courses.find((c) => c.id === t.course_id);
       const assignedCategory = categories.find((c) => c.id === t.category_id);
@@ -147,6 +157,7 @@ export const FocusPage = ({
         isCompleted,
         isDueToday,
         isOverdue,
+        isFinishedToday,
         assignedGoal,
         assignedCourse,
         assignedCategory,
@@ -156,9 +167,40 @@ export const FocusPage = ({
 
   // High priority / relevant tasks for today's focus mode
   const focusTasks = useMemo(() => {
-    return enrichedTasks.filter((t) => {
-      if (t.isCompleted) return true;
+    const filtered = enrichedTasks.filter((t) => {
+      // Completed tasks: ONLY show ones finished today
+      if (t.isCompleted) {
+        return t.isFinishedToday;
+      }
+      // Active tasks
       return t.isDueToday || t.isOverdue || t.status === 'IN_PROGRESS' || t.priority === 'URGENT' || t.priority === 'HIGH' || !t.due_date;
+    });
+
+    return filtered.sort((a, b) => {
+      // 1. Move completed tasks to the end of the list
+      if (a.isCompleted !== b.isCompleted) {
+        return a.isCompleted ? 1 : -1;
+      }
+
+      // 2. Sort by due date (earlier due dates first; tasks with due dates before tasks without due dates)
+      if (a.due_date && b.due_date) {
+        const timeDiff = new Date(a.due_date) - new Date(b.due_date);
+        if (timeDiff !== 0) return timeDiff;
+      } else if (a.due_date && !b.due_date) {
+        return -1;
+      } else if (!a.due_date && b.due_date) {
+        return 1;
+      }
+
+      // 3. Sort by priority (URGENT > HIGH > MEDIUM > LOW)
+      const prioA = PRIORITY_ORDER[a.priority] || 2;
+      const prioB = PRIORITY_ORDER[b.priority] || 2;
+      if (prioA !== prioB) {
+        return prioB - prioA;
+      }
+
+      // Fallback: newest created first
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     });
   }, [enrichedTasks]);
 
@@ -562,8 +604,21 @@ export const FocusPage = ({
                         </span>
                       </div>
 
+                      {/* Full Task Description */}
+                      {task.description && (
+                        <p
+                          className={`text-xs mt-1.5 leading-relaxed whitespace-pre-wrap break-words ${
+                            isDone
+                              ? 'line-through text-slate-400/80 dark:text-slate-500'
+                              : 'text-slate-600 dark:text-slate-300'
+                          }`}
+                        >
+                          {task.description}
+                        </p>
+                      )}
+
                       {/* Metadata Chips (Category, Goal, Course, Due Date) */}
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         {task.isOverdue && !isDone && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-md">
                             <AlertTriangle size={10} /> Overdue
@@ -573,6 +628,18 @@ export const FocusPage = ({
                         {task.isDueToday && !isDone && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 px-1.5 py-0.5 rounded-md">
                             <Calendar size={10} /> Due Today
+                          </span>
+                        )}
+
+                        {task.due_date && !task.isDueToday && !task.isOverdue && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-1.5 py-0.5 rounded-md">
+                            <Calendar size={10} /> {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+
+                        {isDone && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded-md">
+                            <Check size={10} strokeWidth={3} /> Finished Today
                           </span>
                         )}
 

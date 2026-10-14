@@ -180,11 +180,17 @@ export const DashboardPage = ({
         </div>
 
         {/* 4 Stat Cards Skeleton */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 h-28 flex flex-col justify-between">
-              <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
-              <div className="h-7 w-12 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+            <div key={i} className="p-3 sm:p-5 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+              <div className="flex items-center justify-between gap-2">
+                <div className="h-3 w-16 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-7 w-7 rounded-lg bg-slate-200 dark:bg-slate-800" />
+              </div>
+              <div className="mt-2.5 space-y-1.5">
+                <div className="h-7 w-12 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
+              </div>
             </div>
           ))}
         </div>
@@ -414,57 +420,79 @@ export const DashboardPage = ({
         if (!dashboardConfig.showStats) return null;
         return (
           <div key="stats" className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-            <Card className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">
+            <Card className="p-3 sm:p-5 flex flex-col justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+                <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
                   Total Tasks
-                </p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 mt-0.5 sm:mt-1 tracking-tight">{total}</h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Active items</p>
+                </span>
+                <div className="p-1.5 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+                  <ListTodo size={16} className="sm:w-5 sm:h-5" />
+                </div>
               </div>
-              <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 self-end sm:self-auto shrink-0">
-                <ListTodo size={20} className="sm:w-6 sm:h-6" />
+              <div className="mt-2 sm:mt-3">
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                  {total}
+                </h3>
+                <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                  Active items
+                </p>
               </div>
             </Card>
 
-            <Card className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">
+            <Card className="p-3 sm:p-5 flex flex-col justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+                <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
                   In Progress
-                </p>
-                <h3 className="text-2xl sm:text-3xl font-black text-amber-500 mt-0.5 sm:mt-1 tracking-tight">{inProgress}</h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Active execution</p>
+                </span>
+                <div className="p-1.5 sm:p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-500 shrink-0">
+                  <Clock size={16} className="sm:w-5 sm:h-5" />
+                </div>
               </div>
-              <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-500 self-end sm:self-auto shrink-0">
-                <Clock size={20} className="sm:w-6 sm:h-6" />
+              <div className="mt-2 sm:mt-3">
+                <h3 className="text-2xl sm:text-3xl font-black text-amber-500 tracking-tight">
+                  {inProgress}
+                </h3>
+                <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                  Active execution
+                </p>
               </div>
             </Card>
 
-            <Card className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">
+            <Card className="p-3 sm:p-5 flex flex-col justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+                <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
                   Urgent Priority
-                </p>
-                <h3 className="text-2xl sm:text-3xl font-black text-rose-500 mt-0.5 sm:mt-1 tracking-tight">{urgent}</h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">Bottlenecks</p>
+                </span>
+                <div className="p-1.5 sm:p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-500 shrink-0">
+                  <AlertTriangle size={16} className="sm:w-5 sm:h-5" />
+                </div>
               </div>
-              <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-500 self-end sm:self-auto shrink-0">
-                <AlertTriangle size={20} className="sm:w-6 sm:h-6" />
+              <div className="mt-2 sm:mt-3">
+                <h3 className="text-2xl sm:text-3xl font-black text-rose-500 tracking-tight">
+                  {urgent}
+                </h3>
+                <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                  Bottlenecks
+                </p>
               </div>
             </Card>
 
-            <Card className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate">
+            <Card className="p-3 sm:p-5 flex flex-col justify-between border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
+              <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+                <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate">
                   Completion Rate
-                </p>
-                <h3 className="text-2xl sm:text-3xl font-black text-[#0d8a72] dark:text-teal-400 mt-0.5 sm:mt-1 tracking-tight">
+                </span>
+                <div className="p-1.5 sm:p-2.5 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300 shrink-0">
+                  <TrendingUp size={16} className="sm:w-5 sm:h-5" />
+                </div>
+              </div>
+              <div className="mt-2 sm:mt-3">
+                <h3 className="text-2xl sm:text-3xl font-black text-[#0d8a72] dark:text-teal-400 tracking-tight">
                   {completionRate}%
                 </h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{completed}/{total} finished</p>
-              </div>
-              <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300 self-end sm:self-auto shrink-0">
-                <TrendingUp size={20} className="sm:w-6 sm:h-6" />
+                <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                  {completed}/{total} finished
+                </p>
               </div>
             </Card>
           </div>

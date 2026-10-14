@@ -24,11 +24,18 @@ const PAGE_SIZE = 50;
 const getInitialTaskPrefs = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_TASKS);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (!parsed.statusFilterVersion) {
+        parsed.statusFilter = 'NOT_COMPLETED';
+        parsed.statusFilterVersion = 2;
+      }
+      return parsed;
+    }
   } catch {
     // fallback
   }
-  return {};
+  return { statusFilter: 'NOT_COMPLETED', statusFilterVersion: 2 };
 };
 
 const isCompletedToday = (dateStr) => {
@@ -63,7 +70,7 @@ export const TasksPage = ({
   }
 
   const [viewMode, setViewMode] = useState(savedPrefs.viewMode || 'kanban'); // 'kanban' or 'list'
-  const [statusFilter, setStatusFilter] = useState(savedPrefs.statusFilter || 'ALL');
+  const [statusFilter, setStatusFilter] = useState(savedPrefs.statusFilter || 'NOT_COMPLETED');
   const [priorityFilter, setPriorityFilter] = useState(savedPrefs.priorityFilter || 'ALL');
   const [categoryFilter, setCategoryFilter] = useState(savedPrefs.categoryFilter || 'ALL');
   const [goalFilter, setGoalFilter] = useState(savedPrefs.goalFilter || 'ALL');
@@ -109,6 +116,7 @@ export const TasksPage = ({
         JSON.stringify({
           viewMode,
           statusFilter,
+          statusFilterVersion: 2,
           priorityFilter,
           categoryFilter: effectiveCategoryFilter,
           goalFilter: effectiveGoalFilter,
@@ -124,27 +132,26 @@ export const TasksPage = ({
   }, [viewMode, statusFilter, priorityFilter, effectiveCategoryFilter, effectiveGoalFilter, effectiveCourseFilter, sortBy, groupBy, hideCompleted]);
 
   const hasActiveFilters =
-    statusFilter !== 'ALL' ||
+    statusFilter !== 'NOT_COMPLETED' ||
     priorityFilter !== 'ALL' ||
     effectiveCategoryFilter !== 'ALL' ||
     effectiveGoalFilter !== 'ALL' ||
     effectiveCourseFilter !== 'ALL';
 
-  const isAnyFilterActive = hasActiveFilters || Boolean(searchQuery) || (viewMode === 'list' && hideCompleted);
+  const isAnyFilterActive = hasActiveFilters || Boolean(searchQuery);
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
-    if (statusFilter !== 'ALL') count++;
+    if (statusFilter !== 'NOT_COMPLETED' && statusFilter !== 'ALL') count++;
     if (priorityFilter !== 'ALL') count++;
     if (effectiveCategoryFilter !== 'ALL') count++;
     if (effectiveGoalFilter !== 'ALL') count++;
     if (effectiveCourseFilter !== 'ALL') count++;
-    if (viewMode === 'list' && hideCompleted) count++;
     return count;
-  }, [statusFilter, priorityFilter, effectiveCategoryFilter, effectiveGoalFilter, effectiveCourseFilter, viewMode, hideCompleted]);
+  }, [statusFilter, priorityFilter, effectiveCategoryFilter, effectiveGoalFilter, effectiveCourseFilter]);
 
   const handleClearFilters = () => {
-    setStatusFilter('ALL');
+    setStatusFilter('NOT_COMPLETED');
     setPriorityFilter('ALL');
     setCategoryFilter('ALL');
     setGoalFilter('ALL');
@@ -198,12 +205,13 @@ export const TasksPage = ({
   }
 
   // Hiding completed tasks applies in List view only (unless explicitly chosen in the status filter)
-  const isHidingCompleted = viewMode === 'list' && hideCompleted && statusFilter !== 'COMPLETED';
+  const isHidingCompleted = (viewMode === 'list' && hideCompleted && statusFilter !== 'COMPLETED' && statusFilter !== 'ALL') || statusFilter === 'NOT_COMPLETED';
 
   // Filter tasks
   const filteredTasks = tasks.filter((t) => {
+    if (statusFilter === 'NOT_COMPLETED' && t.status === 'COMPLETED') return false;
+    if (statusFilter !== 'ALL' && statusFilter !== 'NOT_COMPLETED' && t.status !== statusFilter) return false;
     if (isHidingCompleted && t.status === 'COMPLETED') return false;
-    if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
     if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
     if (effectiveCategoryFilter !== 'ALL' && String(t.category_id) !== String(effectiveCategoryFilter)) return false;
     if (effectiveGoalFilter !== 'ALL' && String(t.goal_id) !== String(effectiveGoalFilter)) return false;
@@ -397,12 +405,13 @@ export const TasksPage = ({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[115px] max-w-[155px] truncate ${
-              statusFilter !== 'ALL'
+            className={`text-xs rounded-xl px-2.5 py-1.5 font-semibold transition-all cursor-pointer border flex-1 sm:flex-initial min-w-[125px] max-w-[165px] truncate ${
+              statusFilter !== 'ALL' && statusFilter !== 'NOT_COMPLETED'
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-[#0d8a72]'
             }`}
           >
+            <option value="NOT_COMPLETED">Not Completed</option>
             <option value="ALL">All Statuses</option>
             <option value="TODO">To Do</option>
             <option value="IN_PROGRESS">In Progress</option>
@@ -489,7 +498,17 @@ export const TasksPage = ({
           {viewMode === 'list' && (
             <button
               type="button"
-              onClick={() => setHideCompleted((prev) => !prev)}
+              onClick={() => {
+                if (statusFilter === 'NOT_COMPLETED') {
+                  setStatusFilter('ALL');
+                  setHideCompleted(false);
+                } else if (statusFilter === 'ALL') {
+                  setStatusFilter('NOT_COMPLETED');
+                  setHideCompleted(true);
+                } else {
+                  setHideCompleted((prev) => !prev);
+                }
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shrink-0 ${
                 isHidingCompleted
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 shadow-2xs'
@@ -712,6 +731,7 @@ export const TasksPage = ({
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
                   >
+                    <option value="NOT_COMPLETED">Not Completed</option>
                     <option value="ALL">All Statuses</option>
                     <option value="TODO">To Do</option>
                     <option value="IN_PROGRESS">In Progress</option>
