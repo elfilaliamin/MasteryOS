@@ -35,7 +35,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres123}
       DB_NAME: ${DB_NAME:-tasktracker_db}
       JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_master_tasks_tracker_2026}
-      JWT_EXPIRES_IN: 7d
+      JWT_EXPIRES_IN: 30d
     depends_on:
       db:
         condition: service_healthy

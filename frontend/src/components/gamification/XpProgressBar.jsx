@@ -2,7 +2,24 @@ import { Link } from 'react-router-dom';
 import { useGamification } from '../../context/useGamification';
 
 export const XpProgressBar = ({ compact = false }) => {
-  const { playerStats } = useGamification();
+  const { playerStats, isLoading } = useGamification();
+
+  if (isLoading) {
+    if (compact) {
+      return (
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 animate-pulse">
+          <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700" />
+          <div className="flex flex-col gap-1">
+            <div className="w-14 h-2.5 bg-slate-200 dark:bg-slate-700 rounded" />
+            <div className="w-10 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full" />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-pulse h-24" />
+    );
+  }
 
   if (compact) {
     return (

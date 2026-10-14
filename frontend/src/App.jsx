@@ -79,12 +79,14 @@ const AuthenticatedApp = () => {
   const queryClient = useQueryClient();
 
   // Declarative server state queries
-  const { data: tasks = [] } = useTasks();
-  const { data: goals = [] } = useGoals();
-  const { data: courses = [] } = useCourses();
-  const { data: habits = [] } = useHabits();
+  const { data: tasks = [], isLoading: isTasksLoading } = useTasks();
+  const { data: goals = [], isLoading: isGoalsLoading } = useGoals();
+  const { data: courses = [], isLoading: isCoursesLoading } = useCourses();
+  const { data: habits = [], isLoading: isHabitsLoading } = useHabits();
   const { data: categories = [] } = useCategories();
   const { data: stats = {} } = useTaskStats();
+
+  const isInitialLoading = isTasksLoading || isGoalsLoading || isCoursesLoading || isHabitsLoading;
 
   // Entity mutations
   const createTaskMutation = useCreateTask();
@@ -644,7 +646,7 @@ const AuthenticatedApp = () => {
   };
 
   return (
-    <GamificationProvider tasks={tasks} goals={goals} courses={courses} habits={habits}>
+    <GamificationProvider tasks={tasks} goals={goals} courses={courses} habits={habits} isLoading={isInitialLoading}>
       <Routes>
         {/* Public only routes */}
         <Route element={<PublicOnlyRoute />}>
@@ -673,6 +675,7 @@ const AuthenticatedApp = () => {
                   courses={courses}
                   habits={habits}
                   stats={stats}
+                  isLoading={isInitialLoading}
                   onOpenNewTask={() => {
                     setEditingTask(null);
                     setIsModalOpen(true);

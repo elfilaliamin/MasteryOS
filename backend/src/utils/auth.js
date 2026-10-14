@@ -11,7 +11,7 @@ const getValidatedJwtSecret = () => {
 };
 
 const JWT_SECRET = getValidatedJwtSecret();
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h'; // Shortened access token expiry
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d'; // 30-day long-lived session expiry
 
 export const hashPassword = async (password) => {
   const salt = await bcrypt.genSalt(12);

@@ -4,7 +4,7 @@ import { calculateGamification } from '../services/gamification';
 import { useAuth } from './useAuth';
 import { api } from '../services/api';
 
-export const GamificationProvider = ({ children, tasks = [], goals = [], courses = [], habits = [] }) => {
+export const GamificationProvider = ({ children, tasks = [], goals = [], courses = [], habits = [], isLoading = false }) => {
   const { user } = useAuth();
   const userId = user?.id || 'guest';
   const ackLevelKey = `mastery_acknowledged_level_${userId}`;
@@ -40,13 +40,24 @@ export const GamificationProvider = ({ children, tasks = [], goals = [], courses
       previousLevelRef.current = null;
     }
 
-    // If not initialized yet, initialize from localStorage or current level
+    // Do NOT initialize baseline or evaluate level-up celebrations while server queries are loading!
+    if (isLoading) {
+      return;
+    }
+
+    const userAckLevel = user?.settings?.acknowledgedLevel;
+    const savedLevel = localStorage.getItem(ackLevelKey) || (userAckLevel ? String(userAckLevel) : null);
+
+    // If not initialized yet, initialize from localStorage / backend settings or current level
     if (!isInitializedRef.current) {
-      const savedLevel = localStorage.getItem(ackLevelKey);
-      const ackLevel = savedLevel ? parseInt(savedLevel, 10) : playerStats.level;
+      const parsedSaved = savedLevel ? parseInt(savedLevel, 10) : null;
+      const ackLevel = Number.isInteger(parsedSaved) ? parsedSaved : playerStats.level;
 
       if (!savedLevel) {
         localStorage.setItem(ackLevelKey, String(playerStats.level));
+        if (user?.id) {
+          api.updateSettings({ acknowledgedLevel: playerStats.level }).catch(() => {});
+        }
       }
 
       previousLevelRef.current = Math.max(playerStats.level, ackLevel);
@@ -56,9 +67,9 @@ export const GamificationProvider = ({ children, tasks = [], goals = [], courses
 
     // Live session: user is already initialized.
     // Trigger Level Up Celebration ONLY if current level strictly exceeds previous level
-    // and strictly exceeds the highest acknowledged level in localStorage!
-    const savedLevel = localStorage.getItem(ackLevelKey);
-    const highestAckLevel = savedLevel ? parseInt(savedLevel, 10) : (previousLevelRef.current || 1);
+    // and strictly exceeds the highest acknowledged level in localStorage/settings!
+    const parsedSaved = savedLevel ? parseInt(savedLevel, 10) : null;
+    const highestAckLevel = Number.isInteger(parsedSaved) ? parsedSaved : (previousLevelRef.current || 1);
 
     if (playerStats.level > highestAckLevel && playerStats.level > (previousLevelRef.current || 1)) {
       setLevelUpData({
@@ -68,10 +79,13 @@ export const GamificationProvider = ({ children, tasks = [], goals = [], courses
         totalXp: playerStats.totalXp,
       });
       localStorage.setItem(ackLevelKey, String(playerStats.level));
+      if (user?.id) {
+        api.updateSettings({ acknowledgedLevel: playerStats.level }).catch(() => {});
+      }
     }
 
     previousLevelRef.current = playerStats.level;
-  }, [userId, playerStats.level, playerStats.levelTitle, playerStats.levelIcon, playerStats.totalXp, ackLevelKey]);
+  }, [userId, isLoading, playerStats.level, playerStats.levelTitle, playerStats.levelIcon, playerStats.totalXp, ackLevelKey, user?.settings?.acknowledgedLevel, user?.id]);
 
   const equipTitle = (titleId) => {
     setEquippedTitleId(titleId);
@@ -84,6 +98,9 @@ export const GamificationProvider = ({ children, tasks = [], goals = [], courses
   const closeLevelUpModal = () => {
     if (levelUpData) {
       localStorage.setItem(ackLevelKey, String(levelUpData.level));
+      if (user?.id) {
+        api.updateSettings({ acknowledgedLevel: levelUpData.level }).catch(() => {});
+      }
     }
     setLevelUpData(null);
   };
@@ -96,6 +113,7 @@ export const GamificationProvider = ({ children, tasks = [], goals = [], courses
         equipTitle,
         levelUpData,
         closeLevelUpModal,
+        isLoading,
       }}
     >
       {children}

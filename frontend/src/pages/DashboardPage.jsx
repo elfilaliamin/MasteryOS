@@ -60,6 +60,7 @@ export const DashboardPage = ({
   courses = [],
   habits = [],
   stats = {},
+  isLoading = false,
   onOpenNewTask,
   onOpenNewGoal,
   onOpenNewCourse,
@@ -139,7 +140,7 @@ export const DashboardPage = ({
     };
   }, []);
 
-  const isBrandNewAccount = tasks.length === 0 && goals.length === 0 && courses.length === 0 && habits.length === 0;
+  const isBrandNewAccount = !isLoading && tasks.length === 0 && goals.length === 0 && courses.length === 0 && habits.length === 0;
   const hasCompletedAllQuests = tasks.length > 0 && goals.length > 0 && courses.length > 0 && habits.length > 0;
   const completedQuestsCount = (tasks.length > 0 ? 1 : 0) + (goals.length > 0 ? 1 : 0) + (courses.length > 0 ? 1 : 0) + (habits.length > 0 ? 1 : 0);
 
@@ -160,7 +161,42 @@ export const DashboardPage = ({
     }
   };
 
-  // If brand new account (0 tasks, 0 goals, 0 courses, 0 habits) or user is still onboarding and hasn't toggled to workspace:
+  // While data is fetching, display a matching skeleton to prevent flashing OnboardingGuide
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6 text-left animate-pulse">
+        {/* Welcome header skeleton */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+          <div className="space-y-2">
+            <div className="h-7 w-48 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+            <div className="h-4 w-72 bg-slate-200/60 dark:bg-slate-800/60 rounded-md" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-9 w-28 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+            <div className="h-9 w-28 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+          </div>
+        </div>
+
+        {/* 4 Stat Cards Skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="p-4 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 h-28 flex flex-col justify-between">
+              <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
+              <div className="h-7 w-12 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+            </div>
+          ))}
+        </div>
+
+        {/* Grid Widgets Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="p-5 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 h-64" />
+          <div className="p-5 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 h-64" />
+        </div>
+      </div>
+    );
+  }
+
+  // If genuinely brand new account after query resolves or user is still onboarding:
   if (isBrandNewAccount || (!hasCompletedAllQuests && !userPrefersWorkspace)) {
     return (
       <div className="flex flex-col gap-6 text-left">

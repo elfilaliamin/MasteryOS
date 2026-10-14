@@ -5,13 +5,15 @@ import { query } from '../config/db.js';
 
 const DUMMY_HASH = '$2a$12$e8YdC0d0n0D8pS8j1C.lTe8R.43y/O6hJq7v1YVb9iF7u2eO5vG1S';
 
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days long-lived session
+
 const setAuthCookies = (res, token, csrfToken) => {
   const isProd = process.env.NODE_ENV === 'production';
   const cookieOptions = {
     httpOnly: true,
     secure: isProd,
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: SESSION_MAX_AGE_MS
   };
 
   res.cookie('token', token, cookieOptions);
@@ -19,7 +21,7 @@ const setAuthCookies = (res, token, csrfToken) => {
     httpOnly: false, // Accessible to client JavaScript to send back in X-CSRF-Token header
     secure: isProd,
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000
+    maxAge: SESSION_MAX_AGE_MS
   });
 };
 

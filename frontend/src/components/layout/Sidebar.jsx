@@ -23,7 +23,7 @@ import { useGamification } from '../../context/useGamification';
 export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
-  const { playerStats } = useGamification();
+  const { playerStats, isLoading } = useGamification();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -155,7 +155,7 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
               }}
             />
             <span className="absolute -bottom-1 -right-1 text-[10px] font-bold px-1 rounded-full bg-teal-600 text-white">
-              {playerStats.level}
+              {isLoading ? '•' : playerStats.level}
             </span>
           </div>
 
