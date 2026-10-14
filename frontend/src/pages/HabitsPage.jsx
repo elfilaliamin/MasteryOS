@@ -485,14 +485,131 @@ export const HabitsPage = ({
             </Card>
           ) : viewMode === 'GRID' ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xs relative">
-              {/* Mobile Horizontal Swipe Notice */}
-              <div className="flex sm:hidden items-center justify-between text-[10px] text-slate-400 font-medium pb-2 border-b border-slate-100 dark:border-slate-800">
-                <span>Sticky Habit Titles</span>
-                <span>Swipe days horizontally →</span>
-              </div>
+              {/* Mobile Horizontal Swipe Notice (Only shown on non-week views where horizontal scroll is needed) */}
+              {period !== 'WEEK' && (
+                <div className="flex sm:hidden items-center justify-between text-[10px] text-slate-400 font-medium pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <span>Sticky Habit Titles</span>
+                  <span>Swipe horizontally →</span>
+                </div>
+              )}
 
-              {/* Responsive Scrollable Container with Sticky Habit Column */}
-              <div className="overflow-x-auto -mx-1 px-1 scroll-smooth">
+              {/* MOBILE TWO-TIER VIEW (< sm for Week view): No squishing, no truncation, zero horizontal scroll */}
+              {period === 'WEEK' && (
+                <div className="sm:hidden space-y-3">
+                  {habits.map((habit) => {
+                    const dates = (habit.completed_dates || []).map((d) =>
+                      typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
+                    );
+                    const habitColor = habit.color || '#0d8a72';
+                    const habitStreak = computeHabitStreak(habit);
+
+                    let completedInWeek = 0;
+                    weekDays.forEach((wd) => {
+                      if (dates.includes(wd.key)) completedInWeek++;
+                    });
+
+                    return (
+                      <div
+                        key={`m-matrix-${habit.id}`}
+                        className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/80 space-y-3"
+                      >
+                        {/* Top Tier: Dot + Icon + Full Habit Title + Streak Badge + Ratio + Edit & Delete */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                              style={{ backgroundColor: habitColor }}
+                            />
+                            <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                              {habit.title}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <StreakBadge
+                              streak={habitStreak}
+                              onClick={() => onToggleHabit(habit.id, todayKey)}
+                            />
+                            <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 pl-1">
+                              {completedInWeek}/7
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditHabit(habit);
+                              }}
+                              className="p-1 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md transition-colors cursor-pointer"
+                              title="Edit Habit"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            {onDeleteHabit && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(habit.id, habit.title);
+                                }}
+                                className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md transition-colors cursor-pointer"
+                                title="Delete Habit"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bottom Tier: All 7 Days Spanning Full Width with Zero Horizontal Scroll */}
+                        <div className="grid grid-cols-7 gap-1 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
+                          {weekDays.map((wd) => {
+                            const isCompleted = dates.includes(wd.key);
+                            return (
+                              <button
+                                key={wd.key}
+                                type="button"
+                                onClick={() => onToggleHabit(habit.id, wd.key)}
+                                className="flex flex-col items-center gap-1 py-0.5 rounded-xl transition-all active:scale-90 cursor-pointer w-full"
+                              >
+                                <span
+                                  className={`text-[10px] font-bold uppercase ${
+                                    wd.isSelected
+                                      ? 'text-[#0d8a72] dark:text-teal-400 font-black'
+                                      : wd.isToday
+                                      ? 'text-amber-500 font-black'
+                                      : 'text-slate-400'
+                                  }`}
+                                >
+                                  {wd.dayShort.slice(0, 2)}
+                                </span>
+                                <div
+                                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                                    isCompleted
+                                      ? 'shadow-xs text-white'
+                                      : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-transparent hover:border-slate-300'
+                                  }`}
+                                  style={{
+                                    backgroundColor: isCompleted ? habitColor : undefined,
+                                    borderColor: isCompleted ? habitColor : undefined,
+                                  }}
+                                >
+                                  {isCompleted && (
+                                    <Check size={14} className="text-white drop-shadow-xs" strokeWidth={3} />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Responsive Scrollable Container with Sticky Habit Column (Hidden on mobile for WEEK view, active on desktop) */}
+              <div className={`${period === 'WEEK' ? 'hidden sm:block' : ''} overflow-x-auto -mx-1 px-1 scroll-smooth`}>
                 <div className="min-w-[500px] sm:min-w-[560px]">
                   {/* Table Header */}
                   <div className="grid grid-cols-12 gap-1.5 sm:gap-2 pb-2.5 pt-1 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 items-center">
