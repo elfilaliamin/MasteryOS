@@ -83,7 +83,7 @@ export const HabitsPage = ({
   const { user } = useAuth();
 
   // Navigation & View States
-  const [period, setPeriod] = useState('WEEK'); // 'WEEK' | 'MONTH' | 'YEAR' | 'ALL'
+  const [period, setPeriod] = useState('WEEK'); // 'WEEK' | 'MONTH' | 'YEAR'
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
   const [monthOffset, setMonthOffset] = useState(0);
   const [viewMode, setViewMode] = useState('GRID'); // 'GRID' (matrix) | 'LIST' (cards)
@@ -178,7 +178,7 @@ export const HabitsPage = ({
       return `${d.getFullYear()} Annual Consistency`;
     }
 
-    return 'All Time Lifespan';
+    return '';
   }, [period, weekDays, monthOffset]);
 
   // 2. Month Days for Month view
@@ -251,12 +251,15 @@ export const HabitsPage = ({
     }
 
     let totalLogs = 0;
+    const currentYearStr = String(new Date().getFullYear());
     habits.forEach((h) => {
-      totalLogs += (h.completed_dates || []).length;
+      totalLogs += (h.completed_dates || []).filter((d) =>
+        (typeof d === 'string' ? d : formatDateKey(d)).startsWith(currentYearStr)
+      ).length;
     });
-    const estimated = habits.length * 365;
-    const percent = estimated > 0 ? Math.min(100, Math.round((totalLogs / estimated) * 100)) : 0;
-    return { percent, completedLogs: totalLogs, totalOpportunities: estimated };
+    const totalPossible = habits.length * 365;
+    const percent = totalPossible > 0 ? Math.min(100, Math.round((totalLogs / totalPossible) * 100)) : 0;
+    return { percent, completedLogs: totalLogs, totalOpportunities: totalPossible };
   }, [habits, period, weekDays, monthDays]);
 
   // Selected Day Object for the Right Side Quick Action Panel
@@ -345,7 +348,6 @@ export const HabitsPage = ({
                 { id: 'WEEK', label: 'Week' },
                 { id: 'MONTH', label: 'Month' },
                 { id: 'YEAR', label: 'Year' },
-                { id: 'ALL', label: 'All Time' },
               ].map((p) => (
                 <button
                   key={p.id}
@@ -512,9 +514,7 @@ export const HabitsPage = ({
                       ? `${completedInWeek}/7`
                       : period === 'MONTH'
                       ? `${completedInMonth}/${monthDays.length}`
-                      : period === 'YEAR'
-                      ? `${completedInYear}d`
-                      : `${dates.length}`;
+                      : `${completedInYear}d`;
 
                   return (
                     <div
@@ -684,26 +684,6 @@ export const HabitsPage = ({
                           })}
                         </div>
                       )}
-
-                      {period === 'ALL' && (
-                        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
-                          <div className="flex items-center justify-between text-[11px] font-medium text-slate-400">
-                            <span>Lifetime Consistency</span>
-                            <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                              {dates.length} total check-ins
-                            </span>
-                          </div>
-                          <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{
-                                width: `${Math.min(100, Math.max(5, (dates.length / 50) * 100))}%`,
-                                backgroundColor: habitColor,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -760,17 +740,13 @@ export const HabitsPage = ({
                           </button>
                         ))}
                       </div>
-                    ) : period === 'YEAR' ? (
+                    ) : (
                       <div className="col-span-6 sm:col-span-7 grid grid-cols-12 gap-1 text-center">
                         {yearMonths.map((ym) => (
                           <span key={ym.yearMonthKey} className="text-[8px] sm:text-[9px] font-bold uppercase text-slate-400 truncate">
                             {ym.monthShort}
                           </span>
                         ))}
-                      </div>
-                    ) : (
-                      <div className="col-span-6 sm:col-span-7 text-center text-xs font-semibold text-slate-400">
-                        Lifetime Intensity
                       </div>
                     )}
 
@@ -895,7 +871,7 @@ export const HabitsPage = ({
                                 );
                               })}
                             </div>
-                          ) : period === 'YEAR' ? (
+                          ) : (
                             <div className="col-span-6 sm:col-span-7 grid grid-cols-12 gap-1 justify-items-center">
                               {yearMonths.map((ym) => {
                                 const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
@@ -915,18 +891,6 @@ export const HabitsPage = ({
                                 );
                               })}
                             </div>
-                          ) : (
-                            <div className="col-span-6 sm:col-span-7 px-2 sm:px-4">
-                              <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all"
-                                  style={{
-                                    width: `${Math.min(100, Math.max(5, (dates.length / 50) * 100))}%`,
-                                    backgroundColor: habitColor,
-                                  }}
-                                />
-                              </div>
-                            </div>
                           )}
 
                           {/* Right: Ratio */}
@@ -934,7 +898,9 @@ export const HabitsPage = ({
                             <span className="text-[11px] sm:text-xs font-mono font-bold text-slate-400">
                               {period === 'WEEK'
                                 ? `${completedInWeek}/7`
-                                : `${dates.length}`}
+                                : period === 'MONTH'
+                                ? `${completedInMonth}/${monthDays.length}`
+                                : `${completedInYear}d`}
                             </span>
                           </div>
                         </div>
