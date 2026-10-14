@@ -78,15 +78,19 @@ const AuthenticatedApp = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Declarative server state queries
-  const { data: tasks = [], isLoading: isTasksLoading } = useTasks();
-  const { data: goals = [], isLoading: isGoalsLoading } = useGoals();
-  const { data: courses = [], isLoading: isCoursesLoading } = useCourses();
-  const { data: habits = [], isLoading: isHabitsLoading } = useHabits();
-  const { data: categories = [] } = useCategories();
-  const { data: stats = {} } = useTaskStats();
+  const isAuth = !!user?.id;
 
-  const isInitialLoading = isTasksLoading || isGoalsLoading || isCoursesLoading || isHabitsLoading;
+  // Declarative server state queries - only run when user is authenticated
+  const { data: tasks = [], isLoading: isTasksLoading, isFetching: isTasksFetching } = useTasks({}, { enabled: isAuth });
+  const { data: goals = [], isLoading: isGoalsLoading, isFetching: isGoalsFetching } = useGoals({ enabled: isAuth });
+  const { data: courses = [], isLoading: isCoursesLoading, isFetching: isCoursesFetching } = useCourses({ enabled: isAuth });
+  const { data: habits = [], isLoading: isHabitsLoading, isFetching: isHabitsFetching } = useHabits({ enabled: isAuth });
+  const { data: categories = [] } = useCategories({ enabled: isAuth });
+  const { data: stats = {} } = useTaskStats({ enabled: isAuth });
+
+  const hasEmptyData = tasks.length === 0 && goals.length === 0 && courses.length === 0 && habits.length === 0;
+  const isAnyFetching = isTasksFetching || isGoalsFetching || isCoursesFetching || isHabitsFetching;
+  const isInitialLoading = !isAuth || isTasksLoading || isGoalsLoading || isCoursesLoading || isHabitsLoading || (hasEmptyData && isAnyFetching);
 
   // Entity mutations
   const createTaskMutation = useCreateTask();

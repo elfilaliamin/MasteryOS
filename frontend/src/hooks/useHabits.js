@@ -6,7 +6,7 @@ export const HABIT_QUERY_KEYS = {
   all: ['habits'],
 };
 
-export const useHabits = () => {
+export const useHabits = (options = {}) => {
   return useQuery({
     queryKey: HABIT_QUERY_KEYS.all,
     queryFn: async () => {
@@ -14,6 +14,7 @@ export const useHabits = () => {
       return res.habits || [];
     },
     staleTime: 1000 * 60 * 2,
+    ...options,
   });
 };
 

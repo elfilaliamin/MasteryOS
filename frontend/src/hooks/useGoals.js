@@ -5,7 +5,7 @@ export const GOAL_QUERY_KEYS = {
   all: ['goals'],
 };
 
-export const useGoals = () => {
+export const useGoals = (options = {}) => {
   return useQuery({
     queryKey: GOAL_QUERY_KEYS.all,
     queryFn: async () => {
@@ -13,6 +13,7 @@ export const useGoals = () => {
       return res.goals || [];
     },
     staleTime: 1000 * 60 * 2,
+    ...options,
   });
 };
 

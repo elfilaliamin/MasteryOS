@@ -5,7 +5,7 @@ export const CATEGORY_QUERY_KEYS = {
   all: ['categories'],
 };
 
-export const useCategories = () => {
+export const useCategories = (options = {}) => {
   return useQuery({
     queryKey: CATEGORY_QUERY_KEYS.all,
     queryFn: async () => {
@@ -13,6 +13,7 @@ export const useCategories = () => {
       return res.categories || [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    ...options,
   });
 };
 

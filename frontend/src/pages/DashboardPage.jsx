@@ -140,7 +140,9 @@ export const DashboardPage = ({
     };
   }, []);
 
-  const isBrandNewAccount = !isLoading && tasks.length === 0 && goals.length === 0 && courses.length === 0 && habits.length === 0;
+  const hasAnyData = tasks.length > 0 || goals.length > 0 || courses.length > 0 || habits.length > 0 || (stats?.total && stats.total > 0);
+  const isExperiencedUser = (playerStats?.level && playerStats.level > 1) || (playerStats?.totalXp && playerStats.totalXp > 0) || hasAnyData;
+  const isBrandNewAccount = !isLoading && !isExperiencedUser && tasks.length === 0 && goals.length === 0 && courses.length === 0 && habits.length === 0;
   const hasCompletedAllQuests = tasks.length > 0 && goals.length > 0 && courses.length > 0 && habits.length > 0;
   const completedQuestsCount = (tasks.length > 0 ? 1 : 0) + (goals.length > 0 ? 1 : 0) + (courses.length > 0 ? 1 : 0) + (habits.length > 0 ? 1 : 0);
 
@@ -196,8 +198,8 @@ export const DashboardPage = ({
     );
   }
 
-  // If genuinely brand new account after query resolves or user is still onboarding:
-  if (isBrandNewAccount || (!hasCompletedAllQuests && !userPrefersWorkspace)) {
+  // Only show OnboardingGuide for genuine beginners who haven't leveled up and haven't opted for the workspace:
+  if (isBrandNewAccount || (!isExperiencedUser && !hasCompletedAllQuests && !userPrefersWorkspace)) {
     return (
       <div className="flex flex-col gap-6 text-left">
         <OnboardingGuide

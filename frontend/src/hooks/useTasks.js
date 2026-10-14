@@ -8,7 +8,7 @@ export const TASK_QUERY_KEYS = {
   detail: (id) => ['tasks', id],
 };
 
-export const useTasks = (params = {}) => {
+export const useTasks = (params = {}, options = {}) => {
   return useQuery({
     queryKey: TASK_QUERY_KEYS.list(params),
     queryFn: async () => {
@@ -16,10 +16,11 @@ export const useTasks = (params = {}) => {
       return res.tasks || [];
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
+    ...options,
   });
 };
 
-export const useTaskStats = () => {
+export const useTaskStats = (options = {}) => {
   return useQuery({
     queryKey: TASK_QUERY_KEYS.stats,
     queryFn: async () => {
@@ -27,6 +28,7 @@ export const useTaskStats = () => {
       return res.stats || {};
     },
     staleTime: 1000 * 60 * 2,
+    ...options,
   });
 };
 

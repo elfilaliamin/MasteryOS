@@ -5,7 +5,7 @@ export const COURSE_QUERY_KEYS = {
   all: ['courses'],
 };
 
-export const useCourses = () => {
+export const useCourses = (options = {}) => {
   return useQuery({
     queryKey: COURSE_QUERY_KEYS.all,
     queryFn: async () => {
@@ -13,6 +13,7 @@ export const useCourses = () => {
       return res.courses || [];
     },
     staleTime: 1000 * 60 * 2,
+    ...options,
   });
 };
 

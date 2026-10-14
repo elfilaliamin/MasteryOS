@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { AuthContext } from './authContextInstance';
+import { queryClient } from '../services/queryClient';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -59,6 +60,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const data = await api.login(email, password);
+      queryClient.clear();
       setUser(data.user);
       if (data.user?.settings) {
         if (data.user.settings.themeMode) {
@@ -157,6 +159,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     clearUserLocalData();
+    queryClient.clear();
     try {
       await api.logout();
     } catch {
