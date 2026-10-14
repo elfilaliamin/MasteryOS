@@ -13,6 +13,7 @@ import {
   EyeOff,
   X,
   Search,
+  Check,
 } from 'lucide-react';
 
 const PRIORITY_WEIGHTS = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
@@ -1051,7 +1052,132 @@ export const TasksPage = ({
       ) : (
         /* List Table View with Sorting and Grouping */
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
+          {/* Mobile Task Cards List (< md) */}
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+            {filteredTasks.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs">
+                No tasks match the filter criteria.
+              </div>
+            ) : (
+              groupedData.map((group) => (
+                <Fragment key={`m-group-${group.key}`}>
+                  {group.title && (
+                    <div className="bg-slate-100/90 dark:bg-slate-800/70 px-4 py-2 flex items-center justify-between border-y border-slate-200/80 dark:border-slate-800">
+                      <span className="font-bold text-xs uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                        {group.title}
+                      </span>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 shadow-2xs">
+                        {group.tasks.length}
+                      </span>
+                    </div>
+                  )}
+                  {group.tasks.map((task) => {
+                    const assignedGoal = goals.find((g) => g.id === task.goal_id) || (task.goal_title ? { title: task.goal_title, icon: task.goal_icon || '🎯', color: task.goal_color } : null);
+                    const assignedCourse = courses.find((c) => c.id === task.course_id) || (task.course_title ? { title: task.course_title } : null);
+                    const isDone = task.status === 'COMPLETED';
+
+                    return (
+                      <div key={`m-task-${task.id}`} className="p-4 space-y-2.5">
+                        <div className="flex items-start gap-3">
+                          {onStatusChange && (
+                            <button
+                              type="button"
+                              onClick={() => onStatusChange(task.id, isDone ? 'TODO' : 'COMPLETED')}
+                              className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 border ${
+                                isDone
+                                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                                  : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 hover:border-[#0d8a72]'
+                              }`}
+                              title={isDone ? 'Mark as TODO' : 'Mark as Completed'}
+                            >
+                              {isDone && <Check size={14} strokeWidth={3} />}
+                            </button>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`font-bold text-sm text-slate-900 dark:text-slate-100 ${isDone ? 'line-through text-slate-400 dark:text-slate-500 font-medium' : ''}`}>
+                              {task.title}
+                            </h4>
+                            {task.description && (
+                              <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{task.description}</p>
+                            )}
+                            {(assignedCourse || assignedGoal) && (
+                              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                {assignedCourse && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                                    <span>🎓</span>
+                                    <span className="truncate max-w-[120px]">{assignedCourse.title}</span>
+                                  </span>
+                                )}
+                                {assignedGoal && (
+                                  <span
+                                    className="text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1"
+                                    style={{
+                                      backgroundColor: `${assignedGoal.color || '#d97706'}15`,
+                                      borderColor: `${assignedGoal.color || '#d97706'}35`,
+                                      color: assignedGoal.color || '#d97706',
+                                    }}
+                                  >
+                                    <span>{assignedGoal.icon || '🎯'}</span>
+                                    <span className="truncate max-w-[120px]">{assignedGoal.title}</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Badges, due date & actions */}
+                        <div className="flex items-center justify-between gap-2 pt-1 pl-9">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                              {task.priority}
+                            </span>
+                            {task.category_name && (
+                              <span
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-md border"
+                                style={{
+                                  backgroundColor: `${task.category_color || '#0d8a72'}15`,
+                                  borderColor: `${task.category_color || '#0d8a72'}40`,
+                                  color: task.category_color || '#0d8a72',
+                                }}
+                              >
+                                {task.category_name}
+                              </span>
+                            )}
+                            {task.due_date && (
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => onEditTask(task)}
+                              className="text-xs text-[#0d8a72] dark:text-teal-400 font-bold hover:underline cursor-pointer"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onDeleteTask(task.id)}
+                              className="text-xs text-rose-500 hover:underline font-bold cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </Fragment>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View (>= md) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full min-w-[620px] text-left text-sm text-slate-700 dark:text-slate-300">
               <thead className="bg-slate-50 dark:bg-slate-950/60 text-xs uppercase text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800">
                 <tr>

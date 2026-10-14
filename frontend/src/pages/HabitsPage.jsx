@@ -594,6 +594,7 @@ export const HabitsPage = ({
                               {/* Streak Badge directly next to the habit title - Click to toggle today */}
                               <StreakBadge
                                 streak={habitStreak}
+                                showLabel={false}
                                 onClick={() => onToggleHabit(habit.id, todayKey)}
                               />
                             </div>

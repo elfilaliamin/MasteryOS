@@ -254,7 +254,7 @@ export const AnalyticsPage = ({ tasks = [], goals = [], courses = [], stats = {}
           </div>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800 text-center">
               <span className="text-[11px] font-semibold text-slate-500 uppercase">Total Goals</span>
               <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-0.5">{totalGoals}</div>
@@ -327,7 +327,7 @@ export const AnalyticsPage = ({ tasks = [], goals = [], courses = [], stats = {}
           </div>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800 text-center">
               <span className="text-[11px] font-semibold text-slate-500 uppercase">Courses</span>
               <div className="text-xl font-black text-slate-900 dark:text-slate-100 mt-0.5">{totalCourses}</div>
