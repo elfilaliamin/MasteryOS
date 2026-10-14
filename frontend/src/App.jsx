@@ -13,6 +13,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TasksPage } from './pages/TasksPage';
 import { GoalsPage } from './pages/GoalsPage';
+import { FocusPage } from './pages/FocusPage';
 import { CoursesPage } from './pages/CoursesPage';
 import { HabitsPage } from './pages/HabitsPage';
 import { formatDateKey } from './utils/habitUtils';
@@ -699,6 +700,29 @@ const AuthenticatedApp = () => {
                   onStatusChange={handleStatusChange}
                   onIncrementLesson={handleIncrementLesson}
                   onToggleHabit={handleToggleHabit}
+                />
+              }
+            />
+            <Route
+              path="/focus"
+              element={
+                <FocusPage
+                  tasks={tasks}
+                  habits={habits}
+                  categories={categories}
+                  goals={goals}
+                  courses={courses}
+                  onStatusChange={handleStatusChange}
+                  onToggleHabit={handleToggleHabit}
+                  onOpenNewTask={() => {
+                    setEditingTask(null);
+                    setIsModalOpen(true);
+                  }}
+                  onOpenNewHabit={() => {
+                    setEditingHabit(null);
+                    setIsHabitModalOpen(true);
+                  }}
+                  isLoading={isInitialLoading}
                 />
               }
             />
