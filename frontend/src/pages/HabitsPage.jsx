@@ -723,8 +723,8 @@ export const HabitsPage = ({
                         ))}
                       </div>
                     ) : period === 'MONTH' ? (
-                      <div className="col-span-6 sm:col-span-7 grid grid-cols-10 gap-1 text-center">
-                        {monthDays.slice(0, 30).map((md) => (
+                      <div className="col-span-6 sm:col-span-7 grid grid-flow-col auto-cols-fr gap-0.5 sm:gap-1 text-center">
+                        {monthDays.map((md) => (
                           <button
                             key={md.key}
                             type="button"
@@ -732,7 +732,7 @@ export const HabitsPage = ({
                               setSelectedDayKey(md.key);
                               setMobileTab('ACTIONS');
                             }}
-                            className={`text-[9px] font-bold uppercase transition-colors cursor-pointer ${
+                            className={`text-[8px] sm:text-[9px] font-bold uppercase transition-colors cursor-pointer ${
                               md.isSelected ? 'text-[#0d8a72] font-black' : 'text-slate-400'
                             }`}
                           >
@@ -767,6 +767,14 @@ export const HabitsPage = ({
                       weekDays.forEach((wd) => {
                         if (dates.includes(wd.key)) completedInWeek++;
                       });
+
+                      let completedInMonth = 0;
+                      monthDays.forEach((md) => {
+                        if (dates.includes(md.key)) completedInMonth++;
+                      });
+
+                      const currentYearStr = String(new Date().getFullYear());
+                      const completedInYear = dates.filter((d) => d.startsWith(currentYearStr)).length;
 
                       return (
                         <div
@@ -852,8 +860,8 @@ export const HabitsPage = ({
                               })}
                             </div>
                           ) : period === 'MONTH' ? (
-                            <div className="col-span-6 sm:col-span-7 grid grid-cols-10 gap-1 justify-items-center">
-                              {monthDays.slice(0, 30).map((md) => {
+                            <div className="col-span-6 sm:col-span-7 grid grid-flow-col auto-cols-fr gap-0.5 sm:gap-1 justify-items-center">
+                              {monthDays.map((md) => {
                                 const isCompleted = dates.includes(md.key);
                                 return (
                                   <button
@@ -861,7 +869,7 @@ export const HabitsPage = ({
                                     type="button"
                                     onClick={() => onToggleHabit(habit.id, md.key)}
                                     title={`${md.key}: ${isCompleted ? 'Completed' : 'Missed'}`}
-                                    className={`w-4 h-4 rounded-md transition-all cursor-pointer ${
+                                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-md transition-all cursor-pointer ${
                                       isCompleted ? 'scale-105' : 'bg-slate-100 dark:bg-slate-800 opacity-60'
                                     }`}
                                     style={{
