@@ -485,83 +485,92 @@ export const HabitsPage = ({
             </Card>
           ) : viewMode === 'GRID' ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xs relative">
-              {/* Mobile Horizontal Swipe Notice (Only shown on non-week views where horizontal scroll is needed) */}
-              {period !== 'WEEK' && (
-                <div className="flex sm:hidden items-center justify-between text-[10px] text-slate-400 font-medium pb-2 border-b border-slate-100 dark:border-slate-800">
-                  <span>Sticky Habit Titles</span>
-                  <span>Swipe horizontally →</span>
-                </div>
-              )}
+              {/* MOBILE TWO-TIER VIEW (< sm for all periods): No squishing, no truncation, zero horizontal scroll */}
+              <div className="sm:hidden space-y-3">
+                {habits.map((habit) => {
+                  const dates = (habit.completed_dates || []).map((d) =>
+                    typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
+                  );
+                  const habitColor = habit.color || '#0d8a72';
+                  const habitStreak = computeHabitStreak(habit);
 
-              {/* MOBILE TWO-TIER VIEW (< sm for Week view): No squishing, no truncation, zero horizontal scroll */}
-              {period === 'WEEK' && (
-                <div className="sm:hidden space-y-3">
-                  {habits.map((habit) => {
-                    const dates = (habit.completed_dates || []).map((d) =>
-                      typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
-                    );
-                    const habitColor = habit.color || '#0d8a72';
-                    const habitStreak = computeHabitStreak(habit);
+                  let completedInWeek = 0;
+                  weekDays.forEach((wd) => {
+                    if (dates.includes(wd.key)) completedInWeek++;
+                  });
 
-                    let completedInWeek = 0;
-                    weekDays.forEach((wd) => {
-                      if (dates.includes(wd.key)) completedInWeek++;
-                    });
+                  let completedInMonth = 0;
+                  monthDays.forEach((md) => {
+                    if (dates.includes(md.key)) completedInMonth++;
+                  });
 
-                    return (
-                      <div
-                        key={`m-matrix-${habit.id}`}
-                        className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/80 space-y-3"
-                      >
-                        {/* Top Tier: Dot + Icon + Full Habit Title + Streak Badge + Ratio + Edit & Delete */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
-                              style={{ backgroundColor: habitColor }}
-                            />
-                            <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
-                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                              {habit.title}
-                            </span>
-                          </div>
+                  const currentYearStr = String(new Date().getFullYear());
+                  const completedInYear = dates.filter((d) => d.startsWith(currentYearStr)).length;
 
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <StreakBadge
-                              streak={habitStreak}
-                              onClick={() => onToggleHabit(habit.id, todayKey)}
-                            />
-                            <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 pl-1">
-                              {completedInWeek}/7
-                            </span>
+                  const ratioLabel =
+                    period === 'WEEK'
+                      ? `${completedInWeek}/7`
+                      : period === 'MONTH'
+                      ? `${completedInMonth}/${monthDays.length}`
+                      : period === 'YEAR'
+                      ? `${completedInYear}d`
+                      : `${dates.length}`;
+
+                  return (
+                    <div
+                      key={`m-matrix-${habit.id}`}
+                      className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/80 space-y-3"
+                    >
+                      {/* Top Tier: Dot + Icon + Full Habit Title + Streak Badge + Ratio + Edit & Delete */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                            style={{ backgroundColor: habitColor }}
+                          />
+                          <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                          <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {habit.title}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <StreakBadge
+                            streak={habitStreak}
+                            onClick={() => onToggleHabit(habit.id, todayKey)}
+                          />
+                          <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 pl-1">
+                            {ratioLabel}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditHabit(habit);
+                            }}
+                            className="p-1 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md transition-colors cursor-pointer"
+                            title="Edit Habit"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          {onDeleteHabit && (
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onEditHabit(habit);
+                                handleDelete(habit.id, habit.title);
                               }}
-                              className="p-1 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md transition-colors cursor-pointer"
-                              title="Edit Habit"
+                              className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md transition-colors cursor-pointer"
+                              title="Delete Habit"
                             >
-                              <Edit2 size={13} />
+                              <Trash2 size={13} />
                             </button>
-                            {onDeleteHabit && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(habit.id, habit.title);
-                                }}
-                                className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md transition-colors cursor-pointer"
-                                title="Delete Habit"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            )}
-                          </div>
+                          )}
                         </div>
+                      </div>
 
-                        {/* Bottom Tier: All 7 Days Spanning Full Width with Zero Horizontal Scroll */}
+                      {/* Bottom Tier: Period-specific visualizations with zero horizontal scroll */}
+                      {period === 'WEEK' && (
                         <div className="grid grid-cols-7 gap-1 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
                           {weekDays.map((wd) => {
                             const isCompleted = dates.includes(wd.key);
@@ -602,14 +611,106 @@ export const HabitsPage = ({
                             );
                           })}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      )}
 
-              {/* Responsive Scrollable Container with Sticky Habit Column (Hidden on mobile for WEEK view, active on desktop) */}
-              <div className={`${period === 'WEEK' ? 'hidden sm:block' : ''} overflow-x-auto -mx-1 px-1 scroll-smooth`}>
+                      {period === 'MONTH' && (
+                        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                          {/* 7-column calendar weekday headers */}
+                          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 mb-0.5">
+                            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d, idx) => (
+                              <span key={idx}>{d}</span>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-7 gap-1 justify-items-center">
+                            {/* Calendar leading empty padding */}
+                            {monthDays.length > 0 &&
+                              Array.from({
+                                length: (monthDays[0].date.getDay() + 6) % 7,
+                              }).map((_, padIdx) => (
+                                <div key={`pad-${padIdx}`} className="w-8 h-8" />
+                              ))}
+                            {monthDays.map((md) => {
+                              const isCompleted = dates.includes(md.key);
+                              return (
+                                <button
+                                  key={md.key}
+                                  type="button"
+                                  onClick={() => onToggleHabit(habit.id, md.key)}
+                                  className={`w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-bold transition-all active:scale-90 cursor-pointer ${
+                                    isCompleted
+                                      ? 'text-white shadow-xs font-black'
+                                      : md.isToday
+                                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-700'
+                                      : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                                  }`}
+                                  style={{
+                                    backgroundColor: isCompleted ? habitColor : undefined,
+                                    borderColor: isCompleted ? habitColor : undefined,
+                                  }}
+                                  title={`${md.key}: ${isCompleted ? 'Completed' : 'Pending'}`}
+                                >
+                                  {md.dayNum}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {period === 'YEAR' && (
+                        <div className="grid grid-cols-6 gap-1.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
+                          {yearMonths.map((ym) => {
+                            const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
+                            return (
+                              <div key={ym.yearMonthKey} className="flex flex-col items-center gap-1 py-1 w-full">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                  {ym.monthShort}
+                                </span>
+                                <div
+                                  className={`w-9 h-8 rounded-xl flex items-center justify-center text-[11px] font-bold transition-all ${
+                                    countInMonth > 0
+                                      ? 'text-white shadow-2xs font-black'
+                                      : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-400 dark:text-slate-500'
+                                  }`}
+                                  style={{
+                                    backgroundColor: countInMonth > 0 ? habitColor : undefined,
+                                    opacity: countInMonth > 0 ? Math.max(0.4, Math.min(1, countInMonth / 15)) : 1,
+                                  }}
+                                >
+                                  {countInMonth > 0 ? countInMonth : '0'}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {period === 'ALL' && (
+                        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] font-medium text-slate-400">
+                            <span>Lifetime Consistency</span>
+                            <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                              {dates.length} total check-ins
+                            </span>
+                          </div>
+                          <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, Math.max(5, (dates.length / 50) * 100))}%`,
+                                backgroundColor: habitColor,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Scrollable Container with Sticky Habit Column (Hidden on mobile for all periods, active on desktop) */}
+              <div className="hidden sm:block overflow-x-auto -mx-1 px-1 scroll-smooth">
                 <div className="min-w-[500px] sm:min-w-[560px]">
                   {/* Table Header */}
                   <div className="grid grid-cols-12 gap-1.5 sm:gap-2 pb-2.5 pt-1 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 items-center">
