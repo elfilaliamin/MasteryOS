@@ -18,42 +18,22 @@ import {
 } from 'lucide-react';
 import { formatDateKey, computeHabitStreak } from '../utils/habitUtils';
 
-// Duolingo-inspired Interactive Flame & Streak Badge
-export const DuolingoStreakBadge = ({
+// Simple Streak Badge matching Dashboard and Focus Mode
+export const StreakBadge = ({
   streak = 0,
   variant = 'default',
-  size = 'sm',
   className = '',
   onClick = null,
-  isCompletedToday = false,
-  titleText = '',
+  showLabel = true,
 }) => {
   const count = Math.max(0, Number(streak) || 0);
-  const isActive = count > 0 || isCompletedToday;
   const isClickable = typeof onClick === 'function';
-
-  const badgeStyles = () => {
-    if (variant === 'light') {
-      return isActive
-        ? 'bg-black/30 backdrop-blur-xs border border-white/35 text-white shadow-xs hover:bg-black/40'
-        : 'bg-black/15 text-white/75 border border-white/15 hover:bg-black/25';
-    }
-    return isActive
-      ? 'bg-gradient-to-r from-amber-500/15 via-orange-500/20 to-red-500/15 border border-orange-500/40 text-orange-600 dark:text-orange-400 shadow-[0_2px_8px_rgba(249,115,22,0.2)] hover:shadow-[0_2px_14px_rgba(249,115,22,0.4)] hover:border-orange-500/60'
-      : 'bg-slate-100 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700/60 text-slate-400 dark:text-slate-500 hover:border-orange-400/50 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50/40 dark:hover:bg-orange-950/20';
-  };
-
-  const computedTitle =
-    titleText ||
-    (isCompletedToday
-      ? `🔥 ${count} Day Streak! Completed today! (Click to toggle)`
-      : isClickable
-      ? `⚡ ${count} Day Streak — Click to check in today & ignite streak! 🔥`
-      : count > 0
-      ? `🔥 ${count} Day Streak! Momentum is ablaze!`
-      : `0 Day Streak — check in today to ignite your flame!`);
-
   const Component = isClickable ? 'button' : 'div';
+
+  const badgeStyles =
+    variant === 'light'
+      ? 'bg-black/25 backdrop-blur-xs border border-white/30 text-white shadow-2xs'
+      : 'bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 border border-amber-500/35 text-amber-600 dark:text-amber-400 shadow-2xs';
 
   return (
     <Component
@@ -64,60 +44,34 @@ export const DuolingoStreakBadge = ({
           onClick(e);
         }
       }}
-      className={`inline-flex items-center gap-1 shrink-0 rounded-full select-none transition-all duration-300 font-black ${
-        isClickable ? 'cursor-pointer hover:scale-110 active:scale-95 group/streak' : 'cursor-default hover:scale-105'
-      } ${size === 'lg' ? 'px-3 py-1 text-sm' : 'px-1.5 py-0.5 text-[11px]'} ${badgeStyles()} ${className}`}
-      title={computedTitle}
-      aria-label={computedTitle}
+      className={`inline-flex items-center gap-1 shrink-0 px-2.5 py-0.5 rounded-lg font-black text-xs select-none transition-colors ${
+        isClickable ? 'cursor-pointer hover:opacity-90 active:scale-95' : 'cursor-default'
+      } ${badgeStyles} ${className}`}
+      title={`${count} day streak`}
+      aria-label={`${count} day streak`}
     >
-      {/* Duolingo-inspired Multi-layer Flame SVG */}
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className={`shrink-0 transition-all duration-300 ${
-          size === 'lg' ? 'w-5 h-5' : 'w-3.5 h-3.5'
-        } ${
-          isActive
-            ? 'scale-110 drop-shadow-[0_1px_4px_rgba(249,115,22,0.65)] animate-pulse'
-            : isClickable
-            ? 'opacity-50 grayscale group-hover/streak:opacity-100 group-hover/streak:grayscale-0 group-hover/streak:scale-115'
-            : 'opacity-40 grayscale'
+      <Flame
+        size={13}
+        className={`shrink-0 ${
+          variant === 'light' ? 'fill-white text-white' : 'fill-amber-500 text-amber-500'
         }`}
-      >
-        <defs>
-          <linearGradient id="duoFlameOuter" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFA000" />
-            <stop offset="50%" stopColor="#FF5722" />
-            <stop offset="100%" stopColor="#F43F5E" />
-          </linearGradient>
-          <linearGradient id="duoFlameInner" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#FEF08A" />
-            <stop offset="100%" stopColor="#F59E0B" />
-          </linearGradient>
-        </defs>
-
-        {/* Outer Flame body */}
-        <path
-          d="M12 2C10.6 4.3 9.4 6.3 9.2 8.5C8.5 7.8 8 6.9 7.8 6.1C5.7 8.5 4.2 11.6 4.2 15C4.2 19.3 7.7 22.8 12 22.8C16.3 22.8 19.8 19.3 19.8 15C19.8 10.9 17.3 7.1 14.7 4.2C13.7 3.1 12.8 2.3 12 2Z"
-          fill={isActive ? 'url(#duoFlameOuter)' : 'currentColor'}
-        />
-
-        {/* Inner Heart/Droplet core */}
-        {isActive && (
-          <path
-            d="M12 12.8C10.9 14.2 10.3 15.4 10.3 16.7C10.3 18.1 11.1 19.2 12 19.2C12.9 19.2 13.7 18.1 13.7 16.7C13.7 15.4 13.1 14.2 12 12.8Z"
-            fill="url(#duoFlameInner)"
-          />
-        )}
-      </svg>
-
-      <span className="font-mono text-[11px] leading-none font-black tracking-tight">
-        {count}
-      </span>
+      />
+      <span>{count}d</span>
+      {showLabel && (
+        <span
+          className={`text-[10px] font-bold ${
+            variant === 'light' ? 'text-white/80' : 'text-amber-700/80 dark:text-amber-300/80'
+          }`}
+        >
+          streak
+        </span>
+      )}
     </Component>
   );
 };
+
+// Backward-compatibility alias
+export const DuolingoStreakBadge = StreakBadge;
 
 export const HabitsPage = ({
   habits = [],
@@ -637,10 +591,9 @@ export const HabitsPage = ({
                               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
                                 {habit.title}
                               </span>
-                              {/* Duolingo Streak Badge directly next to the habit title - Click to toggle today */}
-                              <DuolingoStreakBadge
+                              {/* Streak Badge directly next to the habit title - Click to toggle today */}
+                              <StreakBadge
                                 streak={habitStreak}
-                                isCompletedToday={isCompletedToday}
                                 onClick={() => onToggleHabit(habit.id, todayKey)}
                               />
                             </div>
@@ -790,9 +743,8 @@ export const HabitsPage = ({
                         <div>
                           <div className="flex items-center gap-1.5">
                             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">{habit.title}</h4>
-                            <DuolingoStreakBadge
+                            <StreakBadge
                               streak={streak}
-                              isCompletedToday={isDoneToday}
                               onClick={() => onToggleHabit(habit.id, todayKey)}
                             />
                           </div>
@@ -911,10 +863,9 @@ export const HabitsPage = ({
                           <div className="flex items-center gap-1.5 min-w-0 truncate">
                             <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
                             <span className="text-xs font-black truncate">{habit.title}</span>
-                            <DuolingoStreakBadge
+                            <StreakBadge
                               streak={habitStreak}
                               variant="light"
-                              isCompletedToday={isCompleted}
                               onClick={() => onToggleHabit(habit.id, selectedDayKey)}
                             />
                           </div>
@@ -967,9 +918,8 @@ export const HabitsPage = ({
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                               {habit.title}
                             </span>
-                            <DuolingoStreakBadge
+                            <StreakBadge
                               streak={habitStreak}
-                              isCompletedToday={false}
                               onClick={() => onToggleHabit(habit.id, selectedDayKey)}
                             />
                           </div>
