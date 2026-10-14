@@ -568,7 +568,6 @@ export const HabitsPage = ({
                       );
                       const habitColor = habit.color || '#0d8a72';
                       const habitStreak = computeHabitStreak(habit);
-                      const isCompletedToday = dates.includes(todayKey);
 
                       let completedInWeek = 0;
                       weekDays.forEach((wd) => {
