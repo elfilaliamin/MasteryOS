@@ -228,8 +228,8 @@ export const FocusPage = ({
             </h1>
           </div>
 
-          {/* Quick Action Buttons & Pomodoro Toggle */}
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Focus Timer Toggle */}
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setShowTimer((prev) => !prev)}
@@ -242,32 +242,6 @@ export const FocusPage = ({
               <Clock size={14} className={isTimerRunning ? 'animate-spin' : ''} />
               <span>{isTimerRunning ? timerFormatted : 'Focus Timer'}</span>
             </button>
-
-            {onOpenNewTask && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onOpenNewTask}
-                className="h-9 px-3 text-xs rounded-xl gap-1.5"
-                title="Add Task"
-              >
-                <Plus size={14} />
-                <span>New Task</span>
-              </Button>
-            )}
-
-            {onOpenNewHabit && (
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={onOpenNewHabit}
-                className="h-9 px-3 text-xs rounded-xl gap-1.5"
-                title="Add Habit"
-              >
-                <Plus size={14} />
-                <span>New Habit</span>
-              </Button>
-            )}
           </div>
         </div>
 
