@@ -487,8 +487,8 @@ export const HabitsPage = ({
             </Card>
           ) : viewMode === 'GRID' ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xs relative">
-              {/* MOBILE TWO-TIER VIEW (< sm for all periods): No squishing, no truncation, zero horizontal scroll */}
-              <div className="sm:hidden space-y-3">
+              {/* MOBILE & TABLET TWO-TIER VIEW (< lg for all periods): No squishing, no truncation, zero horizontal scroll */}
+              <div className="lg:hidden space-y-3">
                 {habits.map((habit) => {
                   const dates = (habit.completed_dates || []).map((d) =>
                     typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
@@ -519,7 +519,7 @@ export const HabitsPage = ({
                   return (
                     <div
                       key={`m-matrix-${habit.id}`}
-                      className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/80 space-y-3"
+                      className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/80 space-y-3"
                     >
                       {/* Top Tier: Dot + Icon + Full Habit Title + Streak Badge + Ratio + Edit & Delete */}
                       <div className="flex items-center justify-between gap-2">
@@ -529,7 +529,7 @@ export const HabitsPage = ({
                             style={{ backgroundColor: habitColor }}
                           />
                           <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
-                          <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                          <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
                             {habit.title}
                           </span>
                         </div>
@@ -539,7 +539,7 @@ export const HabitsPage = ({
                             streak={habitStreak}
                             onClick={() => onToggleHabit(habit.id, todayKey)}
                           />
-                          <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 pl-1">
+                          <span className="text-xs sm:text-sm font-mono font-bold text-slate-400 dark:text-slate-500 pl-1">
                             {ratioLabel}
                           </span>
                           <button
@@ -548,7 +548,7 @@ export const HabitsPage = ({
                               e.stopPropagation();
                               onEditHabit(habit);
                             }}
-                            className="p-1 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md transition-colors cursor-pointer"
+                            className="p-1 sm:p-1.5 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md transition-colors cursor-pointer"
                             title="Edit Habit"
                           >
                             <Edit2 size={13} />
@@ -560,7 +560,7 @@ export const HabitsPage = ({
                                 e.stopPropagation();
                                 handleDelete(habit.id, habit.title);
                               }}
-                              className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md transition-colors cursor-pointer"
+                              className="p-1 sm:p-1.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md transition-colors cursor-pointer"
                               title="Delete Habit"
                             >
                               <Trash2 size={13} />
@@ -571,7 +571,7 @@ export const HabitsPage = ({
 
                       {/* Bottom Tier: Period-specific visualizations with zero horizontal scroll */}
                       {period === 'WEEK' && (
-                        <div className="grid grid-cols-7 gap-1 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
+                        <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
                           {weekDays.map((wd) => {
                             const isCompleted = dates.includes(wd.key);
                             return (
@@ -582,7 +582,7 @@ export const HabitsPage = ({
                                 className="flex flex-col items-center gap-1 py-0.5 rounded-xl transition-all active:scale-90 cursor-pointer w-full"
                               >
                                 <span
-                                  className={`text-[10px] font-bold uppercase ${
+                                  className={`text-[10px] sm:text-xs font-bold uppercase ${
                                     wd.isSelected
                                       ? 'text-[#0d8a72] dark:text-teal-400 font-black'
                                       : wd.isToday
@@ -593,7 +593,7 @@ export const HabitsPage = ({
                                   {wd.dayShort.slice(0, 2)}
                                 </span>
                                 <div
-                                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all ${
                                     isCompleted
                                       ? 'shadow-xs text-white'
                                       : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-transparent hover:border-slate-300'
@@ -604,7 +604,7 @@ export const HabitsPage = ({
                                   }}
                                 >
                                   {isCompleted && (
-                                    <Check size={14} className="text-white drop-shadow-xs" strokeWidth={3} />
+                                    <Check size={16} className="text-white drop-shadow-xs" strokeWidth={3} />
                                   )}
                                 </div>
                               </button>
@@ -616,18 +616,18 @@ export const HabitsPage = ({
                       {period === 'MONTH' && (
                         <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1">
                           {/* 7-column calendar weekday headers */}
-                          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 mb-0.5">
+                          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[10px] sm:text-xs font-bold text-slate-400 mb-0.5">
                             {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d, idx) => (
                               <span key={idx}>{d}</span>
                             ))}
                           </div>
-                          <div className="grid grid-cols-7 gap-1 justify-items-center">
+                          <div className="grid grid-cols-7 gap-1 sm:gap-2 justify-items-center">
                             {/* Calendar leading empty padding */}
                             {monthDays.length > 0 &&
                               Array.from({
                                 length: (monthDays[0].date.getDay() + 6) % 7,
                               }).map((_, padIdx) => (
-                                <div key={`pad-${padIdx}`} className="w-8 h-8" />
+                                <div key={`pad-${padIdx}`} className="w-8 h-8 sm:w-10 sm:h-10" />
                               ))}
                             {monthDays.map((md) => {
                               const isCompleted = dates.includes(md.key);
@@ -636,7 +636,7 @@ export const HabitsPage = ({
                                   key={md.key}
                                   type="button"
                                   onClick={() => onToggleHabit(habit.id, md.key)}
-                                  className={`w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-bold transition-all active:scale-90 cursor-pointer ${
+                                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all active:scale-90 cursor-pointer ${
                                     isCompleted
                                       ? 'text-white shadow-xs font-black'
                                       : md.isToday
@@ -658,16 +658,16 @@ export const HabitsPage = ({
                       )}
 
                       {period === 'YEAR' && (
-                        <div className="grid grid-cols-6 gap-1.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
+                        <div className="grid grid-cols-6 gap-1.5 sm:gap-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
                           {yearMonths.map((ym) => {
                             const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
                             return (
                               <div key={ym.yearMonthKey} className="flex flex-col items-center gap-1 py-1 w-full">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase">
                                   {ym.monthShort}
                                 </span>
                                 <div
-                                  className={`w-9 h-8 rounded-xl flex items-center justify-center text-[11px] font-bold transition-all ${
+                                  className={`w-9 h-8 sm:w-12 sm:h-10 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all ${
                                     countInMonth > 0
                                       ? 'text-white shadow-2xs font-black'
                                       : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-400 dark:text-slate-500'
@@ -689,8 +689,8 @@ export const HabitsPage = ({
                 })}
               </div>
 
-              {/* Desktop Scrollable Container with Sticky Habit Column (Hidden on mobile for all periods, active on desktop) */}
-              <div className="hidden sm:block overflow-x-auto -mx-1 px-1 scroll-smooth">
+              {/* Desktop Scrollable Container with Sticky Habit Column (Hidden on mobile and tablet < lg, active on desktop >= lg) */}
+              <div className="hidden lg:block overflow-x-auto -mx-1 px-1 scroll-smooth">
                 <div className="min-w-[500px] sm:min-w-[560px]">
                   {/* Table Header */}
                   <div className="grid grid-cols-12 gap-1.5 sm:gap-2 pb-2.5 pt-1 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 items-center">
