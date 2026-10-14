@@ -60,22 +60,32 @@ export const FocusPage = ({
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
 
-  // Focus Timer interval
+  // Focus Timer interval: depends strictly on isTimerRunning to avoid interval recreation loops
   useEffect(() => {
-    let interval = null;
-    if (isTimerRunning && timerSeconds > 0) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev - 1);
-      }, 1000);
-    } else if (timerSeconds === 0 && isTimerRunning) {
-      setIsTimerRunning(false);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTimerRunning, timerSeconds]);
+    if (!isTimerRunning) return;
 
-  const toggleTimer = () => setIsTimerRunning((prev) => !prev);
+    const interval = setInterval(() => {
+      setTimerSeconds((prev) => {
+        if (prev <= 1) {
+          setIsTimerRunning(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isTimerRunning]);
+
+  const toggleTimer = () => {
+    if (!isTimerRunning && timerSeconds === 0) {
+      setTimerSeconds(POMODORO_DEFAULT_SECONDS);
+      setIsTimerRunning(true);
+    } else {
+      setIsTimerRunning((prev) => !prev);
+    }
+  };
+
   const resetTimer = () => {
     setIsTimerRunning(false);
     setTimerSeconds(POMODORO_DEFAULT_SECONDS);
