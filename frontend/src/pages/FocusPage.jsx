@@ -374,21 +374,21 @@ export const FocusPage = ({
           <div className="grid grid-cols-2 gap-2.5 pt-1 md:pt-0">
             <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 flex flex-col justify-between">
               <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs font-bold">
-                <Flame size={14} className="text-amber-500" />
-                <span>Habits</span>
-              </div>
-              <span className="text-xl font-black text-slate-900 dark:text-slate-100">
-                {completedHabitsCount} <span className="text-xs text-slate-400 font-bold">/ {totalHabitsCount}</span>
-              </span>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 flex flex-col justify-between">
-              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs font-bold">
                 <CheckCircle2 size={14} className="text-[#0d8a72] dark:text-teal-400" />
                 <span>Tasks</span>
               </div>
               <span className="text-xl font-black text-slate-900 dark:text-slate-100">
                 {completedTasksCount} <span className="text-xs text-slate-400 font-bold">/ {totalTasksCount}</span>
+              </span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 flex flex-col justify-between">
+              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs font-bold">
+                <Flame size={14} className="text-amber-500" />
+                <span>Habits</span>
+              </div>
+              <span className="text-xl font-black text-slate-900 dark:text-slate-100">
+                {completedHabitsCount} <span className="text-xs text-slate-400 font-bold">/ {totalHabitsCount}</span>
               </span>
             </div>
           </div>
@@ -400,8 +400,8 @@ export const FocusPage = ({
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 overflow-x-auto no-scrollbar w-full sm:w-auto">
           {[
             { id: 'ALL', label: 'All Today', count: totalItemsCount },
-            { id: 'HABITS', label: 'Habits', count: totalHabitsCount },
             { id: 'TASKS', label: 'Tasks', count: totalTasksCount },
+            { id: 'HABITS', label: 'Habits', count: totalHabitsCount },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -428,110 +428,12 @@ export const FocusPage = ({
 
         {/* Quick count indicator */}
         <span className="hidden sm:inline-block text-xs font-semibold text-slate-400 dark:text-slate-500">
-          Showing {displayHabits.length + displayTasks.length} items
+          Showing {displayTasks.length + displayHabits.length} items
         </span>
       </div>
 
       {/* Main Content Layout: Stacks on mobile, 2-column on desktop when both habits and tasks exist */}
       <div className={`grid grid-cols-1 ${isSplitLayout ? 'lg:grid-cols-2 lg:gap-8 lg:items-start' : ''} gap-6`}>
-        {/* Habits Column / Section */}
-        {displayHabits.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Flame size={14} className="text-amber-500" />
-                Daily Habits ({completedHabitsCount}/{totalHabitsCount})
-              </h2>
-              {onOpenNewHabit && (
-                <button
-                  type="button"
-                  onClick={onOpenNewHabit}
-                  className="text-[11px] font-bold text-[#0d8a72] dark:text-teal-400 hover:underline cursor-pointer"
-                >
-                  + Add Habit
-                </button>
-              )}
-            </div>
-
-            <div className="space-y-2.5">
-              {displayHabits.map((habit) => {
-                const isDone = habit.isCompletedToday;
-                const TimeIcon = TIME_ICONS[habit.time_of_day] || Zap;
-
-                return (
-                  <div
-                    key={habit.id}
-                    onClick={() => onToggleHabit?.(habit.id)}
-                    className={`group relative flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                      isDone
-                        ? 'bg-teal-50/40 dark:bg-teal-950/10 border-teal-200/60 dark:border-teal-900/40 text-slate-500 dark:text-slate-400'
-                        : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-teal-500/50 shadow-xs hover:shadow-md'
-                    }`}
-                  >
-                    {/* Large tactile checkbox */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleHabit?.(habit.id);
-                      }}
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 border ${
-                        isDone
-                          ? 'bg-[#0d8a72] border-[#0d8a72] text-white shadow-xs'
-                          : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 group-hover:border-[#0d8a72]'
-                      }`}
-                      aria-label={`Toggle ${habit.title}`}
-                    >
-                      {isDone && <Check size={16} strokeWidth={3} className="animate-scale-in" />}
-                    </button>
-
-                    {/* Habit Icon Badge */}
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-xs"
-                      style={{
-                        backgroundColor: `${habit.color || '#0d8a72'}18`,
-                        border: `1px solid ${habit.color || '#0d8a72'}30`,
-                      }}
-                    >
-                      {habit.icon || '🔥'}
-                    </div>
-
-                    {/* Habit Details */}
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm font-bold truncate transition-colors ${
-                          isDone
-                            ? 'line-through text-slate-400 dark:text-slate-500 font-medium'
-                            : 'text-slate-900 dark:text-slate-100 group-hover:text-[#0d8a72] dark:group-hover:text-teal-400'
-                        }`}
-                      >
-                        {habit.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-                          <TimeIcon size={11} />
-                          {TIME_LABELS[habit.time_of_day] || 'Anytime'}
-                        </span>
-                        {habit.description && (
-                          <span className="text-[11px] text-slate-400 truncate max-w-[200px] hidden sm:inline">
-                            • {habit.description}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Streak badge */}
-                    <div className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 text-amber-700 dark:text-amber-400 font-bold text-xs">
-                      <Flame size={13} className="fill-amber-500 text-amber-500" />
-                      <span>{habit.currentStreak || 0}d</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Tasks Column / Section */}
         {displayTasks.length > 0 && (
           <div className="space-y-3">
@@ -672,6 +574,104 @@ export const FocusPage = ({
             </div>
           </div>
         )}
+
+        {/* Habits Column / Section */}
+        {displayHabits.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Flame size={14} className="text-amber-500" />
+                Daily Habits ({completedHabitsCount}/{totalHabitsCount})
+              </h2>
+              {onOpenNewHabit && (
+                <button
+                  type="button"
+                  onClick={onOpenNewHabit}
+                  className="text-[11px] font-bold text-[#0d8a72] dark:text-teal-400 hover:underline cursor-pointer"
+                >
+                  + Add Habit
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-2.5">
+              {displayHabits.map((habit) => {
+                const isDone = habit.isCompletedToday;
+                const TimeIcon = TIME_ICONS[habit.time_of_day] || Zap;
+
+                return (
+                  <div
+                    key={habit.id}
+                    onClick={() => onToggleHabit?.(habit.id)}
+                    className={`group relative flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                      isDone
+                        ? 'bg-teal-50/40 dark:bg-teal-950/10 border-teal-200/60 dark:border-teal-900/40 text-slate-500 dark:text-slate-400'
+                        : 'bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 hover:border-teal-500/50 shadow-xs hover:shadow-md'
+                    }`}
+                  >
+                    {/* Large tactile checkbox */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleHabit?.(habit.id);
+                      }}
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 border ${
+                        isDone
+                          ? 'bg-[#0d8a72] border-[#0d8a72] text-white shadow-xs'
+                          : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/80 group-hover:border-[#0d8a72]'
+                      }`}
+                      aria-label={`Toggle ${habit.title}`}
+                    >
+                      {isDone && <Check size={16} strokeWidth={3} className="animate-scale-in" />}
+                    </button>
+
+                    {/* Habit Icon Badge */}
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-xs"
+                      style={{
+                        backgroundColor: `${habit.color || '#0d8a72'}18`,
+                        border: `1px solid ${habit.color || '#0d8a72'}30`,
+                      }}
+                    >
+                      {habit.icon || '🔥'}
+                    </div>
+
+                    {/* Habit Details */}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-bold truncate transition-colors ${
+                          isDone
+                            ? 'line-through text-slate-400 dark:text-slate-500 font-medium'
+                            : 'text-slate-900 dark:text-slate-100 group-hover:text-[#0d8a72] dark:group-hover:text-teal-400'
+                        }`}
+                      >
+                        {habit.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                          <TimeIcon size={11} />
+                          {TIME_LABELS[habit.time_of_day] || 'Anytime'}
+                        </span>
+                        {habit.description && (
+                          <span className="text-[11px] text-slate-400 truncate max-w-[200px] hidden sm:inline">
+                            • {habit.description}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Streak badge */}
+                    <div className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 text-amber-700 dark:text-amber-400 font-bold text-xs">
+                      <Flame size={13} className="fill-amber-500 text-amber-500" />
+                      <span>{habit.currentStreak || 0}d</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Empty State when zero items match */}
@@ -682,10 +682,10 @@ export const FocusPage = ({
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              {filter === 'HABITS'
-                ? 'No habits scheduled for today'
-                : filter === 'TASKS'
+              {filter === 'TASKS'
                 ? 'No action tasks due today'
+                : filter === 'HABITS'
+                ? 'No habits scheduled for today'
                 : 'Your Focus list is clear'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
@@ -695,12 +695,12 @@ export const FocusPage = ({
 
           <div className="flex items-center justify-center gap-2 pt-2">
             {onOpenNewTask && (
-              <Button size="sm" variant="outline" onClick={onOpenNewTask} className="rounded-xl text-xs gap-1.5">
+              <Button size="sm" variant="primary" onClick={onOpenNewTask} className="rounded-xl text-xs gap-1.5">
                 <Plus size={14} /> Add Task
               </Button>
             )}
             {onOpenNewHabit && (
-              <Button size="sm" variant="primary" onClick={onOpenNewHabit} className="rounded-xl text-xs gap-1.5">
+              <Button size="sm" variant="outline" onClick={onOpenNewHabit} className="rounded-xl text-xs gap-1.5">
                 <Plus size={14} /> Add Habit
               </Button>
             )}
