@@ -30,7 +30,7 @@ const DASHBOARD_LIMITS = {
   HABITS: 6,            // Max 6 habits in today's shortcut widget
   URGENT_TASKS: 4,      // Max 4 High/Urgent priority tasks (2x2 grid)
   DEADLINES: 6,         // Max 6 nearest due date tasks (2x3 grid)
-  ACTIVE_COURSES: 4,    // Max 4 in-progress courses (2x2 grid)
+  ACTIVE_COURSES: 6,    // Max 6 in-progress courses (2x3 grid)
   GOALS: 3,             // Max 3 active strategic goals (1x3 grid)
 };
 
