@@ -1,0 +1,33 @@
+# Dependencies (must never be copied from host into Linux container)
+node_modules
+**/node_modules
+
+# Build artifacts
+dist
+**/dist
+.vitepress/dist
+docs/.vitepress/dist
+.vitepress/cache
+docs/.vitepress/cache
+
+# Git metadata
+.git
+.github
+
+# Environment secrets
+.env
+backend/.env
+frontend/.env
+*.env.local
+*.env.production
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# System and editor files
+.DS_Store
+Thumbs.db
+.vscode
+.idea

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d8a72" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="44" height="44" rx="12" fill="url(#brandGrad)" />
+  <!-- Crisp Sparkle / Star matching brand icon -->
+  <path d="M24 10 L26.8 19.8 L36.6 22.6 L26.8 25.4 L24 35.2 L21.2 25.4 L11.4 22.6 L21.2 19.8 Z" fill="#ffffff" />
+  <circle cx="34" cy="14" r="2" fill="#f59e0b" />
+</svg>

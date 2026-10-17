@@ -5,11 +5,11 @@ export default defineConfig({
   description: 'Production-grade Full-Stack Productivity, Gamification & Workflow Management Platform',
   base: '/Docs/',
   lang: 'en-US',
-  lastUpdated: true,
+  lastUpdated: false,
   cleanUrls: true,
 
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/Docs/favicon.svg' }],
     ['meta', { name: 'theme-color', content: '#0d8a72' }],
     ['meta', { name: 'author', content: 'elfilaliamin' }]
   ],

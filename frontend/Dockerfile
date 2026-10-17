@@ -2,6 +2,7 @@
 FROM node:26-slim AS build-app
 
 WORKDIR /app
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 COPY frontend/package*.json ./
 RUN npm install
@@ -13,6 +14,7 @@ RUN npm run build
 FROM node:26-slim AS build-docs
 
 WORKDIR /docs
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 COPY docs/package*.json ./
 RUN npm install
