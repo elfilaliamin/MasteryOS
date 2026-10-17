@@ -12,9 +12,6 @@ hero:
     - theme: alt
       text: View Architecture
       link: /architecture/overview
-    - theme: alt
-      text: GitHub Repo
-      link: https://github.com/elfilaliamin/MasteryOS
 
 features:
   - title: 🎯 Strategic Goals & Milestone Tracking

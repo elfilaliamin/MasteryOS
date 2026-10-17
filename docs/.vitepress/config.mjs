@@ -22,11 +22,7 @@ export default defineConfig({
       { text: 'Database', link: '/database/schema' },
       { text: 'API Reference', link: '/api/overview' },
       { text: 'Frontend', link: '/frontend/pages-components' },
-      { text: 'Security', link: '/security/hardening' },
-      {
-        text: 'GitHub',
-        link: 'https://github.com/elfilaliamin/MasteryOS'
-      }
+      { text: 'Security', link: '/security/hardening' }
     ],
 
     socialLinks: [
