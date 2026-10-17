@@ -527,4 +527,44 @@ The frontend is built using **React 19**, **Vite**, **Tailwind CSS v4**, and **L
   - Confirm API responses return `Cache-Control: private, no-cache, no-store`.
   - Confirm `/api/upload/file/:filename` returns `Cache-Control: public, max-age=31536000, immutable`.
 
+### 📍 Phase 22: VitePress Documentation Platform (Isolated at /Docs)
+- [x] **Task 22.1**: **VitePress Project Scaffolding & Setup (`docs/`)**
+  - Initialize isolated `docs/` workspace with `package.json` and VitePress dependency (`vitepress`).
+  - Configure scripts (`docs:dev`, `docs:build`, `docs:preview`).
+- [x] **Task 22.2**: **VitePress Global Configuration & Branding (`docs/.vitepress/config.mjs`)**
+  - Set `base: '/Docs/'` for standalone path routing on `mydomain.com/Docs`.
+  - Link GitHub Repository (`https://github.com/elfilaliamin/MasteryOS`) in socialLinks and top navigation.
+  - Define custom theme accent colors matching MasteryOS palette (Deep Teal `#0d8a72` and Amber Gold `#f59e0b`).
+  - Configure navigation bar, structured multi-section sidebar, local search provider, and footer copyright.
+- [x] **Task 22.3**: **Web Server (Nginx) & Docker Multi-Stage Build Integration**
+  - Update `frontend/Dockerfile` to compile both the React SPA and the VitePress documentation in isolated build stages.
+  - Copy VitePress static build output (`docs/.vitepress/dist/`) to `/usr/share/nginx/html/Docs/`.
+  - Update `frontend/nginx.conf` with dedicated `location /Docs/` and redirect rule `location = /docs { return 301 /Docs/; }`.
+  - **Strict App Isolation**: Ensure ZERO documentation links, buttons, or navigations are added inside the React web application (`frontend/src/`).
+- [x] **Task 22.4**: **Documentation Section 1: Overview, Getting Started & Architecture**
+  - Write `docs/index.md` (Hero landing page with feature cards, system metrics, and quick actions).
+  - Write `docs/getting-started/quickstart.md` (prerequisites, docker-compose setup, environment variables).
+  - Write `docs/architecture/overview.md` & `docker-stack.md` (container topology, multi-tier isolation, Cloudflare tunnel).
+- [x] **Task 22.5**: **Documentation Section 2: PostgreSQL Database & Data Flow**
+  - Write `docs/database/schema.md` (complete relational schema, tables, foreign keys, indexes, cascades).
+  - Write `docs/database/data-flow.md` (data lifecycle, client cache, optimistic updates, server persistence).
+- [x] **Task 22.6**: **Documentation Section 3: Backend REST API Reference**
+  - Write `docs/api/overview.md` (base URL, authentication headers, error formats, rate limiting).
+  - Write `docs/api/auth.md` (`/api/auth/register`, `/login`, `/me`, `/logout`, `/change-password`).
+  - Write `docs/api/tasks.md` & `categories.md` (CRUD, status updates, filtering, sorting).
+  - Write `docs/api/goals.md`, `courses.md`, `habits.md` (goals, courses with lesson tracking, habits with streak matrices).
+  - Write `docs/api/upload-analytics.md` (file upload with magic-byte check, dashboard statistics).
+- [x] **Task 22.7**: **Documentation Section 4: Frontend UI, Gamification & Design System**
+  - Write `docs/frontend/pages-components.md` (complete catalog of pages, layout, and UI components).
+  - Write `docs/frontend/gamification.md` (XP math, 8 rank tiers, unlockable executive titles, psychological tracks).
+  - Write `docs/frontend/state-management.md` (TanStack React Query architecture, query keys, invalidation).
+- [x] **Task 22.8**: **Documentation Section 5: Security Architecture & Deployment**
+  - Write `docs/security/hardening.md` (multi-tenant query guards, httpOnly cookies, CSRF, Zod validation, Helmet, rate limiting).
+  - Write `docs/deployment/production.md` (Docker Compose deployment, Cloudflare tunnel setup, SSL, caching rules).
+- [x] **Task 22.9**: **Build Verification, Link Checking & Isolation Audit**
+  - Execute `npm run docs:build` to verify clean build without broken links or syntax issues.
+  - Audit frontend code to confirm zero links to `/Docs` inside the React application UI.
+  - Verify Nginx routing and asset paths for `/Docs/`.
+
+
 

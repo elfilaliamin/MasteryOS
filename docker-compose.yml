@@ -47,8 +47,8 @@ services:
   # Frontend Single Page App Service (Nginx Alpine)
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./frontend/Dockerfile
     container_name: mastery_os_frontend_web
     restart: unless-stopped
     depends_on:
