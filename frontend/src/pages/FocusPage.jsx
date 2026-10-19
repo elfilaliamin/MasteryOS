@@ -52,6 +52,7 @@ export const FocusPage = ({
   goals = [],
   courses = [],
   onStatusChange,
+  onEditTask,
   onToggleHabit,
   onOpenNewTask,
   onOpenNewHabit,
@@ -461,7 +462,7 @@ export const FocusPage = ({
                 return (
                   <div
                     key={task.id}
-                    onClick={() => onStatusChange?.(task.id, isDone ? 'TODO' : 'COMPLETED')}
+                    onClick={() => onEditTask?.(task)}
                     className={`group relative flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
                       isDone
                         ? 'bg-slate-50/60 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/50 text-slate-400 dark:text-slate-500'

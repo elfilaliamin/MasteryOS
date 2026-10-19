@@ -713,6 +713,10 @@ const AuthenticatedApp = () => {
                   goals={goals}
                   courses={courses}
                   onStatusChange={handleStatusChange}
+                  onEditTask={(task) => {
+                    setEditingTask(task);
+                    setIsModalOpen(true);
+                  }}
                   onToggleHabit={handleToggleHabit}
                   onOpenNewTask={() => {
                     setEditingTask(null);
