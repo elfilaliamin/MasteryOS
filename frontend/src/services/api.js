@@ -21,6 +21,9 @@ const getHeaders = (extraHeaders = {}) => {
 const handleResponse = async (res) => {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 413) {
+      throw new Error(data.error || 'The uploaded file exceeds the maximum allowed size.');
+    }
     throw new Error(data.error || `Request failed with status ${res.status}`);
   }
   return data;
