@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
 import { ThemeProvider } from './context/ThemeContext';
+import { SoundProvider } from './context/SoundContext';
+import { useSound } from './context/useSound';
 import { GamificationProvider } from './context/GamificationContext';
 import { useGamification } from './context/useGamification';
 import { ProtectedRoute, PublicOnlyRoute } from './components/auth/ProtectedRoute';
@@ -77,6 +79,7 @@ const LevelUpListener = () => {
 // Inner Authenticated App powered by React Query cache
 const AuthenticatedApp = () => {
   const { user } = useAuth();
+  const sound = useSound();
   const queryClient = useQueryClient();
 
   const isAuth = !!user?.id;
@@ -586,6 +589,21 @@ const AuthenticatedApp = () => {
   };
 
   const handleStatusChange = async (taskId, newStatus) => {
+    if (newStatus === 'COMPLETED') {
+      const task = tasks.find((t) => t.id === taskId);
+      const targetGoal = task?.goal_id ? goals.find((g) => g.id === task.goal_id) : null;
+      if (targetGoal) {
+        const otherGoalTasks = tasks.filter((t) => t.goal_id === targetGoal.id && t.id !== taskId);
+        const willCompleteGoal = otherGoalTasks.length > 0 && otherGoalTasks.every((t) => t.status === 'COMPLETED');
+        if (willCompleteGoal) {
+          sound.playGoalComplete();
+        } else {
+          sound.playTaskComplete();
+        }
+      } else {
+        sound.playTaskComplete();
+      }
+    }
     await updateTaskStatusMutation.mutateAsync({ id: taskId, status: newStatus });
   };
 
@@ -595,6 +613,11 @@ const AuthenticatedApp = () => {
 
   // Goal actions
   const handleCreateOrUpdateGoal = async (goalData) => {
+    const isNowComplete = goalData.status === 'COMPLETED';
+    const prevGoal = goals.find((g) => g.id === goalData.id);
+    if (isNowComplete && prevGoal?.status !== 'COMPLETED') {
+      sound.playGoalComplete();
+    }
     if (goalData.id && !String(goalData.id).startsWith('local-goal-')) {
       await updateGoalMutation.mutateAsync({ id: goalData.id, ...goalData });
     } else {
@@ -608,6 +631,12 @@ const AuthenticatedApp = () => {
 
   // Course actions
   const handleCreateOrUpdateCourse = async (courseData) => {
+    const isNowComplete = courseData.total_lessons > 0 && courseData.finished_lessons >= courseData.total_lessons;
+    const prevCourse = courses.find((c) => c.id === courseData.id);
+    const wasComplete = prevCourse && prevCourse.total_lessons > 0 && prevCourse.finished_lessons >= prevCourse.total_lessons;
+    if (isNowComplete && !wasComplete) {
+      sound.playCourseComplete();
+    }
     if (courseData.id && !String(courseData.id).startsWith('local-course-')) {
       await updateCourseMutation.mutateAsync({ id: courseData.id, ...courseData });
     } else {
@@ -616,6 +645,17 @@ const AuthenticatedApp = () => {
   };
 
   const handleIncrementLesson = async (courseId) => {
+    const course = courses.find((c) => c.id === courseId);
+    if (course) {
+      const nextFinished = (course.finished_lessons || 0) + 1;
+      if (course.total_lessons > 0 && nextFinished >= course.total_lessons) {
+        sound.playCourseComplete();
+      } else {
+        sound.playLessonComplete();
+      }
+    } else {
+      sound.playLessonComplete();
+    }
     await incrementLessonMutation.mutateAsync(courseId);
   };
 
@@ -643,6 +683,11 @@ const AuthenticatedApp = () => {
 
   const handleToggleHabit = async (habitId, targetDate = null) => {
     const dateKey = targetDate ? formatDateKey(targetDate) : formatDateKey(new Date());
+    const habit = habits.find((h) => h.id === habitId);
+    const isCompleted = habit?.completed_dates?.includes(dateKey);
+    if (!isCompleted) {
+      sound.playHabitCheck();
+    }
     await toggleHabitMutation.mutateAsync({ id: habitId, dateStr: dateKey });
   };
 
@@ -892,7 +937,9 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <AuthenticatedApp />
+          <SoundProvider>
+            <AuthenticatedApp />
+          </SoundProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

@@ -75,6 +75,7 @@ export default defineConfig({
           items: [
             { text: 'Pages & Design System', link: '/frontend/pages-components' },
             { text: 'Gamification Engine (XP & Ranks)', link: '/frontend/gamification' },
+            { text: 'Audio & Soundscapes Engine', link: '/frontend/sound-engine' },
             { text: 'State Management (React Query)', link: '/frontend/state-management' }
           ]
         },

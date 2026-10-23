@@ -2,8 +2,16 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Award, Sparkles, ArrowRight, X } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useSound } from '../../context/useSound';
 
 export const LevelUpModal = ({ isOpen, onClose, levelData }) => {
+  const { playLevelUp } = useSound();
+
+  useEffect(() => {
+    if (!isOpen || !levelData) return;
+    playLevelUp();
+  }, [isOpen, levelData, playLevelUp]);
+
   useEffect(() => {
     if (!isOpen) return;
 

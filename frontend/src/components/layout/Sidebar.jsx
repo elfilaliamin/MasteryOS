@@ -15,16 +15,20 @@ import {
   Sparkles,
   Flame,
   Zap,
-  X
+  X,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { useTheme } from '../../context/useTheme';
 import { useGamification } from '../../context/useGamification';
+import { useSound } from '../../context/useSound';
 
 export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const { playerStats, isLoading } = useGamification();
+  const { isMuted, toggleMute } = useSound();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -92,6 +96,16 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Sound quick switch */}
+          <button
+            onClick={toggleMute}
+            className="hidden md:inline-flex p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
+            aria-label={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
+          >
+            {isMuted ? <VolumeX size={16} className="text-rose-500" /> : <Volume2 size={16} className="text-[#0d8a72] dark:text-teal-400" />}
+          </button>
+
           {/* Theme quick switch */}
           <button
             onClick={toggleTheme}

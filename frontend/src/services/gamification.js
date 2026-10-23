@@ -1,4 +1,6 @@
-// Professional Mastery Tiers (Balanced & Serious)
+import { computeHabitStreak } from '../utils/habitUtils';
+
+// Professional Mastery Tiers (Levels 1 to 20)
 export const LEVELS = [
   { level: 1, title: 'Associate Practitioner', minXp: 0, maxXp: 200, icon: '🏛️', badgeColor: '#0d8a72' },
   { level: 2, title: 'Strategic Specialist', minXp: 200, maxXp: 500, icon: '⚡', badgeColor: '#0d8a72' },
@@ -7,7 +9,19 @@ export const LEVELS = [
   { level: 5, title: 'Executive Director', minXp: 1600, maxXp: 2500, icon: '🛡️', badgeColor: '#8b5cf6' },
   { level: 6, title: 'Master of Operations', minXp: 2500, maxXp: 3700, icon: '👑', badgeColor: '#f59e0b' },
   { level: 7, title: 'Principal Strategist', minXp: 3700, maxXp: 5200, icon: '🌟', badgeColor: '#ec4899' },
-  { level: 8, title: 'Apex Executive', minXp: 5200, maxXp: 99999, icon: '💎', badgeColor: '#10b981' },
+  { level: 8, title: 'Apex Executive', minXp: 5200, maxXp: 7000, icon: '💎', badgeColor: '#10b981' },
+  { level: 9, title: 'Senior Managing Director', minXp: 7000, maxXp: 9100, icon: '🏛️', badgeColor: '#0d8a72' },
+  { level: 10, title: 'Vice President of Execution', minXp: 9100, maxXp: 11500, icon: '🎖️', badgeColor: '#0284c7' },
+  { level: 11, title: 'Chief of Strategy', minXp: 11500, maxXp: 14200, icon: '🧭', badgeColor: '#6366f1' },
+  { level: 12, title: 'Enterprise Architect', minXp: 14200, maxXp: 17200, icon: '⚡', badgeColor: '#8b5cf6' },
+  { level: 13, title: 'Global Operations Director', minXp: 17200, maxXp: 20500, icon: '🌐', badgeColor: '#f59e0b' },
+  { level: 14, title: 'Chief Operating Officer', minXp: 20500, maxXp: 24100, icon: '⚔️', badgeColor: '#ec4899' },
+  { level: 15, title: 'Executive Chancellor', minXp: 24100, maxXp: 28000, icon: '🔮', badgeColor: '#14b8a6' },
+  { level: 16, title: 'Distinguished Fellow', minXp: 28000, maxXp: 32200, icon: '🌌', badgeColor: '#06b6d4' },
+  { level: 17, title: 'Master Strategist', minXp: 32200, maxXp: 36700, icon: '🪐', badgeColor: '#3b82f6' },
+  { level: 18, title: 'Sovereign Leader', minXp: 36700, maxXp: 41500, icon: '☀️', badgeColor: '#f97316' },
+  { level: 19, title: 'Grand Chancellor', minXp: 41500, maxXp: 46600, icon: '🔥', badgeColor: '#ef4444' },
+  { level: 20, title: 'Apex Grandmaster', minXp: 46600, maxXp: 52000, icon: '🏆', badgeColor: '#10b981' },
 ];
 
 // Separated Executive Tracks for Achievements
@@ -224,6 +238,22 @@ export const TITLES = [
     icon: '👑',
     reqLevel: 6,
   },
+  {
+    id: 'grand_architect',
+    name: 'Grand Architect',
+    domain: 'Mastery',
+    description: 'Reach Level 10 Vice President',
+    icon: '🏛️',
+    reqLevel: 10,
+  },
+  {
+    id: 'apex_grandmaster',
+    name: 'Apex Grandmaster',
+    domain: 'Mastery',
+    description: 'Reach Level 20 Apex Grandmaster',
+    icon: '🏆',
+    reqLevel: 20,
+  },
 ];
 
 // Stable Psychological Gamification Calculation
@@ -282,6 +312,30 @@ export const calculateGamification = (
     totalXp += 100;
   });
 
+  // Habit Streak XP: Continuous consistency and logged completions
+  habits.forEach((habit) => {
+    const streak = computeHabitStreak(habit);
+    const totalCompletions = Array.isArray(habit?.completed_dates)
+      ? habit.completed_dates.length
+      : Number(habit?.total_completions) || 0;
+
+    // +10 XP per logged habit completion
+    totalXp += totalCompletions * 10;
+
+    // Habit Streak XP: rewarding ongoing consistency (+15 XP per continuous streak day)
+    if (streak > 0) {
+      totalXp += streak * 15;
+      // Milestone Streak Bonuses
+      if (streak >= 30) {
+        totalXp += 200;
+      } else if (streak >= 14) {
+        totalXp += 100;
+      } else if (streak >= 7) {
+        totalXp += 50;
+      }
+    }
+  });
+
   // Track achievements check and bonus
   const allAchievements = [
     ...TRACK_ACHIEVEMENTS.tasks.map((a) => ({
@@ -318,14 +372,65 @@ export const calculateGamification = (
   });
 
   // Determine current executive level
-  let currentLevelObj = LEVELS[0];
-  let nextLevelObj = LEVELS[1] || LEVELS[0];
+  const maxConfiguredLevel = LEVELS[LEVELS.length - 1]; // Level 20 (Apex Grandmaster)
+  const POST_LEVEL_20_SPAN = 5500; // Continuous XP required per level past Level 20
 
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (totalXp >= LEVELS[i].minXp) {
-      currentLevelObj = LEVELS[i];
-      nextLevelObj = LEVELS[i + 1] || LEVELS[i];
-      break;
+  let currentLevelObj;
+  let nextLevelObj;
+  let nextLevelTitle;
+
+  if (totalXp >= maxConfiguredLevel.maxXp) {
+    // Dynamic Leveling beyond Level 20: changes level continuously without adding new titles
+    const excessXp = totalXp - maxConfiguredLevel.maxXp;
+    const additionalLevels = Math.floor(excessXp / POST_LEVEL_20_SPAN) + 1;
+    const currentLevel = maxConfiguredLevel.level + additionalLevels;
+    const currentMinXp = maxConfiguredLevel.maxXp + (additionalLevels - 1) * POST_LEVEL_20_SPAN;
+    const currentMaxXp = currentMinXp + POST_LEVEL_20_SPAN;
+
+    currentLevelObj = {
+      level: currentLevel,
+      title: maxConfiguredLevel.title, // Retains Level 20 title without adding new titles
+      minXp: currentMinXp,
+      maxXp: currentMaxXp,
+      icon: maxConfiguredLevel.icon,
+      badgeColor: maxConfiguredLevel.badgeColor,
+    };
+
+    nextLevelObj = {
+      level: currentLevel + 1,
+      title: maxConfiguredLevel.title,
+      minXp: currentMaxXp,
+      maxXp: currentMaxXp + POST_LEVEL_20_SPAN,
+      icon: maxConfiguredLevel.icon,
+      badgeColor: maxConfiguredLevel.badgeColor,
+    };
+
+    nextLevelTitle = `Level ${currentLevel + 1}`;
+  } else {
+    // Standard lookup within Level 1 to 20
+    currentLevelObj = LEVELS[0];
+    nextLevelObj = LEVELS[1] || LEVELS[0];
+
+    for (let i = LEVELS.length - 1; i >= 0; i--) {
+      if (totalXp >= LEVELS[i].minXp) {
+        currentLevelObj = LEVELS[i];
+        if (i === LEVELS.length - 1) {
+          // At Level 20 heading toward Level 21
+          nextLevelObj = {
+            level: 21,
+            title: maxConfiguredLevel.title,
+            minXp: maxConfiguredLevel.maxXp,
+            maxXp: maxConfiguredLevel.maxXp + POST_LEVEL_20_SPAN,
+            icon: maxConfiguredLevel.icon,
+            badgeColor: maxConfiguredLevel.badgeColor,
+          };
+          nextLevelTitle = 'Level 21';
+        } else {
+          nextLevelObj = LEVELS[i + 1];
+          nextLevelTitle = nextLevelObj.title;
+        }
+        break;
+      }
     }
   }
 
@@ -375,6 +480,12 @@ export const calculateGamification = (
     finishedLessons: totalFinishedLessons,
   };
 
+  const habitProgress = {
+    totalHabits: habits.length,
+    activeStreaks: habits.filter((h) => computeHabitStreak(h) > 0).length,
+    bestStreak: habits.reduce((max, h) => Math.max(max, computeHabitStreak(h)), 0),
+  };
+
   return {
     totalXp,
     level: currentLevelObj.level,
@@ -384,12 +495,13 @@ export const calculateGamification = (
     minXp: currentLevelObj.minXp,
     maxXp: currentLevelObj.maxXp,
     xpToNextLevel: Math.max(0, currentLevelObj.maxXp - totalXp),
-    nextLevelTitle: nextLevelObj.title,
+    nextLevelTitle: nextLevelTitle || nextLevelObj.title,
     xpInCurrentLevel,
     progressPercent,
     taskProgress,
     goalProgress,
     courseProgress,
+    habitProgress,
     unlockedTitles,
     activeTitle,
     nextTitleToUnlock,

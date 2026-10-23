@@ -29,11 +29,15 @@ MasteryOS is a modern, high-performance web application designed to help individ
   - Progress percentage visualization and dynamic status tags.
   - Certificate links & PDF uploads.
   - Course-linked tasks with quick search assignment.
-- **🏆 Balanced Gamification**:
-  - Level-up XP milestones designed to sustain steady motivation without distracting alerts.
-  - Focused achievements separating tasks, goals, and learning progression.
+- **🏆 Balanced Gamification & Streaks**:
+  - 20 Executive mastery tiers with infinite dynamic rank progression past Level 20.
+  - Connected habit streak XP rewards (+15 XP/day + milestone streak multipliers).
+  - Unlockable prestige executive titles and psychological progress gradient previews.
+- **🔊 Interactive Audio & Soundscapes Engine**:
+  - Zero-dependency native Web Audio API micro-sounds for positive actions (completing tasks, advancing lessons, completing courses, checking habits, and level-ups).
+  - Instant quick-mute toggles in Navbar/Sidebar, master volume slider, and interactive sound previews in Settings.
 - **⚙️ Complete Customization**:
-  - Configurable dashboard layout order, category management (Personal, Work, School), and persistent user preferences.
+  - Configurable dashboard layout order, category management (Personal, Work, School), audio preferences, and persistent user settings.
 
 ---
 

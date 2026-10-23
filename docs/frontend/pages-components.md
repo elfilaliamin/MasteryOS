@@ -24,7 +24,7 @@ The MasteryOS frontend is engineered with **React 19**, **Vite**, **Tailwind CSS
 | `/habits` | `HabitsPage.jsx` | 7-day habit matrices, period analytics (Week/Month/Year), and streak badges. |
 | `/categories` | `CategoriesPage.jsx` | Taxonomy tags manager with custom color picker and task counters. |
 | `/analytics` | `AnalyticsPage.jsx` | Deep-dive productivity insights and priority workload distribution. |
-| `/settings` | `SettingsPage.jsx` | Profile editor, avatar uploader, title equip, password change, and dashboard view customizer. |
+| `/settings` | `SettingsPage.jsx` | Profile editor, avatar uploader, title equip, password change, dashboard view customizer, and audio feedback customizer with micro-sound previews. |
 | `/login` | `LoginPage.jsx` | Glassmorphic authentication portal with validation. |
 | `/register` | `RegisterPage.jsx` | Onboarding register flow with live password strength indicator. |
 
@@ -32,8 +32,11 @@ The MasteryOS frontend is engineered with **React 19**, **Vite**, **Tailwind CSS
 
 ## Core UI Components
 
+- **`Navbar`**: Fixed top navigation bar featuring active gamification XP progress badge, quick New Task button, theme switcher, and instant **Mute/Unmute audio toggle**.
+- **`Sidebar`**: Collapsible navigation rail containing route links, quick audio mute toggle, theme toggle, and user rank badge.
 - **`Button`**: Polished button supporting `primary`, `secondary`, `outline`, `ghost`, and `danger` variants with loading states.
 - **`Modal`**: Accessible dialog with smooth scale-in animation, escape key handlers, and backdrop click dismissal.
+- **`LevelUpModal`**: Fullscreen celebratory rank advancement modal with ambient glow, badge animation, and synchronized orchestral fanfare sound.
 - **`Card`**: Elevated surface with subtle borders, hover elevation, and dark mode transitions.
 - **`Badge`**: Small semantic pill for status (`TODO`, `IN_PROGRESS`, etc.) and priority (`LOW`, `HIGH`, `URGENT`).
 - **`OnboardingGuide`**: Interactive quest hub guiding zero-state accounts through their first 4 platform milestones.

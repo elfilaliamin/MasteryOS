@@ -31,7 +31,12 @@ import {
   RotateCcw,
   FileJson,
   CheckCircle2,
+  Volume1,
+  Volume2,
+  VolumeX,
+  Play,
 } from 'lucide-react';
+import { useSound } from '../context/useSound';
 import { DEFAULT_DASHBOARD_CONFIG, normalizeDashboardConfig } from '../utils/dashboardConfig';
 
 const SECTION_METADATA = {
@@ -55,6 +60,18 @@ export const SettingsPage = ({
   const { user, updateProfile, updateSettings } = useAuth();
   const { theme, themeMode, selectThemeMode } = useTheme();
   const { playerStats, equippedTitleId, equipTitle } = useGamification();
+  const {
+    isMuted,
+    toggleMute,
+    volume,
+    setVolume,
+    playTaskComplete,
+    playLessonComplete,
+    playCourseComplete,
+    playGoalComplete,
+    playHabitCheck,
+    playLevelUp,
+  } = useSound();
 
   // Profile Form state
   const [fullName, setFullName] = useState(user?.full_name || '');
@@ -644,6 +661,133 @@ export const SettingsPage = ({
                   </div>
                 );
               })}
+            </div>
+          </Card>
+
+          {/* Audio & Positive Feedback Soundscapes */}
+          <Card className="flex flex-col gap-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                {isMuted ? (
+                  <VolumeX size={18} className="text-rose-500" />
+                ) : (
+                  <Volume2 size={18} className="text-[#0d8a72] dark:text-teal-400" />
+                )}
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Audio & Positive Feedback
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Satisfying synthesized micro-soundscapes that celebrate your progress and build momentum.
+                  </p>
+                </div>
+              </div>
+
+              {/* Master Mute/Unmute Toggle */}
+              <button
+                type="button"
+                onClick={toggleMute}
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                  !isMuted ? 'bg-[#0d8a72]' : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+                title={!isMuted ? 'Mute Sound Effects' : 'Enable Sound Effects'}
+              >
+                <span
+                  className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                    !isMuted ? 'left-6' : 'left-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Master Volume Slider */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <span className="flex items-center gap-1.5">
+                  <Volume1 size={15} className="text-slate-400" />
+                  <span>Master Volume</span>
+                </span>
+                <span className="font-mono text-teal-600 dark:text-teal-400 font-bold">
+                  {Math.round(volume * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={volume}
+                disabled={isMuted}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#0d8a72] disabled:opacity-30 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            {/* Micro-Sound Preview Buttons */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Preview Positive Micro-Sounds
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                {[
+                  {
+                    title: 'Task Complete',
+                    desc: 'Crisp pop & resonance',
+                    icon: '✅',
+                    action: playTaskComplete,
+                  },
+                  {
+                    title: 'Lesson Advance',
+                    desc: 'Harmonic dual-chime',
+                    icon: '📚',
+                    action: playLessonComplete,
+                  },
+                  {
+                    title: 'Course Finished',
+                    desc: 'Triumphant major fanfare',
+                    icon: '🎓',
+                    action: playCourseComplete,
+                  },
+                  {
+                    title: 'Strategic Goal',
+                    desc: 'Deep milestone chord',
+                    icon: '🎯',
+                    action: playGoalComplete,
+                  },
+                  {
+                    title: 'Habit Checked',
+                    desc: 'Snappy tactile tick',
+                    icon: '🔥',
+                    action: playHabitCheck,
+                  },
+                  {
+                    title: 'Level Up',
+                    desc: 'Orchestral fanfare shimmer',
+                    icon: '🏆',
+                    action: playLevelUp,
+                  },
+                ].map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={item.action}
+                    className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 hover:border-[#0d8a72]/50 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{item.icon}</span>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
+                          {item.title}
+                        </p>
+                        <p className="text-[10px] text-slate-400">{item.desc}</p>
+                      </div>
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-teal-50 dark:bg-slate-800 text-[#0d8a72] dark:text-teal-400 group-hover:scale-110 transition-transform">
+                      <Play size={12} className="fill-current" />
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </Card>
 
