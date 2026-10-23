@@ -44,7 +44,6 @@ export const CoursesPage = ({
   const [savedFilters] = useState(getInitialCourseFilters);
   const [searchFilter, setSearchFilter] = useState(savedFilters.searchFilter || '');
   const [statusFilter, setStatusFilter] = useState(savedFilters.statusFilter || 'ALL');
-  const [hideFinished, setHideFinished] = useState(Boolean(savedFilters.hideFinished));
   const [sortBy, setSortBy] = useState(savedFilters.sortBy || 'default');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isMobileSortOpen, setIsMobileSortOpen] = useState(false);
@@ -87,12 +86,12 @@ export const CoursesPage = ({
     try {
       localStorage.setItem(
         STORAGE_KEY_COURSES,
-        JSON.stringify({ searchFilter, statusFilter, sortBy, hideFinished })
+        JSON.stringify({ searchFilter, statusFilter, sortBy })
       );
     } catch {
       // ignore
     }
-  }, [searchFilter, statusFilter, sortBy, hideFinished]);
+  }, [searchFilter, statusFilter, sortBy]);
 
   // Enrich courses with dynamic task metrics, progress, and 3-tier status
   const enrichedCourses = courses.map((course) => {
@@ -136,18 +135,15 @@ export const CoursesPage = ({
     0
   );
 
-  const isHidingFinished = hideFinished && statusFilter !== 'COMPLETED';
-  const hasActiveFilters = statusFilter !== 'ALL' || hideFinished;
-  const activeFilterCount = (statusFilter !== 'ALL' ? 1 : 0) + (hideFinished ? 1 : 0);
+  const hasActiveFilters = statusFilter !== 'ALL';
+  const activeFilterCount = statusFilter !== 'ALL' ? 1 : 0;
 
   const handleClearFilters = () => {
     setStatusFilter('ALL');
-    setHideFinished(false);
   };
 
   // Filtered courses
   const filteredCourses = enrichedCourses.filter((c) => {
-    if (isHidingFinished && (c.isCompleted || c.status === 'COMPLETED')) return false;
     if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
     if (searchFilter.trim()) {
       const q = searchFilter.toLowerCase().trim();
@@ -308,24 +304,6 @@ export const CoursesPage = ({
             <option value="IN_PROGRESS">In Progress ({inProgressCourses})</option>
             <option value="COMPLETED">Completed ({completedCourses})</option>
           </select>
-
-          {/* Hide Finished Courses Checkbox */}
-          <label
-            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold border cursor-pointer select-none transition-all ${
-              hideFinished
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-bold shadow-2xs'
-                : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700'
-            }`}
-            title={hideFinished ? 'Finished courses are hidden. Click to show.' : 'Click to hide finished courses'}
-          >
-            <input
-              type="checkbox"
-              checked={hideFinished}
-              onChange={(e) => setHideFinished(e.target.checked)}
-              className="w-3.5 h-3.5 text-[#0d8a72] rounded border-slate-300 dark:border-slate-600 focus:ring-[#0d8a72] cursor-pointer accent-[#0d8a72]"
-            />
-            <span>Hide finished courses</span>
-          </label>
 
           {/* Clear Filters Button */}
           {hasActiveFilters && (
@@ -492,28 +470,6 @@ export const CoursesPage = ({
                     <option value="IN_PROGRESS">In Progress ({inProgressCourses})</option>
                     <option value="COMPLETED">Completed ({completedCourses})</option>
                   </select>
-                </div>
-
-                <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800">
-                  <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
-                    <div className="flex items-center gap-2.5">
-                      <CheckCircle2 size={16} className={hideFinished ? "text-[#0d8a72] dark:text-teal-400" : "text-slate-400"} />
-                      <div>
-                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          Hide Finished Courses
-                        </div>
-                        <div className="text-[11px] text-slate-400">
-                          Exclude completed courses from view
-                        </div>
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={hideFinished}
-                      onChange={(e) => setHideFinished(e.target.checked)}
-                      className="w-4 h-4 text-[#0d8a72] rounded focus:ring-[#0d8a72] cursor-pointer accent-[#0d8a72]"
-                    />
-                  </label>
                 </div>
               </div>
 
