@@ -16,7 +16,6 @@ import {
   Edit2,
   Trash2,
   Pause,
-  Play,
 } from 'lucide-react';
 import { formatDateKey, computeHabitStreak } from '../utils/habitUtils';
 
