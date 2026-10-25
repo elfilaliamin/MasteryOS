@@ -587,8 +587,8 @@ export const HabitsPage = ({
                 </div>
               )}
 
-              {/* Unified Two-Tier Habit Cards for both mobile AND desktop! */}
-              <div className="space-y-3 sm:space-y-3.5">
+              {/* MOBILE & TABLET TWO-TIER VIEW (< lg): Stacked card ergonomics */}
+              <div className="lg:hidden space-y-3">
                 {displayHabits.map((habit) => {
                   const dates = (habit.completed_dates || []).map((d) =>
                     typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
@@ -618,22 +618,22 @@ export const HabitsPage = ({
 
                   return (
                     <div
-                      key={`matrix-${habit.id}`}
-                      className={`p-3.5 sm:p-4.5 rounded-2xl sm:rounded-3xl border transition-all space-y-3 sm:space-y-3.5 ${
+                      key={`m-matrix-${habit.id}`}
+                      className={`p-3.5 sm:p-4 rounded-2xl border transition-all space-y-3 ${
                         habit.is_paused
                           ? 'bg-slate-50/50 dark:bg-slate-800/25 border-dashed border-amber-300 dark:border-amber-700/60 opacity-85'
-                          : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs'
+                          : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800/80 shadow-2xs'
                       }`}
                     >
                       {/* Top Tier: Dot + Icon + Full Habit Title + Paused Badge + Streak Badge + Ratio + Edit & Delete */}
-                      <div className="flex items-center justify-between gap-2.5 sm:gap-3">
-                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <span
-                            className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0 shadow-2xs"
+                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
                             style={{ backgroundColor: habitColor }}
                           />
-                          <span className="text-base sm:text-xl shrink-0">{habit.icon || '⚡'}</span>
-                          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                          <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
                             <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
                               {habit.title}
                             </span>
@@ -645,7 +645,7 @@ export const HabitsPage = ({
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <StreakBadge
                             streak={habitStreak}
                             onClick={() => onToggleHabit(habit.id, todayKey)}
@@ -659,10 +659,10 @@ export const HabitsPage = ({
                               e.stopPropagation();
                               onEditHabit(habit);
                             }}
-                            className="p-1 sm:p-1.5 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer"
-                            title="Edit Habit (Pause/Resume, Change Icon, etc.)"
+                            className="p-1 sm:p-1.5 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md transition-colors cursor-pointer"
+                            title="Edit Habit"
                           >
-                            <Edit2 size={13} className="sm:w-3.5 sm:h-3.5" />
+                            <Edit2 size={13} />
                           </button>
                           {onDeleteHabit && (
                             <button
@@ -671,18 +671,18 @@ export const HabitsPage = ({
                                 e.stopPropagation();
                                 handleDelete(habit.id, habit.title);
                               }}
-                              className="p-1 sm:p-1.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                              className="p-1 sm:p-1.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md transition-colors cursor-pointer"
                               title="Delete Habit"
                             >
-                              <Trash2 size={13} className="sm:w-3.5 sm:h-3.5" />
+                              <Trash2 size={13} />
                             </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Bottom Tier: Period-specific visualizations with zero horizontal scroll */}
+                      {/* Bottom Tier: Period-specific visualizations */}
                       {period === 'WEEK' && (
-                        <div className="grid grid-cols-7 gap-1 sm:gap-2.5 pt-2.5 sm:pt-3 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
+                        <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
                           {weekDays.map((wd) => {
                             const isCompleted = dates.includes(wd.key);
                             return (
@@ -690,35 +690,24 @@ export const HabitsPage = ({
                                 key={wd.key}
                                 type="button"
                                 onClick={() => onToggleHabit(habit.id, wd.key)}
-                                className="flex flex-col items-center gap-1 sm:gap-1.5 py-0.5 sm:py-1 rounded-xl transition-all active:scale-95 cursor-pointer w-full group/btn"
+                                className="flex flex-col items-center gap-1 py-0.5 rounded-xl transition-all active:scale-90 cursor-pointer w-full"
                               >
-                                <div className="flex flex-col items-center leading-tight">
-                                  <span
-                                    className={`text-[10px] sm:text-xs font-bold uppercase transition-colors ${
-                                      wd.isSelected
-                                        ? 'text-[#0d8a72] dark:text-teal-400 font-black'
-                                        : wd.isToday
-                                        ? 'text-amber-500 font-black'
-                                        : 'text-slate-400 group-hover/btn:text-slate-600 dark:group-hover/btn:text-slate-300'
-                                    }`}
-                                  >
-                                    <span className="sm:hidden">{wd.dayShort.slice(0, 2)}</span>
-                                    <span className="hidden sm:inline">{wd.dayShort}</span>
-                                  </span>
-                                  <span
-                                    className={`text-[9px] sm:text-[10px] font-mono ${
-                                      wd.isToday ? 'text-amber-500 font-black' : 'text-slate-400/80'
-                                    }`}
-                                  >
-                                    {wd.dayNum}
-                                  </span>
-                                </div>
-
+                                <span
+                                  className={`text-[10px] sm:text-xs font-bold uppercase ${
+                                    wd.isSelected
+                                      ? 'text-[#0d8a72] dark:text-teal-400 font-black'
+                                      : wd.isToday
+                                      ? 'text-amber-500 font-black'
+                                      : 'text-slate-400'
+                                  }`}
+                                >
+                                  {wd.dayShort.slice(0, 2)}
+                                </span>
                                 <div
-                                  className={`w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all ${
+                                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all ${
                                     isCompleted
-                                      ? 'shadow-xs text-white scale-100'
-                                      : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-transparent hover:border-slate-300 dark:hover:border-slate-600'
+                                      ? 'shadow-xs text-white'
+                                      : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-transparent hover:border-slate-300'
                                   }`}
                                   style={{
                                     backgroundColor: isCompleted ? habitColor : undefined,
@@ -726,7 +715,7 @@ export const HabitsPage = ({
                                   }}
                                 >
                                   {isCompleted && (
-                                    <Check size={16} className="text-white drop-shadow-xs sm:scale-110" strokeWidth={3} />
+                                    <Check size={16} className="text-white drop-shadow-xs" strokeWidth={3} />
                                   )}
                                 </div>
                               </button>
@@ -736,15 +725,13 @@ export const HabitsPage = ({
                       )}
 
                       {period === 'MONTH' && (
-                        <div className="pt-2.5 sm:pt-3 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1 sm:space-y-1.5">
-                          {/* 7-column calendar weekday headers */}
-                          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[10px] sm:text-xs font-bold text-slate-400 mb-0.5 sm:mb-1">
+                        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[10px] sm:text-xs font-bold text-slate-400 mb-0.5">
                             {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d, idx) => (
                               <span key={idx}>{d}</span>
                             ))}
                           </div>
                           <div className="grid grid-cols-7 gap-1 sm:gap-2 justify-items-center">
-                            {/* Calendar leading empty padding */}
                             {monthDays.length > 0 &&
                               Array.from({
                                 length: (monthDays[0].date.getDay() + 6) % 7,
@@ -780,7 +767,7 @@ export const HabitsPage = ({
                       )}
 
                       {period === 'YEAR' && (
-                        <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 sm:gap-2 pt-2.5 sm:pt-3 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
+                        <div className="grid grid-cols-6 gap-1.5 sm:gap-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
                           {yearMonths.map((ym) => {
                             const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
                             return (
@@ -789,7 +776,7 @@ export const HabitsPage = ({
                                   {ym.monthShort}
                                 </span>
                                 <div
-                                  className={`w-9 h-8 sm:w-11 sm:h-10 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all ${
+                                  className={`w-9 h-8 sm:w-12 sm:h-10 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all ${
                                     countInMonth > 0
                                       ? 'text-white shadow-2xs font-black'
                                       : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-400 dark:text-slate-500'
@@ -809,6 +796,250 @@ export const HabitsPage = ({
                     </div>
                   );
                 })}
+              </div>
+
+              {/* DESKTOP MATRIX VIEW (>= lg): Perfectly proportioned desktop table with aligned columns */}
+              <div className="hidden lg:block space-y-2">
+                {/* Desktop Table Header */}
+                <div className="grid grid-cols-12 gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 items-center px-2">
+                  <div className="col-span-5 flex items-center gap-2">
+                    <span>Habit</span>
+                  </div>
+
+                  {period === 'WEEK' && (
+                    <div className="col-span-5 grid grid-cols-7 gap-1.5 text-center">
+                      {weekDays.map((wd) => (
+                        <button
+                          key={wd.key}
+                          type="button"
+                          onClick={() => setSelectedDayKey(wd.key)}
+                          className={`flex flex-col items-center py-1 px-1 rounded-xl transition-all cursor-pointer ${
+                            wd.isSelected
+                              ? 'bg-teal-50 dark:bg-teal-950/50 text-[#0d8a72] dark:text-teal-300 font-black ring-1 ring-[#0d8a72]/30'
+                              : wd.isToday
+                              ? 'text-amber-500 font-black'
+                              : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                          }`}
+                          title={`Select ${wd.dayShort}, ${wd.key}`}
+                        >
+                          <span className="text-[10px] uppercase font-bold tracking-wider">{wd.dayShort.slice(0, 3)}</span>
+                          <span className="text-xs font-mono font-bold leading-none mt-0.5">{wd.dayNum}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {period === 'MONTH' && (
+                    <div className="col-span-5 grid grid-flow-col auto-cols-fr gap-0.5 text-center">
+                      {monthDays.map((md) => (
+                        <button
+                          key={md.key}
+                          type="button"
+                          onClick={() => setSelectedDayKey(md.key)}
+                          className={`text-[9px] font-bold uppercase transition-colors cursor-pointer py-1 ${
+                            md.isSelected
+                              ? 'text-[#0d8a72] dark:text-teal-300 font-black'
+                              : md.isToday
+                              ? 'text-amber-500 font-black'
+                              : 'text-slate-400 hover:text-slate-700'
+                          }`}
+                        >
+                          {md.dayNum}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {period === 'YEAR' && (
+                    <div className="col-span-5 grid grid-cols-12 gap-1 text-center">
+                      {yearMonths.map((ym) => (
+                        <span key={ym.yearMonthKey} className="text-[9px] font-bold uppercase text-slate-400 truncate">
+                          {ym.monthShort}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="col-span-2 flex items-center justify-end gap-3 text-right pr-1">
+                    <span>Score</span>
+                    <span className="w-14 text-center">Actions</span>
+                  </div>
+                </div>
+
+                {/* Desktop Table Rows */}
+                <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                  {displayHabits.map((habit) => {
+                    const dates = (habit.completed_dates || []).map((d) =>
+                      typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
+                    );
+                    const habitColor = habit.color || '#0d8a72';
+                    const habitStreak = computeHabitStreak(habit);
+
+                    let completedInWeek = 0;
+                    weekDays.forEach((wd) => {
+                      if (dates.includes(wd.key)) completedInWeek++;
+                    });
+
+                    let completedInMonth = 0;
+                    monthDays.forEach((md) => {
+                      if (dates.includes(md.key)) completedInMonth++;
+                    });
+
+                    const currentYearStr = String(new Date().getFullYear());
+                    const completedInYear = dates.filter((d) => d.startsWith(currentYearStr)).length;
+
+                    const ratioLabel =
+                      period === 'WEEK'
+                        ? `${completedInWeek}/7`
+                        : period === 'MONTH'
+                        ? `${completedInMonth}/${monthDays.length}`
+                        : `${completedInYear}d`;
+
+                    return (
+                      <div
+                        key={`desk-matrix-${habit.id}`}
+                        className={`grid grid-cols-12 gap-2.5 items-center py-2 px-2 rounded-xl transition-colors group ${
+                          habit.is_paused
+                            ? 'bg-amber-50/20 dark:bg-amber-950/10 opacity-75 hover:opacity-100'
+                            : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                        }`}
+                      >
+                        {/* Habit title & details (col-span-5) */}
+                        <div className="col-span-5 flex items-center gap-2 min-w-0 pr-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                            style={{ backgroundColor: habitColor }}
+                          />
+                          <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                          <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                            <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
+                              {habit.title}
+                            </span>
+                            {habit.is_paused && (
+                              <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                Paused
+                              </span>
+                            )}
+                          </div>
+                          <StreakBadge
+                            streak={habitStreak}
+                            showLabel={false}
+                            onClick={() => onToggleHabit(habit.id, todayKey)}
+                          />
+                        </div>
+
+                        {/* Interactive check blocks (col-span-5) */}
+                        {period === 'WEEK' && (
+                          <div className="col-span-5 grid grid-cols-7 gap-1.5 justify-items-center">
+                            {weekDays.map((wd) => {
+                              const isCompleted = dates.includes(wd.key);
+                              return (
+                                <button
+                                  key={wd.key}
+                                  type="button"
+                                  onClick={() => onToggleHabit(habit.id, wd.key)}
+                                  title={`${habit.title} - ${wd.dayShort}, ${wd.key}: ${
+                                    isCompleted ? 'Completed (Click to uncheck)' : 'Pending (Click to complete)'
+                                  }`}
+                                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                                    isCompleted
+                                      ? 'shadow-xs text-white scale-100 hover:scale-105 active:scale-90'
+                                      : 'bg-slate-100/90 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 active:scale-90 border border-slate-200/60 dark:border-slate-700/60'
+                                  }`}
+                                  style={{
+                                    backgroundColor: isCompleted ? habitColor : undefined,
+                                    borderColor: isCompleted ? habitColor : undefined,
+                                  }}
+                                >
+                                  {isCompleted && (
+                                    <Check size={14} className="text-white drop-shadow-xs" strokeWidth={3} />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {period === 'MONTH' && (
+                          <div className="col-span-5 grid grid-flow-col auto-cols-fr gap-0.5 justify-items-center">
+                            {monthDays.map((md) => {
+                              const isCompleted = dates.includes(md.key);
+                              return (
+                                <button
+                                  key={md.key}
+                                  type="button"
+                                  onClick={() => onToggleHabit(habit.id, md.key)}
+                                  title={`${md.key}: ${isCompleted ? 'Completed' : 'Missed'}`}
+                                  className={`w-full max-w-[10px] h-5 rounded-xs transition-all cursor-pointer ${
+                                    isCompleted ? 'scale-105' : 'bg-slate-100 dark:bg-slate-800 opacity-60 hover:opacity-100'
+                                  }`}
+                                  style={{
+                                    backgroundColor: isCompleted ? habitColor : undefined,
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {period === 'YEAR' && (
+                          <div className="col-span-5 grid grid-cols-12 gap-1 justify-items-center">
+                            {yearMonths.map((ym) => {
+                              const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
+                              const intensity = Math.min(1, countInMonth / 20);
+                              return (
+                                <div
+                                  key={ym.yearMonthKey}
+                                  title={`${ym.monthShort}: ${countInMonth} check-ins`}
+                                  className="w-4 h-6 rounded-md flex items-center justify-center text-[8px] font-bold text-white transition-all"
+                                  style={{
+                                    backgroundColor: countInMonth > 0 ? habitColor : undefined,
+                                    opacity: countInMonth > 0 ? Math.max(0.35, intensity) : 0.15,
+                                  }}
+                                >
+                                  {countInMonth > 0 ? countInMonth : ''}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Ratio and Actions (col-span-2) */}
+                        <div className="col-span-2 flex items-center justify-end gap-2 pr-1">
+                          <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 min-w-[34px] text-right">
+                            {ratioLabel}
+                          </span>
+                          <div className="flex items-center gap-1 shrink-0 w-14 justify-end">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditHabit(habit);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                              title="Edit Habit"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            {onDeleteHabit && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(habit.id, habit.title);
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Habit"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Footer banner for active view if paused habits exist */}
