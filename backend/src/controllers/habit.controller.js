@@ -11,7 +11,7 @@ export const getHabits = async (req, res, next) => {
 
 export const createHabit = async (req, res, next) => {
   try {
-    const { title, description, icon, color, time_of_day, frequency } = req.body;
+    const { title, description, icon, color, time_of_day, frequency, is_paused } = req.body;
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Habit title is required' });
     }
@@ -22,7 +22,8 @@ export const createHabit = async (req, res, next) => {
       icon,
       color,
       time_of_day,
-      frequency
+      frequency,
+      is_paused: Boolean(is_paused)
     });
 
     res.status(201).json({ habit });

@@ -407,11 +407,12 @@ export const DashboardPage = ({
     return `${year}-${month}-${day}`;
   })();
 
-  const displayedHabits = habits.slice(0, DASHBOARD_LIMITS.HABITS);
-  const completedHabitsCount = habits.filter((h) =>
+  const activeHabits = habits.filter((h) => !h.is_paused);
+  const displayedHabits = activeHabits.slice(0, DASHBOARD_LIMITS.HABITS);
+  const completedHabitsCount = activeHabits.filter((h) =>
     (h.completed_dates || []).includes(todayStr)
   ).length;
-  const habitsRate = habits.length > 0 ? Math.round((completedHabitsCount / habits.length) * 100) : 0;
+  const habitsRate = activeHabits.length > 0 ? Math.round((completedHabitsCount / activeHabits.length) * 100) : 0;
 
   // Widget rendering dictionary
   const renderSection = (sectionKey) => {
@@ -500,7 +501,7 @@ export const DashboardPage = ({
 
       case 'habits':
         if (!dashboardConfig.showHabits) return null;
-        if (habits.length === 0) {
+        if (activeHabits.length === 0) {
           return (
             <div key="habits" className="flex flex-col gap-3">
               <div className="flex items-center justify-between">

@@ -210,6 +210,7 @@ export const getHabitsByUser = async (userId) => {
         const streaks = calculateStreaks(dateSet);
         return {
           ...h,
+          is_paused: Boolean(h.is_paused),
           completed_dates: Array.from(dateSet),
           total_completions: dateSet.size,
           current_streak: streaks.currentStreak,
@@ -236,6 +237,7 @@ export const getHabitsByUser = async (userId) => {
 
     return {
       ...h,
+      is_paused: Boolean(h.is_paused),
       completed_dates: Array.from(dateSet),
       total_completions: dateSet.size,
       current_streak: streaks.currentStreak,
@@ -252,20 +254,22 @@ export const createHabit = async (userId, data) => {
     icon = '⚡',
     color = '#0d8a72',
     time_of_day = 'ANYTIME',
-    frequency = 'DAILY'
+    frequency = 'DAILY',
+    is_paused = false
   } = data;
 
   try {
     const res = await query(
-      `INSERT INTO habits (user_id, title, description, icon, color, time_of_day, frequency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO habits (user_id, title, description, icon, color, time_of_day, frequency, is_paused)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [userId, title, description, icon, color, time_of_day, frequency]
+      [userId, title, description, icon, color, time_of_day, frequency, is_paused]
     );
 
     if (res && res.rows && res.rows[0]) {
       return {
         ...res.rows[0],
+        is_paused: Boolean(res.rows[0].is_paused),
         completed_dates: [],
         total_completions: 0,
         current_streak: 0,
@@ -287,6 +291,7 @@ export const createHabit = async (userId, data) => {
     color,
     time_of_day,
     frequency,
+    is_paused: Boolean(is_paused),
     is_archived: false,
     created_at: new Date().toISOString(),
     completed_dates: [],
@@ -303,7 +308,7 @@ export const createHabit = async (userId, data) => {
 };
 
 export const updateHabit = async (userId, habitId, data) => {
-  const { title, description, icon, color, time_of_day, frequency } = data;
+  const { title, description, icon, color, time_of_day, frequency, is_paused } = data;
 
   try {
     const res = await query(
@@ -314,14 +319,18 @@ export const updateHabit = async (userId, habitId, data) => {
            color = COALESCE($4, color),
            time_of_day = COALESCE($5, time_of_day),
            frequency = COALESCE($6, frequency),
+           is_paused = CASE WHEN $7::boolean IS NOT NULL THEN $7::boolean ELSE is_paused END,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7 AND user_id = $8
+       WHERE id = $8 AND user_id = $9
        RETURNING *`,
-      [title, description, icon, color, time_of_day, frequency, habitId, userId]
+      [title, description, icon, color, time_of_day, frequency, is_paused === undefined ? null : is_paused, habitId, userId]
     );
 
     if (res && res.rows && res.rows[0]) {
-      return res.rows[0];
+      return {
+        ...res.rows[0],
+        is_paused: Boolean(res.rows[0].is_paused)
+      };
     }
   } catch (err) {
     if (process.env.NODE_ENV === 'production') throw err;
@@ -334,6 +343,7 @@ export const updateHabit = async (userId, habitId, data) => {
     userHabits[idx] = {
       ...userHabits[idx],
       ...data,
+      is_paused: is_paused !== undefined ? Boolean(is_paused) : Boolean(userHabits[idx].is_paused),
       updated_at: new Date().toISOString()
     };
     return userHabits[idx];

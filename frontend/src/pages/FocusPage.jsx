@@ -111,17 +111,19 @@ export const FocusPage = ({
     }).format(new Date());
   }, []);
 
-  // Process today's habits
+  // Process today's habits (exclude paused habits)
   const enrichedHabits = useMemo(() => {
-    return habits.map((h) => {
-      const stats = calculateHabitStats(h.completed_dates || h.history || []);
-      return {
-        ...h,
-        isCompletedToday: stats.isCompletedToday,
-        currentStreak: stats.currentStreak,
-        totalCompletions: stats.totalCompletions,
-      };
-    });
+    return habits
+      .filter((h) => !h.is_paused)
+      .map((h) => {
+        const stats = calculateHabitStats(h.completed_dates || h.history || []);
+        return {
+          ...h,
+          isCompletedToday: stats.isCompletedToday,
+          currentStreak: stats.currentStreak,
+          totalCompletions: stats.totalCompletions,
+        };
+      });
   }, [habits]);
 
   // Determine tasks for today's focus:

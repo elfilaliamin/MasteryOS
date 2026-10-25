@@ -215,7 +215,8 @@ export const createHabitSchema = z.object({
   icon: z.string().max(50).optional(),
   color: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Color must be valid hex code').optional(),
   frequency: z.string().max(50).optional(),
-  time_of_day: normalizedTimeOfDay.optional()
+  time_of_day: normalizedTimeOfDay.optional(),
+  is_paused: z.boolean().optional()
 });
 
 export const updateHabitSchema = createHabitSchema.partial();

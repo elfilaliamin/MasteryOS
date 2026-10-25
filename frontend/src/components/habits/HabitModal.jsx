@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { AlertCircle, Check, Clock, Trash2 } from 'lucide-react';
+import { AlertCircle, Check, Clock, Trash2, Pause, Play } from 'lucide-react';
 
 const colorPresets = [
   '#0d8a72', // Khademni Teal
@@ -56,6 +56,7 @@ const HabitFormContent = ({ habit, onSubmit, onDelete, onClose }) => {
   const [color, setColor] = useState(habit?.color || '#0d8a72');
   const [timeOfDay, setTimeOfDay] = useState(habit?.time_of_day || 'ANYTIME');
   const [frequency, setFrequency] = useState(habit?.frequency || 'DAILY');
+  const [isPaused, setIsPaused] = useState(Boolean(habit?.is_paused));
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -86,6 +87,7 @@ const HabitFormContent = ({ habit, onSubmit, onDelete, onClose }) => {
         color,
         time_of_day: timeOfDay,
         frequency,
+        is_paused: isPaused,
       });
       onClose();
     } catch (err) {
@@ -219,6 +221,57 @@ const HabitFormContent = ({ habit, onSubmit, onDelete, onClose }) => {
           ))}
         </div>
       </div>
+
+      {/* Habit Status & Pause Control (Only shown in Edit mode to avoid clutter) */}
+      {habit?.id && (
+        <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Habit Status
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isPaused
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                  }`}
+                >
+                  {isPaused ? 'Paused' : 'Active'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                {isPaused
+                  ? 'Paused habits are archived without losing history, stats, or streaks.'
+                  : 'Active habits appear in your daily routines and tracking matrix.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsPaused(!isPaused)}
+              className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95 ${
+                isPaused
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-amber-500 hover:bg-amber-600 text-white'
+              }`}
+            >
+              {isPaused ? (
+                <>
+                  <Play size={13} fill="currentColor" />
+                  <span>Resume</span>
+                </>
+              ) : (
+                <>
+                  <Pause size={13} fill="currentColor" />
+                  <span>Pause</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">

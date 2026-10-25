@@ -118,10 +118,14 @@ CREATE TABLE IF NOT EXISTS habits (
     color VARCHAR(7) DEFAULT '#0d8a72',
     time_of_day VARCHAR(20) DEFAULT 'ANYTIME',
     frequency VARCHAR(20) DEFAULT 'DAILY',
+    is_paused BOOLEAN DEFAULT FALSE,
     is_archived BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Ensure is_paused exists on existing databases
+ALTER TABLE habits ADD COLUMN IF NOT EXISTS is_paused BOOLEAN DEFAULT FALSE;
 
 -- 9. Habit Logs Table
 CREATE TABLE IF NOT EXISTS habit_logs (
@@ -136,3 +140,4 @@ CREATE TABLE IF NOT EXISTS habit_logs (
 CREATE INDEX IF NOT EXISTS idx_habits_user_id ON habits(user_id);
 CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_id ON habit_logs(habit_id);
 CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(completed_date);
+

@@ -15,6 +15,8 @@ import {
   TrendingUp,
   Edit2,
   Trash2,
+  Pause,
+  Play,
 } from 'lucide-react';
 import { formatDateKey, computeHabitStreak } from '../utils/habitUtils';
 
@@ -89,8 +91,18 @@ export const HabitsPage = ({
   const [viewMode, setViewMode] = useState('GRID'); // 'GRID' (matrix) | 'LIST' (cards)
   const [selectedDayKey, setSelectedDayKey] = useState(() => formatDateKey(new Date()));
   const [mobileTab, setMobileTab] = useState('ACTIONS'); // 'ACTIONS' (Today Checklist) | 'MATRIX' (Weekly Heatmap)
+  const [statusFilter, setStatusFilter] = useState('ACTIVE'); // 'ACTIVE' | 'PAUSED'
 
   const todayKey = formatDateKey(new Date());
+
+  // Active and Paused habits separation (data is fully preserved, paused habits are archived from daily targets)
+  const activeHabits = useMemo(() => habits.filter((h) => !h.is_paused), [habits]);
+  const pausedHabits = useMemo(() => habits.filter((h) => Boolean(h.is_paused)), [habits]);
+
+  const displayHabits = useMemo(() => {
+    if (statusFilter === 'PAUSED') return pausedHabits;
+    return activeHabits;
+  }, [statusFilter, activeHabits, pausedHabits]);
 
   const handleDelete = (habitId, habitTitle) => {
     if (!onDeleteHabit) return;
@@ -115,8 +127,8 @@ export const HabitsPage = ({
 
   const firstName = user?.full_name ? user.full_name.split(' ')[0] : 'Alex';
 
-  // Completed Today stats
-  const completedTodayCount = habits.filter((h) =>
+  // Completed Today stats (tracked against active habits)
+  const completedTodayCount = activeHabits.filter((h) =>
     (h.completed_dates || []).includes(todayKey)
   ).length;
 
@@ -222,15 +234,16 @@ export const HabitsPage = ({
     return months;
   }, [period]);
 
-  // Calculate Achievement Percentage for Current View
+  // Calculate Achievement Percentage for Current View (based on active habits)
   const periodAchievement = useMemo(() => {
-    if (habits.length === 0) return { percent: 0, completedLogs: 0, totalOpportunities: 0 };
+    const targetHabits = activeHabits;
+    if (targetHabits.length === 0) return { percent: 0, completedLogs: 0, totalOpportunities: 0 };
 
     if (period === 'WEEK') {
       let totalLogs = 0;
-      const totalPossible = habits.length * 7;
+      const totalPossible = targetHabits.length * 7;
       weekDays.forEach((wd) => {
-        habits.forEach((h) => {
+        targetHabits.forEach((h) => {
           if ((h.completed_dates || []).includes(wd.key)) totalLogs++;
         });
       });
@@ -240,9 +253,9 @@ export const HabitsPage = ({
 
     if (period === 'MONTH') {
       let totalLogs = 0;
-      const totalPossible = habits.length * monthDays.length;
+      const totalPossible = targetHabits.length * monthDays.length;
       monthDays.forEach((md) => {
-        habits.forEach((h) => {
+        targetHabits.forEach((h) => {
           if ((h.completed_dates || []).includes(md.key)) totalLogs++;
         });
       });
@@ -252,15 +265,15 @@ export const HabitsPage = ({
 
     let totalLogs = 0;
     const currentYearStr = String(new Date().getFullYear());
-    habits.forEach((h) => {
+    targetHabits.forEach((h) => {
       totalLogs += (h.completed_dates || []).filter((d) =>
         (typeof d === 'string' ? d : formatDateKey(d)).startsWith(currentYearStr)
       ).length;
     });
-    const totalPossible = habits.length * 365;
+    const totalPossible = targetHabits.length * 365;
     const percent = totalPossible > 0 ? Math.min(100, Math.round((totalLogs / totalPossible) * 100)) : 0;
     return { percent, completedLogs: totalLogs, totalOpportunities: totalPossible };
-  }, [habits, period, weekDays, monthDays]);
+  }, [activeHabits, period, weekDays, monthDays]);
 
   // Selected Day Object for the Right Side Quick Action Panel
   const selectedDayInfo = useMemo(() => {
@@ -315,7 +328,7 @@ export const HabitsPage = ({
           }`}
         >
           <CheckCircle2 size={15} />
-          <span>Daily Check-ins ({completedTodayCount}/{habits.length})</span>
+          <span>Daily Check-ins ({completedTodayCount}/{activeHabits.length})</span>
         </button>
 
         <button
@@ -340,28 +353,59 @@ export const HabitsPage = ({
             mobileTab === 'MATRIX' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          {/* Controls Bar: Period Toggle Pill + Add Habit Button */}
+          {/* Controls Bar: Period Toggle Pill + Active/Paused Status Filter + Add Habit Button */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {/* Period Toggle Pill with horizontal scroll on mobile */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-full border border-slate-200/60 dark:border-slate-700/60 shadow-2xs overflow-x-auto no-scrollbar max-w-full">
-              {[
-                { id: 'WEEK', label: 'Week' },
-                { id: 'MONTH', label: 'Month' },
-                { id: 'YEAR', label: 'Year' },
-              ].map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setPeriod(p.id)}
-                  className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                    period === p.id
-                      ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-sm'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Period Toggle Pill with horizontal scroll on mobile */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-full border border-slate-200/60 dark:border-slate-700/60 shadow-2xs overflow-x-auto no-scrollbar max-w-full">
+                {[
+                  { id: 'WEEK', label: 'Week' },
+                  { id: 'MONTH', label: 'Month' },
+                  { id: 'YEAR', label: 'Year' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPeriod(p.id)}
+                    className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                      period === p.id
+                        ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Active / Paused Status Filter Pill (Shown when paused habits exist) */}
+              {pausedHabits.length > 0 && (
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-full border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('ACTIVE')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      statusFilter === 'ACTIVE'
+                        ? 'bg-white dark:bg-slate-700 text-[#0d8a72] dark:text-teal-300 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Active ({activeHabits.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('PAUSED')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                      statusFilter === 'PAUSED'
+                        ? 'bg-amber-500 text-white shadow-sm'
+                        : 'text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300'
+                    }`}
+                  >
+                    <Pause size={11} fill="currentColor" />
+                    <span>Paused ({pausedHabits.length})</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* + Add Habit Pill Button */}
@@ -485,11 +529,68 @@ export const HabitsPage = ({
                 <span>Create First Habit</span>
               </Button>
             </Card>
+          ) : displayHabits.length === 0 ? (
+            statusFilter === 'PAUSED' ? (
+              <Card className="p-8 sm:p-12 text-center flex flex-col items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center mb-3">
+                  <Pause size={28} />
+                </div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+                  No Paused Habits
+                </h3>
+                <p className="text-xs text-slate-400 max-w-sm mt-1">
+                  You can pause habits you are no longer interested in by clicking Edit on any habit card. Paused habits safely keep all streak and log history without cluttering daily check-ins.
+                </p>
+                <Button onClick={() => setStatusFilter('ACTIVE')} variant="outline" className="mt-4">
+                  View Active Habits
+                </Button>
+              </Card>
+            ) : (
+              <Card className="p-8 sm:p-12 text-center flex flex-col items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center mb-3">
+                  <Pause size={28} />
+                </div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+                  All Habits Are Paused
+                </h3>
+                <p className="text-xs text-slate-400 max-w-sm mt-1">
+                  All your existing habits are currently paused. You can resume any habit at any time or create a new habit.
+                </p>
+                <div className="flex items-center gap-2 mt-4">
+                  <Button onClick={() => setStatusFilter('PAUSED')} variant="outline">
+                    View Paused Habits ({pausedHabits.length})
+                  </Button>
+                  <Button onClick={onOpenNewHabit} variant="primary">
+                    <Plus size={16} className="mr-1.5" />
+                    <span>Add New Habit</span>
+                  </Button>
+                </div>
+              </Card>
+            )
           ) : viewMode === 'GRID' ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xs relative">
-              {/* MOBILE & TABLET TWO-TIER VIEW (< lg for all periods): No squishing, no truncation, zero horizontal scroll */}
-              <div className="lg:hidden space-y-3">
-                {habits.map((habit) => {
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-3 sm:p-5 shadow-2xs space-y-3 sm:space-y-4">
+              {/* Paused view informational banner */}
+              {statusFilter === 'PAUSED' && (
+                <div className="flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Pause size={15} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span className="truncate sm:whitespace-normal">
+                      These habits are paused without losing any streak or history. Click <strong>Edit</strong> to resume tracking.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('ACTIVE')}
+                    className="font-bold text-[#0d8a72] dark:text-teal-400 hover:underline cursor-pointer ml-3 shrink-0"
+                  >
+                    View Active
+                  </button>
+                </div>
+              )}
+
+              {/* Unified Two-Tier Habit Cards for both mobile AND desktop! */}
+              <div className="space-y-3 sm:space-y-3.5">
+                {displayHabits.map((habit) => {
                   const dates = (habit.completed_dates || []).map((d) =>
                     typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
                   );
@@ -518,23 +619,34 @@ export const HabitsPage = ({
 
                   return (
                     <div
-                      key={`m-matrix-${habit.id}`}
-                      className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/80 space-y-3"
+                      key={`matrix-${habit.id}`}
+                      className={`p-3.5 sm:p-4.5 rounded-2xl sm:rounded-3xl border transition-all space-y-3 sm:space-y-3.5 ${
+                        habit.is_paused
+                          ? 'bg-slate-50/50 dark:bg-slate-800/25 border-dashed border-amber-300 dark:border-amber-700/60 opacity-85'
+                          : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs'
+                      }`}
                     >
-                      {/* Top Tier: Dot + Icon + Full Habit Title + Streak Badge + Ratio + Edit & Delete */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
+                      {/* Top Tier: Dot + Icon + Full Habit Title + Paused Badge + Streak Badge + Ratio + Edit & Delete */}
+                      <div className="flex items-center justify-between gap-2.5 sm:gap-3">
+                        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                           <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                            className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0 shadow-2xs"
                             style={{ backgroundColor: habitColor }}
                           />
-                          <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
-                          <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
-                            {habit.title}
-                          </span>
+                          <span className="text-base sm:text-xl shrink-0">{habit.icon || '⚡'}</span>
+                          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                            <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
+                              {habit.title}
+                            </span>
+                            {habit.is_paused && (
+                              <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                Paused
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                           <StreakBadge
                             streak={habitStreak}
                             onClick={() => onToggleHabit(habit.id, todayKey)}
@@ -548,10 +660,10 @@ export const HabitsPage = ({
                               e.stopPropagation();
                               onEditHabit(habit);
                             }}
-                            className="p-1 sm:p-1.5 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md transition-colors cursor-pointer"
-                            title="Edit Habit"
+                            className="p-1 sm:p-1.5 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-colors cursor-pointer"
+                            title="Edit Habit (Pause/Resume, Change Icon, etc.)"
                           >
-                            <Edit2 size={13} />
+                            <Edit2 size={13} className="sm:w-3.5 sm:h-3.5" />
                           </button>
                           {onDeleteHabit && (
                             <button
@@ -560,10 +672,10 @@ export const HabitsPage = ({
                                 e.stopPropagation();
                                 handleDelete(habit.id, habit.title);
                               }}
-                              className="p-1 sm:p-1.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md transition-colors cursor-pointer"
+                              className="p-1 sm:p-1.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
                               title="Delete Habit"
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={13} className="sm:w-3.5 sm:h-3.5" />
                             </button>
                           )}
                         </div>
@@ -571,7 +683,7 @@ export const HabitsPage = ({
 
                       {/* Bottom Tier: Period-specific visualizations with zero horizontal scroll */}
                       {period === 'WEEK' && (
-                        <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
+                        <div className="grid grid-cols-7 gap-1 sm:gap-2.5 pt-2.5 sm:pt-3 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
                           {weekDays.map((wd) => {
                             const isCompleted = dates.includes(wd.key);
                             return (
@@ -579,24 +691,35 @@ export const HabitsPage = ({
                                 key={wd.key}
                                 type="button"
                                 onClick={() => onToggleHabit(habit.id, wd.key)}
-                                className="flex flex-col items-center gap-1 py-0.5 rounded-xl transition-all active:scale-90 cursor-pointer w-full"
+                                className="flex flex-col items-center gap-1 sm:gap-1.5 py-0.5 sm:py-1 rounded-xl transition-all active:scale-95 cursor-pointer w-full group/btn"
                               >
-                                <span
-                                  className={`text-[10px] sm:text-xs font-bold uppercase ${
-                                    wd.isSelected
-                                      ? 'text-[#0d8a72] dark:text-teal-400 font-black'
-                                      : wd.isToday
-                                      ? 'text-amber-500 font-black'
-                                      : 'text-slate-400'
-                                  }`}
-                                >
-                                  {wd.dayShort.slice(0, 2)}
-                                </span>
+                                <div className="flex flex-col items-center leading-tight">
+                                  <span
+                                    className={`text-[10px] sm:text-xs font-bold uppercase transition-colors ${
+                                      wd.isSelected
+                                        ? 'text-[#0d8a72] dark:text-teal-400 font-black'
+                                        : wd.isToday
+                                        ? 'text-amber-500 font-black'
+                                        : 'text-slate-400 group-hover/btn:text-slate-600 dark:group-hover/btn:text-slate-300'
+                                    }`}
+                                  >
+                                    <span className="sm:hidden">{wd.dayShort.slice(0, 2)}</span>
+                                    <span className="hidden sm:inline">{wd.dayShort}</span>
+                                  </span>
+                                  <span
+                                    className={`text-[9px] sm:text-[10px] font-mono ${
+                                      wd.isToday ? 'text-amber-500 font-black' : 'text-slate-400/80'
+                                    }`}
+                                  >
+                                    {wd.dayNum}
+                                  </span>
+                                </div>
+
                                 <div
-                                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all ${
+                                  className={`w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all ${
                                     isCompleted
-                                      ? 'shadow-xs text-white'
-                                      : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-transparent hover:border-slate-300'
+                                      ? 'shadow-xs text-white scale-100'
+                                      : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-transparent hover:border-slate-300 dark:hover:border-slate-600'
                                   }`}
                                   style={{
                                     backgroundColor: isCompleted ? habitColor : undefined,
@@ -604,7 +727,7 @@ export const HabitsPage = ({
                                   }}
                                 >
                                   {isCompleted && (
-                                    <Check size={16} className="text-white drop-shadow-xs" strokeWidth={3} />
+                                    <Check size={16} className="text-white drop-shadow-xs sm:scale-110" strokeWidth={3} />
                                   )}
                                 </div>
                               </button>
@@ -614,9 +737,9 @@ export const HabitsPage = ({
                       )}
 
                       {period === 'MONTH' && (
-                        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                        <div className="pt-2.5 sm:pt-3 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1 sm:space-y-1.5">
                           {/* 7-column calendar weekday headers */}
-                          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[10px] sm:text-xs font-bold text-slate-400 mb-0.5">
+                          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[10px] sm:text-xs font-bold text-slate-400 mb-0.5 sm:mb-1">
                             {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d, idx) => (
                               <span key={idx}>{d}</span>
                             ))}
@@ -658,7 +781,7 @@ export const HabitsPage = ({
                       )}
 
                       {period === 'YEAR' && (
-                        <div className="grid grid-cols-6 gap-1.5 sm:gap-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
+                        <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5 sm:gap-2 pt-2.5 sm:pt-3 border-t border-slate-200/60 dark:border-slate-700/60 justify-items-center">
                           {yearMonths.map((ym) => {
                             const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
                             return (
@@ -667,7 +790,7 @@ export const HabitsPage = ({
                                   {ym.monthShort}
                                 </span>
                                 <div
-                                  className={`w-9 h-8 sm:w-12 sm:h-10 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all ${
+                                  className={`w-9 h-8 sm:w-11 sm:h-10 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all ${
                                     countInMonth > 0
                                       ? 'text-white shadow-2xs font-black'
                                       : 'bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-400 dark:text-slate-500'
@@ -689,239 +812,29 @@ export const HabitsPage = ({
                 })}
               </div>
 
-              {/* Desktop Scrollable Container with Sticky Habit Column (Hidden on mobile and tablet < lg, active on desktop >= lg) */}
-              <div className="hidden lg:block overflow-x-auto -mx-1 px-1 scroll-smooth">
-                <div className="min-w-[500px] sm:min-w-[560px]">
-                  {/* Table Header */}
-                  <div className="grid grid-cols-12 gap-1.5 sm:gap-2 pb-2.5 pt-1 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 items-center">
-                    {/* Sticky Habit column header */}
-                    <div className="col-span-5 sm:col-span-4 sticky left-0 bg-white dark:bg-slate-900 z-10 pl-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.4)]">
-                      Habit
-                    </div>
-
-                    {/* Period Days columns */}
-                    {period === 'WEEK' ? (
-                      <div className="col-span-6 sm:col-span-7 grid grid-cols-7 gap-1 sm:gap-2 text-center">
-                        {weekDays.map((wd) => (
-                          <button
-                            key={wd.key}
-                            type="button"
-                            onClick={() => {
-                              setSelectedDayKey(wd.key);
-                              setMobileTab('ACTIONS');
-                            }}
-                            className={`text-[10px] sm:text-[11px] font-bold uppercase transition-colors cursor-pointer rounded-lg py-1 ${
-                              wd.isSelected
-                                ? 'text-[#0d8a72] dark:text-teal-400 bg-teal-50/70 dark:bg-teal-950/40'
-                                : wd.isToday
-                                ? 'text-amber-500 font-black'
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                            }`}
-                          >
-                            <span>{wd.dayShort}</span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : period === 'MONTH' ? (
-                      <div className="col-span-6 sm:col-span-7 grid grid-flow-col auto-cols-fr gap-0.5 sm:gap-1 text-center">
-                        {monthDays.map((md) => (
-                          <button
-                            key={md.key}
-                            type="button"
-                            onClick={() => {
-                              setSelectedDayKey(md.key);
-                              setMobileTab('ACTIONS');
-                            }}
-                            className={`text-[8px] sm:text-[9px] font-bold uppercase transition-colors cursor-pointer ${
-                              md.isSelected ? 'text-[#0d8a72] font-black' : 'text-slate-400'
-                            }`}
-                          >
-                            {md.dayNum}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="col-span-6 sm:col-span-7 grid grid-cols-12 gap-1 text-center">
-                        {yearMonths.map((ym) => (
-                          <span key={ym.yearMonthKey} className="text-[8px] sm:text-[9px] font-bold uppercase text-slate-400 truncate">
-                            {ym.monthShort}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Ratio column */}
-                    <div className="col-span-1 text-right pr-2">Ratio</div>
+              {/* Footer banner for active view if paused habits exist */}
+              {statusFilter === 'ACTIVE' && pausedHabits.length > 0 && (
+                <div className="flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 text-xs">
+                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                    <Pause size={14} className="shrink-0" />
+                    <span>
+                      <strong>{pausedHabits.length} habit{pausedHabits.length > 1 ? 's are' : ' is'} paused</strong> with streak history safely kept.
+                    </span>
                   </div>
-
-                  {/* Habit Rows */}
-                  <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                    {habits.map((habit) => {
-                      const dates = (habit.completed_dates || []).map((d) =>
-                        typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
-                      );
-                      const habitColor = habit.color || '#0d8a72';
-                      const habitStreak = computeHabitStreak(habit);
-
-                      let completedInWeek = 0;
-                      weekDays.forEach((wd) => {
-                        if (dates.includes(wd.key)) completedInWeek++;
-                      });
-
-                      let completedInMonth = 0;
-                      monthDays.forEach((md) => {
-                        if (dates.includes(md.key)) completedInMonth++;
-                      });
-
-                      const currentYearStr = String(new Date().getFullYear());
-                      const completedInYear = dates.filter((d) => d.startsWith(currentYearStr)).length;
-
-                      return (
-                        <div
-                          key={habit.id}
-                          className="grid grid-cols-12 gap-1.5 sm:gap-2 items-center py-3 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 rounded-2xl transition-colors px-1 sm:px-2 group"
-                        >
-                          {/* Sticky Left: Indicator dot + Icon + Title + Streak Badge + Quick Actions */}
-                          <div className="col-span-5 sm:col-span-4 sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-800/80 z-10 flex items-center justify-between gap-1.5 sm:gap-2 min-w-0 pr-2 pl-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.4)] transition-colors">
-                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 truncate">
-                              <span
-                                className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
-                                style={{ backgroundColor: habitColor }}
-                              />
-                              <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
-                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#0d8a72] dark:group-hover:text-teal-400 transition-colors">
-                                {habit.title}
-                              </span>
-                              {/* Streak Badge directly next to the habit title - Click to toggle today */}
-                              <StreakBadge
-                                streak={habitStreak}
-                                showLabel={false}
-                                onClick={() => onToggleHabit(habit.id, todayKey)}
-                              />
-                            </div>
-
-                            {/* Quick Edit & Delete Buttons */}
-                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEditHabit(habit);
-                                }}
-                                className="p-1 text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 rounded-md hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
-                                title="Edit Habit"
-                              >
-                                <Edit2 size={12} />
-                              </button>
-                              {onDeleteHabit && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(habit.id, habit.title);
-                                  }}
-                                  className="p-1 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                                  title="Delete Habit"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Middle: Days Heatmap Blocks with touch target */}
-                          {period === 'WEEK' ? (
-                            <div className="col-span-6 sm:col-span-7 grid grid-cols-7 gap-1 sm:gap-2 justify-items-center">
-                              {weekDays.map((wd) => {
-                                const isCompleted = dates.includes(wd.key);
-
-                                return (
-                                  <button
-                                    key={wd.key}
-                                    type="button"
-                                    onClick={() => onToggleHabit(habit.id, wd.key)}
-                                    title={`${habit.title} - ${wd.dayShort}, ${wd.key}: ${
-                                      isCompleted ? 'Completed (Click to uncheck)' : 'Pending (Click to complete)'
-                                    }`}
-                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
-                                      isCompleted
-                                        ? 'shadow-xs scale-100 hover:scale-105 active:scale-90'
-                                        : 'bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 opacity-70 hover:opacity-100 active:scale-90'
-                                    }`}
-                                    style={{
-                                      backgroundColor: isCompleted ? habitColor : undefined,
-                                    }}
-                                  >
-                                    {isCompleted && (
-                                      <Check size={13} className="text-white drop-shadow-xs" strokeWidth={3} />
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : period === 'MONTH' ? (
-                            <div className="col-span-6 sm:col-span-7 grid grid-flow-col auto-cols-fr gap-0.5 sm:gap-1 justify-items-center">
-                              {monthDays.map((md) => {
-                                const isCompleted = dates.includes(md.key);
-                                return (
-                                  <button
-                                    key={md.key}
-                                    type="button"
-                                    onClick={() => onToggleHabit(habit.id, md.key)}
-                                    title={`${md.key}: ${isCompleted ? 'Completed' : 'Missed'}`}
-                                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-md transition-all cursor-pointer ${
-                                      isCompleted ? 'scale-105' : 'bg-slate-100 dark:bg-slate-800 opacity-60'
-                                    }`}
-                                    style={{
-                                      backgroundColor: isCompleted ? habitColor : undefined,
-                                    }}
-                                  />
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="col-span-6 sm:col-span-7 grid grid-cols-12 gap-1 justify-items-center">
-                              {yearMonths.map((ym) => {
-                                const countInMonth = dates.filter((d) => d.startsWith(ym.yearMonthKey)).length;
-                                const intensity = Math.min(1, countInMonth / 20);
-                                return (
-                                  <div
-                                    key={ym.yearMonthKey}
-                                    title={`${ym.monthShort}: ${countInMonth} check-ins`}
-                                    className="w-3.5 h-4.5 sm:w-4 sm:h-5 rounded-md flex items-center justify-center text-[8px] font-bold text-white transition-all"
-                                    style={{
-                                      backgroundColor: countInMonth > 0 ? habitColor : undefined,
-                                      opacity: countInMonth > 0 ? Math.max(0.35, intensity) : 0.15,
-                                    }}
-                                  >
-                                    {countInMonth > 0 ? countInMonth : ''}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {/* Right: Ratio */}
-                          <div className="col-span-1 text-right pr-2">
-                            <span className="text-[11px] sm:text-xs font-mono font-bold text-slate-400">
-                              {period === 'WEEK'
-                                ? `${completedInWeek}/7`
-                                : period === 'MONTH'
-                                ? `${completedInMonth}/${monthDays.length}`
-                                : `${completedInYear}d`}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('PAUSED')}
+                    className="font-bold text-amber-700 dark:text-amber-400 hover:underline cursor-pointer"
+                  >
+                    View Paused
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
             /* Detailed Cards View fallback */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              {habits.map((habit) => {
+              {displayHabits.map((habit) => {
                 const dates = (habit.completed_dates || []).map((d) =>
                   typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
                 );
@@ -935,6 +848,11 @@ export const HabitsPage = ({
                         <div>
                           <div className="flex items-center gap-1.5">
                             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">{habit.title}</h4>
+                            {habit.is_paused && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                Paused
+                              </span>
+                            )}
                             <StreakBadge
                               streak={streak}
                               onClick={() => onToggleHabit(habit.id, todayKey)}
@@ -1025,132 +943,138 @@ export const HabitsPage = ({
               </div>
             </div>
 
-            {/* Habit Items Vertical Timeline for the Selected Day */}
+            {/* Habit Items Vertical Timeline for the Selected Day (Active habits only) */}
             <div className="flex flex-col gap-3">
-              {habits.map((habit) => {
-                const dates = (habit.completed_dates || []).map((d) =>
-                  typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
-                );
-                const isCompleted = dates.includes(selectedDayKey);
-                const habitColor = habit.color || '#0d8a72';
-                const habitStreak = computeHabitStreak(habit);
+              {activeHabits.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400">
+                  No active habits to track.
+                </div>
+              ) : (
+                activeHabits.map((habit) => {
+                  const dates = (habit.completed_dates || []).map((d) =>
+                    typeof d === 'string' ? d.substring(0, 10) : formatDateKey(d)
+                  );
+                  const isCompleted = dates.includes(selectedDayKey);
+                  const habitColor = habit.color || '#0d8a72';
+                  const habitStreak = computeHabitStreak(habit);
 
-                return (
-                  <div key={`day-habit-${habit.id}`} className="relative pl-3 flex flex-col gap-1.5">
-                    {/* Left timeline indicator line */}
-                    <div
-                      className="absolute left-0 top-1 bottom-1 w-1 rounded-full transition-all"
-                      style={{ backgroundColor: habitColor }}
-                    />
-
-                    {/* Habit Card */}
-                    {isCompleted ? (
-                      /* COMPLETED STATE: Rich Filled Card styled like the reference design */
+                  return (
+                    <div key={`day-habit-${habit.id}`} className="relative pl-3 flex flex-col gap-1.5">
+                      {/* Left timeline indicator line */}
                       <div
-                        className="p-3.5 rounded-2xl text-white transition-all shadow-sm flex flex-col justify-between gap-3"
+                        className="absolute left-0 top-1 bottom-1 w-1 rounded-full transition-all"
                         style={{ backgroundColor: habitColor }}
-                      >
-                        {/* Card Header: Icon + Title + Streak Badge + Edit & Delete actions */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0 truncate">
-                            <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
-                            <span className="text-xs font-black truncate">{habit.title}</span>
-                            <StreakBadge
-                              streak={habitStreak}
-                              variant="light"
-                              onClick={() => onToggleHabit(habit.id, selectedDayKey)}
-                            />
-                          </div>
+                      />
 
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => onEditHabit(habit)}
-                              className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-black/15 cursor-pointer transition-colors"
-                              title="Edit Habit"
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                            {onDeleteHabit && (
+                      {/* Habit Card */}
+                      {isCompleted ? (
+                        /* COMPLETED STATE: Rich Filled Card styled like the reference design */
+                        <div
+                          className="p-3.5 rounded-2xl text-white transition-all shadow-sm flex flex-col justify-between gap-3"
+                          style={{ backgroundColor: habitColor }}
+                        >
+                          {/* Card Header: Icon + Title + Streak Badge + Edit & Delete actions */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0 truncate">
+                              <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                              <span className="text-xs font-black truncate">{habit.title}</span>
+                              <StreakBadge
+                                streak={habitStreak}
+                                variant="light"
+                                onClick={() => onToggleHabit(habit.id, selectedDayKey)}
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-0.5 shrink-0">
                               <button
                                 type="button"
-                                onClick={() => handleDelete(habit.id, habit.title)}
-                                className="p-1.5 rounded-lg text-white/80 hover:text-rose-200 hover:bg-black/20 cursor-pointer transition-colors"
-                                title="Delete Habit"
+                                onClick={() => onEditHabit(habit)}
+                                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-black/15 cursor-pointer transition-colors"
+                                title="Edit Habit"
                               >
-                                <Trash2 size={13} />
+                                <Edit2 size={13} />
                               </button>
-                            )}
+                              {onDeleteHabit && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(habit.id, habit.title)}
+                                  className="p-1.5 rounded-lg text-white/80 hover:text-rose-200 hover:bg-black/20 cursor-pointer transition-colors"
+                                  title="Delete Habit"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Card Footer: ✓ Completed text + Undo button */}
+                          <div className="flex items-center justify-between pt-1 border-t border-white/20 text-xs">
+                            <div className="flex items-center gap-1 font-bold">
+                              <Check size={14} strokeWidth={3} />
+                              <span>Completed</span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => onToggleHabit(habit.id, selectedDayKey)}
+                              className="font-bold underline text-white/90 hover:text-white cursor-pointer transition-opacity py-0.5 px-1"
+                            >
+                              Undo
+                            </button>
                           </div>
                         </div>
+                      ) : (
+                        /* PENDING STATE: Clean Card with Mark Complete outline button */
+                        <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 transition-all hover:border-slate-300 flex flex-col justify-between gap-3 text-left">
+                          {/* Header: Icon + Title + Streak Badge + Edit & Delete actions */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0 truncate">
+                              <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                                {habit.title}
+                              </span>
+                              <StreakBadge
+                                streak={habitStreak}
+                                onClick={() => onToggleHabit(habit.id, selectedDayKey)}
+                              />
+                            </div>
 
-                        {/* Card Footer: ✓ Completed text + Undo button */}
-                        <div className="flex items-center justify-between pt-1 border-t border-white/20 text-xs">
-                          <div className="flex items-center gap-1 font-bold">
-                            <Check size={14} strokeWidth={3} />
-                            <span>Completed</span>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => onEditHabit(habit)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                                title="Edit Habit"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              {onDeleteHabit && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(habit.id, habit.title)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
+                                  title="Delete Habit"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
+                          {/* Action: Mark Complete outline button with mobile touch height */}
                           <button
                             type="button"
                             onClick={() => onToggleHabit(habit.id, selectedDayKey)}
-                            className="font-bold underline text-white/90 hover:text-white cursor-pointer transition-opacity py-0.5 px-1"
+                            className="w-full py-2 px-3 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#0d8a72] hover:text-[#0d8a72] dark:border-teal-400 dark:hover:text-teal-300 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-teal-50/40 dark:hover:bg-teal-950/20 transition-all cursor-pointer shadow-2xs active:scale-98 min-h-[38px]"
                           >
-                            Undo
+                            Mark Complete
                           </button>
                         </div>
-                      </div>
-                    ) : (
-                      /* PENDING STATE: Clean Card with Mark Complete outline button */
-                      <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 transition-all hover:border-slate-300 flex flex-col justify-between gap-3 text-left">
-                        {/* Header: Icon + Title + Streak Badge + Edit & Delete actions */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0 truncate">
-                            <span className="text-base shrink-0">{habit.icon || '⚡'}</span>
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                              {habit.title}
-                            </span>
-                            <StreakBadge
-                              streak={habitStreak}
-                              onClick={() => onToggleHabit(habit.id, selectedDayKey)}
-                            />
-                          </div>
-
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => onEditHabit(habit)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-[#0d8a72] dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
-                              title="Edit Habit"
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                            {onDeleteHabit && (
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(habit.id, habit.title)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
-                                title="Delete Habit"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Action: Mark Complete outline button with mobile touch height */}
-                        <button
-                          type="button"
-                          onClick={() => onToggleHabit(habit.id, selectedDayKey)}
-                          className="w-full py-2 px-3 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#0d8a72] hover:text-[#0d8a72] dark:hover:border-teal-400 dark:hover:text-teal-300 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-teal-50/40 dark:hover:bg-teal-950/20 transition-all cursor-pointer shadow-2xs active:scale-98 min-h-[38px]"
-                        >
-                          Mark Complete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </Card>
         </div>
