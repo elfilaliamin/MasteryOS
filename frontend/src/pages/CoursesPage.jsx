@@ -130,6 +130,7 @@ export const CoursesPage = ({
   const notStartedCourses = enrichedCourses.filter((c) => c.status === 'NOT_STARTED').length;
   const inProgressCourses = enrichedCourses.filter((c) => c.status === 'IN_PROGRESS').length;
   const completedCourses = enrichedCourses.filter((c) => c.status === 'COMPLETED').length;
+  const notCompletedCourses = enrichedCourses.filter((c) => c.status !== 'COMPLETED').length;
   const totalFinishedLessons = enrichedCourses.reduce(
     (acc, c) => acc + (c.finished_lessons || 0),
     0
@@ -144,7 +145,11 @@ export const CoursesPage = ({
 
   // Filtered courses
   const filteredCourses = enrichedCourses.filter((c) => {
-    if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
+    if (statusFilter === 'NOT_COMPLETED') {
+      if (c.status === 'COMPLETED') return false;
+    } else if (statusFilter !== 'ALL' && c.status !== statusFilter) {
+      return false;
+    }
     if (searchFilter.trim()) {
       const q = searchFilter.toLowerCase().trim();
       const inTitle = (c.title || '').toLowerCase().includes(q);
@@ -300,6 +305,7 @@ export const CoursesPage = ({
             }`}
           >
             <option value="ALL">All Statuses ({totalCourses})</option>
+            <option value="NOT_COMPLETED">Not Completed ({notCompletedCourses})</option>
             <option value="NOT_STARTED">Not Started ({notStartedCourses})</option>
             <option value="IN_PROGRESS">In Progress ({inProgressCourses})</option>
             <option value="COMPLETED">Completed ({completedCourses})</option>
@@ -466,6 +472,7 @@ export const CoursesPage = ({
                     className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
                   >
                     <option value="ALL">All Statuses ({totalCourses})</option>
+                    <option value="NOT_COMPLETED">Not Completed ({notCompletedCourses})</option>
                     <option value="NOT_STARTED">Not Started ({notStartedCourses})</option>
                     <option value="IN_PROGRESS">In Progress ({inProgressCourses})</option>
                     <option value="COMPLETED">Completed ({completedCourses})</option>
