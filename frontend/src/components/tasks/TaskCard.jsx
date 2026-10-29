@@ -130,7 +130,7 @@ export const TaskCard = ({
           {task.title}
         </h4>
         {task.description && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 whitespace-pre-wrap break-words leading-relaxed">
             {task.description}
           </p>
         )}
