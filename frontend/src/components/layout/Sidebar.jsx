@@ -10,25 +10,17 @@ import {
   GraduationCap,
   Settings,
   LogOut,
-  Sun,
-  Moon,
   Sparkles,
   Flame,
   Zap,
   X,
-  Volume2,
-  VolumeX,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
-import { useTheme } from '../../context/useTheme';
 import { useGamification } from '../../context/useGamification';
-import { useSound } from '../../context/useSound';
 
 export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
   const { playerStats, isLoading } = useGamification();
-  const { isMuted, toggleMute } = useSound();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -95,37 +87,15 @@ export const Sidebar = ({ isMobileOpen, onCloseMobile }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          {/* Sound quick switch */}
-          <button
-            onClick={toggleMute}
-            className="hidden md:inline-flex p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
-            aria-label={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
-          >
-            {isMuted ? <VolumeX size={16} className="text-rose-500" /> : <Volume2 size={16} className="text-[#0d8a72] dark:text-teal-400" />}
-          </button>
-
-          {/* Theme quick switch */}
-          <button
-            onClick={toggleTheme}
-            className="hidden md:inline-flex p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title={isDark ? 'Light Mode' : 'Dark Mode'}
-            aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-[#0d8a72]" />}
-          </button>
-
-          {/* Close button on mobile */}
-          <button
-            onClick={onCloseMobile}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md:hidden"
-            title="Close menu"
-            aria-label="Close menu"
-          >
-            <X size={18} />
-          </button>
-        </div>
+        {/* Close button on mobile */}
+        <button
+          onClick={onCloseMobile}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md:hidden"
+          title="Close menu"
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Main Navigation */}
