@@ -51,21 +51,10 @@ services:
       dockerfile: ./frontend/Dockerfile
     container_name: mastery_os_frontend_web
     restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3001}:80"
     depends_on:
       - backend
-    networks:
-      - tasks_network
-
-  # Cloudflare Tunnel Service
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared_tunnel
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - frontend
     networks:
       - tasks_network
 
