@@ -39,10 +39,12 @@ app.use(helmet({
 
 app.use(cookieParser());
 
-const envOrigins = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map((s) => s.trim().replace(/\/+$/, ''))
-  .filter(Boolean);
+const getEnvOrigins = () => {
+  return (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+};
 
 export const isOriginAllowed = (origin) => {
   // Allow requests with no origin (curl, mobile apps, server-to-server)
@@ -51,6 +53,7 @@ export const isOriginAllowed = (origin) => {
   }
 
   const cleanOrigin = origin.trim().replace(/\/+$/, '');
+  const envOrigins = getEnvOrigins();
 
   // Wildcard allowed
   if (envOrigins.includes('*')) {
@@ -66,8 +69,10 @@ export const isOriginAllowed = (origin) => {
     const parsed = new URL(cleanOrigin);
     const hostname = parsed.hostname.toLowerCase();
 
-    // Allow all subdomains and apex domains of elfilaliamin.online and elfilaiamin.online
+    // Allow all subdomains and apex domains of aminlab.site, elfilaliamin.online, and elfilaiamin.online
     if (
+      hostname === 'aminlab.site' ||
+      hostname.endsWith('.aminlab.site') ||
       hostname === 'elfilaliamin.online' ||
       hostname.endsWith('.elfilaliamin.online') ||
       hostname === 'elfilaiamin.online' ||

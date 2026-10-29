@@ -36,6 +36,7 @@ services:
       DB_NAME: ${DB_NAME:-tasktracker_db}
       JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_master_tasks_tracker_2026}
       JWT_EXPIRES_IN: 30d
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://masteryos.aminlab.site,http://masteryos.aminlab.site}
     depends_on:
       db:
         condition: service_healthy

@@ -60,7 +60,14 @@ describe('Task 16.6: Security Headers, CORS Lockdown & Error Redaction Tests', (
     assert.equal(data.error, 'Endpoint not found');
   });
 
-  it('Accurately validates allowed origins including all elfilaliamin and elfilaiamin subdomains and localhost', () => {
+  it('Accurately validates allowed origins including all aminlab, elfilaliamin and elfilaiamin subdomains and localhost', () => {
+    // aminlab.site domain and subdomains
+    assert.equal(isOriginAllowed('https://masteryos.aminlab.site'), true);
+    assert.equal(isOriginAllowed('http://masteryos.aminlab.site'), true);
+    assert.equal(isOriginAllowed('http://masteryos.aminlab.site:3001'), true);
+    assert.equal(isOriginAllowed('https://aminlab.site'), true);
+    assert.equal(isOriginAllowed('https://app.aminlab.site'), true);
+
     // Both spelling variants with subdomains and apex
     assert.equal(isOriginAllowed('https://masteryos.elfilaliamin.online'), true);
     assert.equal(isOriginAllowed('https://masteryos.elfilaiamin.online'), true);
