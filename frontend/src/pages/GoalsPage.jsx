@@ -187,7 +187,11 @@ export const GoalsPage = ({
 
   // Filter enriched goals
   const filteredGoals = enrichedGoals.filter((g) => {
-    if (statusFilter !== 'ALL' && g.status !== statusFilter) return false;
+    if (statusFilter === 'NOT_COMPLETED') {
+      if (g.status === 'COMPLETED') return false;
+    } else if (statusFilter !== 'ALL' && g.status !== statusFilter) {
+      return false;
+    }
     if (priorityFilter !== 'ALL' && g.priority !== priorityFilter) return false;
     if (searchFilter.trim()) {
       const q = searchFilter.toLowerCase().trim();
@@ -340,7 +344,7 @@ export const GoalsPage = ({
             <span>Filters:</span>
           </div>
 
-          {/* Status Filter including "Not Started" */}
+          {/* Status Filter including "Not Started" & "Not Completed" */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -351,6 +355,7 @@ export const GoalsPage = ({
             }`}
           >
             <option value="ALL">All Statuses</option>
+            <option value="NOT_COMPLETED">Not Completed</option>
             <option value="NOT_STARTED">Not Started</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="COMPLETED">Completed</option>
@@ -541,6 +546,7 @@ export const GoalsPage = ({
                     className="w-full text-xs rounded-xl p-2.5 font-semibold bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#0d8a72] cursor-pointer"
                   >
                     <option value="ALL">All Statuses</option>
+                    <option value="NOT_COMPLETED">Not Completed</option>
                     <option value="NOT_STARTED">Not Started</option>
                     <option value="IN_PROGRESS">In Progress</option>
                     <option value="COMPLETED">Completed</option>
